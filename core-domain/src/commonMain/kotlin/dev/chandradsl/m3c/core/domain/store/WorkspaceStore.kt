@@ -15,6 +15,12 @@ class WorkspaceStore(initialRoot: ComposableNode) {
             is WorkspaceIntent.InsertChild -> {
                 recordMutation { TreeMutator.insertChild(it, intent.parentId, intent.node, intent.index) }
             }
+            is WorkspaceIntent.SetSlot -> {
+                recordMutation { TreeMutator.setSlot(it, intent.parentId, intent.slotName, intent.node) }
+            }
+            is WorkspaceIntent.UpdateNode -> {
+                recordMutation { TreeMutator.updateNode(it, intent.node) }
+            }
             is WorkspaceIntent.RemoveNode -> {
                 recordMutation { currentRoot ->
                     TreeMutator.removeNode(currentRoot, intent.targetId) ?: currentRoot
