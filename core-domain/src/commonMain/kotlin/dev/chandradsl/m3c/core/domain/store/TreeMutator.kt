@@ -2,22 +2,23 @@ package dev.chandradsl.m3c.core.domain.store
 
 import dev.chandradsl.m3c.core.domain.model.ComposableNode
 import dev.chandradsl.m3c.core.domain.model.ModifierDef
+import dev.chandradsl.m3c.core.domain.model.NodeId
 
 object TreeMutator {
 
-    fun insertChild(root: ComposableNode, parentId: String, child: ComposableNode, index: Int = -1): ComposableNode {
+    fun insertChild(root: ComposableNode, parentId: NodeId, child: ComposableNode, index: Int = -1): ComposableNode {
         if (root.id == parentId) {
             return root.withAddedChild(child, index)
         }
         return root.mapChildren { insertChild(it, parentId, child, index) }
     }
 
-    fun removeNode(root: ComposableNode, targetId: String): ComposableNode? {
+    fun removeNode(root: ComposableNode, targetId: NodeId): ComposableNode? {
         if (root.id == targetId) return null
         return root.filterAndMapChildren(targetId) { removeNode(it, targetId) }
     }
 
-    fun updateModifiers(root: ComposableNode, targetId: String, newModifiers: List<ModifierDef>): ComposableNode {
+    fun updateModifiers(root: ComposableNode, targetId: NodeId, newModifiers: List<ModifierDef>): ComposableNode {
         if (root.id == targetId) {
             return root.withModifiers(newModifiers)
         }
@@ -51,7 +52,7 @@ object TreeMutator {
         is ComposableNode.TextNode -> this
     }
 
-    private fun ComposableNode.filterAndMapChildren(targetId: String, transform: (ComposableNode) -> ComposableNode?): ComposableNode = when (this) {
+    private fun ComposableNode.filterAndMapChildren(targetId: NodeId, transform: (ComposableNode) -> ComposableNode?): ComposableNode = when (this) {
         is ComposableNode.ColumnNode -> copy(children = children.filter { it.id != targetId }.mapNotNull(transform))
         is ComposableNode.RowNode -> copy(children = children.filter { it.id != targetId }.mapNotNull(transform))
         is ComposableNode.BoxNode -> copy(children = children.filter { it.id != targetId }.mapNotNull(transform))

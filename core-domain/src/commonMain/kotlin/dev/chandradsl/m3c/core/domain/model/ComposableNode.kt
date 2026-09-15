@@ -1,67 +1,78 @@
 package dev.chandradsl.m3c.core.domain.model
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
 sealed interface ComposableNode {
-    val id: String
+    val id: NodeId
     val modifiers: List<ModifierDef>
 
-    // -------------------------------------------------------------
-    // Layout Containers
-    // -------------------------------------------------------------
+    // ========================================================================
+    // 1. Structural Layout Containers
+    // ========================================================================
 
     @Serializable
+    @SerialName("column")
     data class ColumnNode(
-        override val id: String,
+        override val id: NodeId = NodeId.generate("col"),
         override val modifiers: List<ModifierDef> = emptyList(),
-        val verticalArrangement: VerticalArrangementDef = VerticalArrangementDef.Top,
+        val verticalArrangement: ArrangementVerticalDef = ArrangementVerticalDef.Top,
         val horizontalAlignment: AlignmentHorizontalDef = AlignmentHorizontalDef.Start,
         val children: List<ComposableNode> = emptyList()
     ) : ComposableNode
 
     @Serializable
+    @SerialName("row")
     data class RowNode(
-        override val id: String,
+        override val id: NodeId = NodeId.generate("row"),
         override val modifiers: List<ModifierDef> = emptyList(),
-        val horizontalArrangement: HorizontalArrangementDef = HorizontalArrangementDef.Start,
+        val horizontalArrangement: ArrangementHorizontalDef = ArrangementHorizontalDef.Start,
         val verticalAlignment: AlignmentVerticalDef = AlignmentVerticalDef.Top,
         val children: List<ComposableNode> = emptyList()
     ) : ComposableNode
 
     @Serializable
+    @SerialName("box")
     data class BoxNode(
-        override val id: String,
+        override val id: NodeId = NodeId.generate("box"),
         override val modifiers: List<ModifierDef> = emptyList(),
+        val contentAlignment: AlignmentDef = AlignmentDef.TopStart,
+        val propagateMinConstraints: Boolean = false,
         val children: List<ComposableNode> = emptyList()
     ) : ComposableNode
 
-    // -------------------------------------------------------------
-    // Material 3 Leaf & Slot Components
-    // -------------------------------------------------------------
+    // ========================================================================
+    // 2. Material 3 Leaf & Slot Components
+    // ========================================================================
 
     @Serializable
+    @SerialName("text")
     data class TextNode(
-        override val id: String,
+        override val id: NodeId = NodeId.generate("txt"),
         override val modifiers: List<ModifierDef> = emptyList(),
         val text: String,
-        val fontSizeSp: Float = 14f,
-        val colorHex: Long? = null
+        val typography: TypographyToken? = null,
+        val fontSize: SpVal? = null,
+        val color: ColorSource? = null
     ) : ComposableNode
 
     @Serializable
+    @SerialName("button")
     data class ButtonNode(
-        override val id: String,
+        override val id: NodeId = NodeId.generate("btn"),
         override val modifiers: List<ModifierDef> = emptyList(),
         val enabled: Boolean = true,
         val content: List<ComposableNode> = emptyList()
     ) : ComposableNode
 
     @Serializable
+    @SerialName("card")
     data class CardNode(
-        override val id: String,
+        override val id: NodeId = NodeId.generate("crd"),
         override val modifiers: List<ModifierDef> = emptyList(),
-        val elevationDp: Float = 1f,
+        val elevation: DpVal = DpVal(1f),
+        val shape: ShapeDef? = null,
         val content: List<ComposableNode> = emptyList()
     ) : ComposableNode
 }

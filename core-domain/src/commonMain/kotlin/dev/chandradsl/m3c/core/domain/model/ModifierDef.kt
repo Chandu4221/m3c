@@ -1,41 +1,148 @@
 package dev.chandradsl.m3c.core.domain.model
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
 sealed interface ModifierDef {
-    @Serializable
-    data class Padding(
-        val start: Float = 0f,
-        val top: Float = 0f,
-        val end: Float = 0f,
-        val bottom: Float = 0f
-    ) : ModifierDef
+
+    // ========================================================================
+    // 1. Sizing & Dimensions
+    // ========================================================================
 
     @Serializable
-    data class FillMaxWidth(val fraction: Float = 1.0f) : ModifierDef
-
-    @Serializable
-    data class FillMaxHeight(val fraction: Float = 1.0f) : ModifierDef
-
-    @Serializable
+    @SerialName("fill_max_size")
     data class FillMaxSize(val fraction: Float = 1.0f) : ModifierDef
 
     @Serializable
-    data class Size(val width: Float, val height: Float) : ModifierDef
+    @SerialName("fill_max_width")
+    data class FillMaxWidth(val fraction: Float = 1.0f) : ModifierDef
 
     @Serializable
-    data class Width(val width: Float) : ModifierDef
+    @SerialName("fill_max_height")
+    data class FillMaxHeight(val fraction: Float = 1.0f) : ModifierDef
 
     @Serializable
-    data class Height(val height: Float) : ModifierDef
+    @SerialName("size")
+    data class Size(val width: DpVal, val height: DpVal) : ModifierDef
 
     @Serializable
-    data class Background(val colorHex: Long) : ModifierDef
+    @SerialName("width")
+    data class Width(val width: DpVal) : ModifierDef
 
     @Serializable
-    data class Clip(val cornerRadius: Float) : ModifierDef
+    @SerialName("height")
+    data class Height(val height: DpVal) : ModifierDef
 
     @Serializable
-    data class Weight(val weight: Float, val fill: Boolean = true) : ModifierDef
+    @SerialName("default_min_size")
+    data class DefaultMinSize(
+        val minWidth: DpVal = DpVal.Zero,
+        val minHeight: DpVal = DpVal.Zero
+    ) : ModifierDef
+
+    // ========================================================================
+    // 2. Spacing & Offsets
+    // ========================================================================
+
+    @Serializable
+    @SerialName("padding")
+    data class Padding(
+        val start: DpVal = DpVal.Zero,
+        val top: DpVal = DpVal.Zero,
+        val end: DpVal = DpVal.Zero,
+        val bottom: DpVal = DpVal.Zero
+    ) : ModifierDef {
+        companion object {
+            fun all(all: DpVal) = Padding(start = all, top = all, end = all, bottom = all)
+            fun symmetric(horizontal: DpVal = DpVal.Zero, vertical: DpVal = DpVal.Zero) =
+                Padding(start = horizontal, top = vertical, end = horizontal, bottom = vertical)
+        }
+    }
+
+    @Serializable
+    @SerialName("offset")
+    data class Offset(val x: DpVal = DpVal.Zero, val y: DpVal = DpVal.Zero) : ModifierDef
+
+    // ========================================================================
+    // 3. Drawing, Appearance & Shapes
+    // ========================================================================
+
+    @Serializable
+    @SerialName("background")
+    data class Background(
+        val color: ColorSource,
+        val shape: ShapeDef? = null
+    ) : ModifierDef
+
+    @Serializable
+    @SerialName("border")
+    data class Border(
+        val border: BorderDef,
+        val shape: ShapeDef? = null
+    ) : ModifierDef
+
+    @Serializable
+    @SerialName("clip")
+    data class Clip(val shape: ShapeDef) : ModifierDef
+
+    @Serializable
+    @SerialName("shadow")
+    data class Shadow(
+        val elevation: DpVal,
+        val shape: ShapeDef? = null,
+        val clip: Boolean = false
+    ) : ModifierDef
+
+    @Serializable
+    @SerialName("alpha")
+    data class Alpha(val alpha: Float) : ModifierDef {
+        init {
+            require(alpha in 0f..1f) { "Alpha must be between 0.0 and 1.0, was $alpha" }
+        }
+    }
+
+    // ========================================================================
+    // 4. Interaction
+    // ========================================================================
+
+    @Serializable
+    @SerialName("clickable")
+    data class Clickable(
+        val enabled: Boolean = true,
+        val onClickLabel: String? = null
+    ) : ModifierDef
+
+    // ========================================================================
+    // 5. Scoped Modifiers
+    // ========================================================================
+
+    @Serializable
+    sealed interface RowScopeModifier : ModifierDef {
+        @Serializable
+        @SerialName("row_weight")
+        data class Weight(val weight: Float, val fill: Boolean = true) : RowScopeModifier
+
+        @Serializable
+        @SerialName("row_align")
+        data class Align(val alignment: AlignmentVerticalDef) : RowScopeModifier
+    }
+
+    @Serializable
+    sealed interface ColumnScopeModifier : ModifierDef {
+        @Serializable
+        @SerialName("column_weight")
+        data class Weight(val weight: Float, val fill: Boolean = true) : ColumnScopeModifier
+
+        @Serializable
+        @SerialName("column_align")
+        data class Align(val alignment: AlignmentHorizontalDef) : ColumnScopeModifier
+    }
+
+    @Serializable
+    sealed interface BoxScopeModifier : ModifierDef {
+        @Serializable
+        @SerialName("box_align")
+        data class Align(val alignment: AlignmentDef) : BoxScopeModifier
+    }
 }
