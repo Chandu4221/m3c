@@ -31,5 +31,8 @@ plugins {
     id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
 }
 
-include(":desktopApp")
-include(":shared")
+// 4 Clean Architecture Modules
+include(":core-domain")
+include(":core-codegen")
+include(":runtime-renderer")
+include(":app-desktop")
