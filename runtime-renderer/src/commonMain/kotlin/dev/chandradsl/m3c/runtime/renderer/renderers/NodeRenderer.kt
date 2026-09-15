@@ -1,18 +1,11 @@
-package dev.chandradsl.m3c.runtime.renderer
+package dev.chandradsl.m3c.runtime.renderer.renderers
 
+import androidx.compose.foundation.layout.Row
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import dev.chandradsl.m3c.core.domain.model.ComposableNode
 import dev.chandradsl.m3c.core.domain.store.WorkspaceIntent
 import dev.chandradsl.m3c.core.domain.store.WorkspaceState
-import dev.chandradsl.m3c.runtime.renderer.renderers.RenderBox
-import dev.chandradsl.m3c.runtime.renderer.renderers.RenderCard
-import dev.chandradsl.m3c.runtime.renderer.renderers.RenderColumn
-import dev.chandradsl.m3c.runtime.renderer.renderers.RenderElevatedCard
-import dev.chandradsl.m3c.runtime.renderer.renderers.RenderOutlinedCard
-import dev.chandradsl.m3c.runtime.renderer.renderers.RenderRow
-import dev.chandradsl.m3c.runtime.renderer.renderers.RenderSpacer
-import dev.chandradsl.m3c.runtime.renderer.renderers.RenderSurface
 
 @Composable
 fun NodeRenderer(
@@ -34,7 +27,41 @@ fun NodeRenderer(
         is ComposableNode.ElevatedCardNode -> RenderElevatedCard(node, state, onIntent, modifier)
         is ComposableNode.OutlinedCardNode -> RenderOutlinedCard(node, state, onIntent, modifier)
 
-        // (We will add the branches for Buttons, Text, Selection, and Scaffold as we create each file)
-        else -> Unit
+        // 3. Buttons & Actions
+        is ComposableNode.ButtonNode -> RenderButton(node, state, onIntent, modifier)
+        is ComposableNode.ElevatedButtonNode -> RenderElevatedButton(node, state, onIntent, modifier)
+        is ComposableNode.FilledTonalButtonNode -> RenderFilledTonalButton(node, state, onIntent, modifier)
+        is ComposableNode.OutlinedButtonNode -> RenderOutlinedButton(node, state, onIntent, modifier)
+        is ComposableNode.TextButtonNode -> RenderTextButton(node, state, onIntent, modifier)
+        is ComposableNode.IconButtonNode -> RenderIconButton(node, state, onIntent, modifier)
+        is ComposableNode.FloatingActionButtonNode -> RenderFloatingActionButton(node, state, onIntent, modifier)
+
+        // 4. Text & Inputs
+        is ComposableNode.TextNode -> RenderText(node, state, onIntent, modifier)
+        is ComposableNode.TextFieldNode -> RenderTextField(node, state, onIntent, modifier)
+        is ComposableNode.OutlinedTextFieldNode -> RenderOutlinedTextField(node, state, onIntent, modifier)
+
+        // 5. Selection & Progress Indicators
+        is ComposableNode.CheckboxNode -> RenderCheckbox(node, state, onIntent, modifier)
+        is ComposableNode.SwitchNode -> RenderSwitch(node, state, onIntent, modifier)
+        is ComposableNode.RadioButtonNode -> RenderRadioButton(node, state, onIntent, modifier)
+        is ComposableNode.SliderNode -> RenderSlider(node, state, onIntent, modifier)
+        is ComposableNode.CircularProgressIndicatorNode -> RenderCircularProgressIndicator(node, state, onIntent, modifier)
+        is ComposableNode.LinearProgressIndicatorNode -> RenderLinearProgressIndicator(node, state, onIntent, modifier)
+
+        // 6. Scaffolding & Navigation
+        is ComposableNode.ScaffoldNode -> RenderScaffold(node, state, onIntent, modifier)
+        is ComposableNode.TopAppBarNode -> RenderTopAppBar(node, state, onIntent, modifier)
+        is ComposableNode.NavigationBarNode -> RenderNavigationBar(node, state, onIntent, modifier)
+        is ComposableNode.NavigationBarItemNode -> {
+            // Standalone fallback: Wrap in Row so RowScope.RenderNavigationBarItem can render
+            Row {
+                RenderNavigationBarItem(node, state, onIntent, modifier)
+            }
+        }
+
+        // 7. Dividers & Utilities
+        is ComposableNode.HorizontalDividerNode -> RenderHorizontalDivider(node, state, onIntent, modifier)
+        is ComposableNode.VerticalDividerNode -> RenderVerticalDivider(node, state, onIntent, modifier)
     }
 }
