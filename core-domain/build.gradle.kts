@@ -1,22 +1,21 @@
 plugins {
-    kotlin("jvm") version "2.4.20"
-}
-
-group = "dev.chandradsl"
-version = "unspecified"
-
-repositories {
-    mavenCentral()
-}
-
-dependencies {
-    testImplementation(kotlin("test"))
+    alias(libs.plugins.kotlinMultiplatform)
+    alias(libs.plugins.kotlinSerialization)
 }
 
 kotlin {
     jvmToolchain(21)
-}
+    jvm()
 
-tasks.test {
-    useJUnitPlatform()
+    sourceSets {
+        commonMain.dependencies {
+            implementation(libs.kotlinx.serialization.json)
+            implementation(libs.kotlinx.collections.immutable)
+        }
+        commonTest.dependencies {
+            implementation(libs.kotlin.test)
+            implementation(libs.kotlin.testJunit)
+            implementation(libs.junit)
+        }
+    }
 }
