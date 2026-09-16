@@ -20,7 +20,8 @@ fun RenderSurface(
     node: ComposableNode.SurfaceNode,
     state: WorkspaceState,
     onIntent: (WorkspaceIntent) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isInteractiveMode: Boolean = false
 ) {
     val borderStroke = node.border?.let {
         BorderStroke(it.width.value.dp, it.color.toComposeColor())
@@ -30,6 +31,9 @@ fun RenderSurface(
         nodeId = node.id,
         nodeTag = "Surface",
         isSelected = state.selectedNodeId == node.id,
+        isInteractiveMode = isInteractiveMode,
+        isChildSelected = node.hasDescendant(state.selectedNodeId),
+        drillDownOnlyWhenSelected = true,
         onSelect = { onIntent(WorkspaceIntent.SelectNode(it)) },
         modifier = modifier
     ) {
@@ -44,7 +48,7 @@ fun RenderSurface(
         ) {
             Column {
                 node.children.forEach { child ->
-                    NodeRenderer(node = child, state = state, onIntent = onIntent)
+                    NodeRenderer(node = child, state = state, onIntent = onIntent, isInteractiveMode = isInteractiveMode)
                 }
             }
         }
@@ -56,7 +60,8 @@ fun RenderCard(
     node: ComposableNode.CardNode,
     state: WorkspaceState,
     onIntent: (WorkspaceIntent) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isInteractiveMode: Boolean = false
 ) {
     val borderStroke = node.border?.let {
         BorderStroke(it.width.value.dp, it.color.toComposeColor())
@@ -70,6 +75,9 @@ fun RenderCard(
         nodeId = node.id,
         nodeTag = "Card",
         isSelected = state.selectedNodeId == node.id,
+        isInteractiveMode = isInteractiveMode,
+        isChildSelected = node.hasDescendant(state.selectedNodeId),
+        drillDownOnlyWhenSelected = true,
         onSelect = { onIntent(WorkspaceIntent.SelectNode(it)) },
         modifier = modifier
     ) {
@@ -82,7 +90,7 @@ fun RenderCard(
         ) {
             Column {
                 node.content.forEach { child ->
-                    NodeRenderer(node = child, state = state, onIntent = onIntent)
+                    NodeRenderer(node = child, state = state, onIntent = onIntent, isInteractiveMode = isInteractiveMode)
                 }
             }
         }
@@ -94,12 +102,16 @@ fun RenderElevatedCard(
     node: ComposableNode.ElevatedCardNode,
     state: WorkspaceState,
     onIntent: (WorkspaceIntent) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isInteractiveMode: Boolean = false
 ) {
     SelectionDecorator(
         nodeId = node.id,
         nodeTag = "ElevatedCard",
         isSelected = state.selectedNodeId == node.id,
+        isInteractiveMode = isInteractiveMode,
+        isChildSelected = node.hasDescendant(state.selectedNodeId),
+        drillDownOnlyWhenSelected = true,
         onSelect = { onIntent(WorkspaceIntent.SelectNode(it)) },
         modifier = modifier
     ) {
@@ -110,7 +122,7 @@ fun RenderElevatedCard(
         ) {
             Column {
                 node.content.forEach { child ->
-                    NodeRenderer(node = child, state = state, onIntent = onIntent)
+                    NodeRenderer(node = child, state = state, onIntent = onIntent, isInteractiveMode = isInteractiveMode)
                 }
             }
         }
@@ -122,7 +134,8 @@ fun RenderOutlinedCard(
     node: ComposableNode.OutlinedCardNode,
     state: WorkspaceState,
     onIntent: (WorkspaceIntent) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isInteractiveMode: Boolean = false
 ) {
     val borderStroke = node.border?.let {
         BorderStroke(it.width.value.dp, it.color.toComposeColor())
@@ -132,6 +145,9 @@ fun RenderOutlinedCard(
         nodeId = node.id,
         nodeTag = "OutlinedCard",
         isSelected = state.selectedNodeId == node.id,
+        isInteractiveMode = isInteractiveMode,
+        isChildSelected = node.hasDescendant(state.selectedNodeId),
+        drillDownOnlyWhenSelected = true,
         onSelect = { onIntent(WorkspaceIntent.SelectNode(it)) },
         modifier = modifier
     ) {
@@ -142,7 +158,7 @@ fun RenderOutlinedCard(
         ) {
             Column {
                 node.content.forEach { child ->
-                    NodeRenderer(node = child, state = state, onIntent = onIntent)
+                    NodeRenderer(node = child, state = state, onIntent = onIntent, isInteractiveMode = isInteractiveMode)
                 }
             }
         }

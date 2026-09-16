@@ -304,7 +304,8 @@ fun CanvasViewport(
                                         return@NodeRenderer
                                     }
                                     viewModel.dispatch(intent)
-                                }
+                                },
+                                isInteractiveMode = viewModel.isInteractiveMode
                             )
                         }
                     }

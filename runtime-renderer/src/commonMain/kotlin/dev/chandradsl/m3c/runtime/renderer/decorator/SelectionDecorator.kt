@@ -24,6 +24,8 @@ fun SelectionDecorator(
     nodeTag: String,
     isSelected: Boolean,
     isInteractiveMode: Boolean = false,
+    isChildSelected: Boolean = false,
+    drillDownOnlyWhenSelected: Boolean = false,
     onSelect: (NodeId) -> Unit,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit
@@ -43,6 +45,8 @@ fun SelectionDecorator(
         MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
     }
 
+    val shouldIntercept = drillDownOnlyWhenSelected && !isSelected && !isChildSelected
+
     Box(
         modifier = modifier
             .border(
@@ -58,6 +62,22 @@ fun SelectionDecorator(
             }
     ) {
         content()
+
+        // Two-Tier Selection Interceptor Overlay:
+        // When not yet selected and no descendant is selected, intercept clicks on this container
+        // so clicking any child (e.g. text/icon inside a button) selects this container first.
+        if (shouldIntercept) {
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) {
+                        onSelect(nodeId)
+                    }
+            )
+        }
 
         // Selection Tag pill in the top-start corner when selected
         if (isSelected) {

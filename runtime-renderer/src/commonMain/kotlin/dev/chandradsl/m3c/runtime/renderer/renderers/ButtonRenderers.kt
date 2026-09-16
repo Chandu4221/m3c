@@ -19,7 +19,8 @@ fun RenderButton(
     node: ComposableNode.ButtonNode,
     state: WorkspaceState,
     onIntent: (WorkspaceIntent) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isInteractiveMode: Boolean = false
 ) {
     val borderStroke = node.border?.let {
         BorderStroke(it.width.value.dp, it.color.toComposeColor())
@@ -33,11 +34,14 @@ fun RenderButton(
         nodeId = node.id,
         nodeTag = "Button",
         isSelected = state.selectedNodeId == node.id,
+        isInteractiveMode = isInteractiveMode,
+        isChildSelected = node.hasDescendant(state.selectedNodeId),
+        drillDownOnlyWhenSelected = true,
         onSelect = { onIntent(WorkspaceIntent.SelectNode(it)) },
         modifier = modifier
     ) {
         Button(
-            onClick = { /* Preview mode */ },
+            onClick = { if (!isInteractiveMode) onIntent(WorkspaceIntent.SelectNode(node.id)) },
             enabled = node.enabled,
             modifier = node.modifiers.toComposeModifier(),
             shape = node.shape?.toComposeShape() ?: ButtonDefaults.shape,
@@ -47,7 +51,7 @@ fun RenderButton(
         ) {
             Row {
                 node.content.forEach { child ->
-                    NodeRenderer(node = child, state = state, onIntent = onIntent)
+                    NodeRenderer(node = child, state = state, onIntent = onIntent, isInteractiveMode = isInteractiveMode)
                 }
             }
         }
@@ -59,17 +63,21 @@ fun RenderElevatedButton(
     node: ComposableNode.ElevatedButtonNode,
     state: WorkspaceState,
     onIntent: (WorkspaceIntent) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isInteractiveMode: Boolean = false
 ) {
     SelectionDecorator(
         nodeId = node.id,
         nodeTag = "ElevatedButton",
         isSelected = state.selectedNodeId == node.id,
+        isInteractiveMode = isInteractiveMode,
+        isChildSelected = node.hasDescendant(state.selectedNodeId),
+        drillDownOnlyWhenSelected = true,
         onSelect = { onIntent(WorkspaceIntent.SelectNode(it)) },
         modifier = modifier
     ) {
         ElevatedButton(
-            onClick = { /* Preview mode */ },
+            onClick = { if (!isInteractiveMode) onIntent(WorkspaceIntent.SelectNode(node.id)) },
             enabled = node.enabled,
             modifier = node.modifiers.toComposeModifier(),
             shape = node.shape?.toComposeShape() ?: ButtonDefaults.elevatedShape,
@@ -77,7 +85,7 @@ fun RenderElevatedButton(
         ) {
             Row {
                 node.content.forEach { child ->
-                    NodeRenderer(node = child, state = state, onIntent = onIntent)
+                    NodeRenderer(node = child, state = state, onIntent = onIntent, isInteractiveMode = isInteractiveMode)
                 }
             }
         }
@@ -89,24 +97,28 @@ fun RenderFilledTonalButton(
     node: ComposableNode.FilledTonalButtonNode,
     state: WorkspaceState,
     onIntent: (WorkspaceIntent) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isInteractiveMode: Boolean = false
 ) {
     SelectionDecorator(
         nodeId = node.id,
         nodeTag = "FilledTonalButton",
         isSelected = state.selectedNodeId == node.id,
+        isInteractiveMode = isInteractiveMode,
+        isChildSelected = node.hasDescendant(state.selectedNodeId),
+        drillDownOnlyWhenSelected = true,
         onSelect = { onIntent(WorkspaceIntent.SelectNode(it)) },
         modifier = modifier
     ) {
         FilledTonalButton(
-            onClick = { /* Preview mode */ },
+            onClick = { if (!isInteractiveMode) onIntent(WorkspaceIntent.SelectNode(node.id)) },
             enabled = node.enabled,
             modifier = node.modifiers.toComposeModifier(),
             shape = node.shape?.toComposeShape() ?: ButtonDefaults.filledTonalShape
         ) {
             Row {
                 node.content.forEach { child ->
-                    NodeRenderer(node = child, state = state, onIntent = onIntent)
+                    NodeRenderer(node = child, state = state, onIntent = onIntent, isInteractiveMode = isInteractiveMode)
                 }
             }
         }
@@ -118,7 +130,8 @@ fun RenderOutlinedButton(
     node: ComposableNode.OutlinedButtonNode,
     state: WorkspaceState,
     onIntent: (WorkspaceIntent) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isInteractiveMode: Boolean = false
 ) {
     val borderStroke = node.border?.let {
         BorderStroke(it.width.value.dp, it.color.toComposeColor())
@@ -128,11 +141,14 @@ fun RenderOutlinedButton(
         nodeId = node.id,
         nodeTag = "OutlinedButton",
         isSelected = state.selectedNodeId == node.id,
+        isInteractiveMode = isInteractiveMode,
+        isChildSelected = node.hasDescendant(state.selectedNodeId),
+        drillDownOnlyWhenSelected = true,
         onSelect = { onIntent(WorkspaceIntent.SelectNode(it)) },
         modifier = modifier
     ) {
         OutlinedButton(
-            onClick = { /* Preview mode */ },
+            onClick = { if (!isInteractiveMode) onIntent(WorkspaceIntent.SelectNode(node.id)) },
             enabled = node.enabled,
             modifier = node.modifiers.toComposeModifier(),
             shape = node.shape?.toComposeShape() ?: ButtonDefaults.outlinedShape,
@@ -140,7 +156,7 @@ fun RenderOutlinedButton(
         ) {
             Row {
                 node.content.forEach { child ->
-                    NodeRenderer(node = child, state = state, onIntent = onIntent)
+                    NodeRenderer(node = child, state = state, onIntent = onIntent, isInteractiveMode = isInteractiveMode)
                 }
             }
         }
@@ -152,24 +168,28 @@ fun RenderTextButton(
     node: ComposableNode.TextButtonNode,
     state: WorkspaceState,
     onIntent: (WorkspaceIntent) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isInteractiveMode: Boolean = false
 ) {
     SelectionDecorator(
         nodeId = node.id,
         nodeTag = "TextButton",
         isSelected = state.selectedNodeId == node.id,
+        isInteractiveMode = isInteractiveMode,
+        isChildSelected = node.hasDescendant(state.selectedNodeId),
+        drillDownOnlyWhenSelected = true,
         onSelect = { onIntent(WorkspaceIntent.SelectNode(it)) },
         modifier = modifier
     ) {
         TextButton(
-            onClick = { /* Preview mode */ },
+            onClick = { if (!isInteractiveMode) onIntent(WorkspaceIntent.SelectNode(node.id)) },
             enabled = node.enabled,
             modifier = node.modifiers.toComposeModifier(),
             shape = node.shape?.toComposeShape() ?: ButtonDefaults.textShape
         ) {
             Row {
                 node.content.forEach { child ->
-                    NodeRenderer(node = child, state = state, onIntent = onIntent)
+                    NodeRenderer(node = child, state = state, onIntent = onIntent, isInteractiveMode = isInteractiveMode)
                 }
             }
         }
@@ -181,22 +201,26 @@ fun RenderIconButton(
     node: ComposableNode.IconButtonNode,
     state: WorkspaceState,
     onIntent: (WorkspaceIntent) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isInteractiveMode: Boolean = false
 ) {
     SelectionDecorator(
         nodeId = node.id,
         nodeTag = "IconButton",
         isSelected = state.selectedNodeId == node.id,
+        isInteractiveMode = isInteractiveMode,
+        isChildSelected = node.hasDescendant(state.selectedNodeId),
+        drillDownOnlyWhenSelected = true,
         onSelect = { onIntent(WorkspaceIntent.SelectNode(it)) },
         modifier = modifier
     ) {
         IconButton(
-            onClick = { /* Preview mode */ },
+            onClick = { if (!isInteractiveMode) onIntent(WorkspaceIntent.SelectNode(node.id)) },
             enabled = node.enabled,
             modifier = node.modifiers.toComposeModifier()
         ) {
             node.content.forEach { child ->
-                NodeRenderer(node = child, state = state, onIntent = onIntent)
+                NodeRenderer(node = child, state = state, onIntent = onIntent, isInteractiveMode = isInteractiveMode)
             }
         }
     }
@@ -207,17 +231,21 @@ fun RenderFloatingActionButton(
     node: ComposableNode.FloatingActionButtonNode,
     state: WorkspaceState,
     onIntent: (WorkspaceIntent) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isInteractiveMode: Boolean = false
 ) {
     SelectionDecorator(
         nodeId = node.id,
         nodeTag = "FAB",
         isSelected = state.selectedNodeId == node.id,
+        isInteractiveMode = isInteractiveMode,
+        isChildSelected = node.hasDescendant(state.selectedNodeId),
+        drillDownOnlyWhenSelected = true,
         onSelect = { onIntent(WorkspaceIntent.SelectNode(it)) },
         modifier = modifier
     ) {
         FloatingActionButton(
-            onClick = { /* Preview mode */ },
+            onClick = { if (!isInteractiveMode) onIntent(WorkspaceIntent.SelectNode(node.id)) },
             modifier = node.modifiers.toComposeModifier(),
             shape = node.shape?.toComposeShape() ?: FloatingActionButtonDefaults.shape,
             containerColor = node.containerColor?.toComposeColor() ?: FloatingActionButtonDefaults.containerColor,
@@ -227,7 +255,7 @@ fun RenderFloatingActionButton(
         ) {
             Row {
                 node.content.forEach { child ->
-                    NodeRenderer(node = child, state = state, onIntent = onIntent)
+                    NodeRenderer(node = child, state = state, onIntent = onIntent, isInteractiveMode = isInteractiveMode)
                 }
             }
         }

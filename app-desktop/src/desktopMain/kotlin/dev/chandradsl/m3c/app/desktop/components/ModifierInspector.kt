@@ -17,7 +17,6 @@ import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -250,11 +249,12 @@ private fun ModifierSortableCard(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Drag Handle / Index Indicator
+            // Draggable Card Body (Badge + Details across whole card)
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
                 modifier = Modifier
+                    .weight(1f)
                     .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR)))
                     .pointerInput(Unit) {
                         detectDragGestures(
@@ -268,12 +268,7 @@ private fun ModifierSortableCard(
                         )
                     }
             ) {
-                Icon(
-                    imageVector = Icons.Default.DragHandle,
-                    contentDescription = "Drag to reorder",
-                    tint = if (isDragging) StudioColors.Primary else StudioColors.TextMuted,
-                    modifier = Modifier.size(StudioSizes.IconMedium)
-                )
+                // Index Indicator Badge
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(4.dp))
@@ -289,26 +284,23 @@ private fun ModifierSortableCard(
                         )
                     )
                 }
-            }
 
-            // Modifier Name & Parameters
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(horizontal = 10.dp),
-                verticalArrangement = Arrangement.spacedBy(2.dp)
-            ) {
-                Text(
-                    text = modifierDef::class.simpleName ?: "Modifier",
-                    style = StudioTypography.UIBody.copy(
-                        fontWeight = if (isDragging) FontWeight.SemiBold else FontWeight.Normal
+                // Modifier Name & Parameters
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    Text(
+                        text = modifierDef::class.simpleName ?: "Modifier",
+                        style = StudioTypography.UIBody.copy(
+                            fontWeight = if (isDragging) FontWeight.SemiBold else FontWeight.Normal
+                        )
                     )
-                )
-                Text(
-                    text = formatModifierDetails(modifierDef),
-                    style = StudioTypography.Caption,
-                    maxLines = 1
-                )
+                    Text(
+                        text = formatModifierDetails(modifierDef),
+                        style = StudioTypography.Caption,
+                        maxLines = 1
+                    )
+                }
             }
 
             // Action Controls: Move Up, Move Down, Delete

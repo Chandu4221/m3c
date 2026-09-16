@@ -23,7 +23,6 @@ import androidx.compose.material.icons.filled.CheckBox
 import androidx.compose.material.icons.filled.CheckBoxOutlineBlank
 import androidx.compose.material.icons.filled.CropLandscape
 import androidx.compose.material.icons.filled.CropPortrait
-import androidx.compose.material.icons.filled.DragIndicator
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -366,16 +365,6 @@ private fun PaletteComponentCard(
                     )
                 )
             }
-        }
-
-        // Drag Handle Grip (visual affordance)
-        if (!isInteractive) {
-            Icon(
-                imageVector = Icons.Default.DragIndicator,
-                contentDescription = "Drag to canvas",
-                tint = StudioColors.TextMuted,
-                modifier = Modifier.size(StudioSizes.IconMedium)
-            )
         }
     }
 }
