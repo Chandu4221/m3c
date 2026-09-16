@@ -74,7 +74,7 @@ class StudioViewModel {
         private set
 
     // 3. Studio UI Settings
-    var isDarkMode: Boolean by mutableStateOf(false)
+    var isDarkMode: Boolean by mutableStateOf(true)
     var isInteractiveMode: Boolean by mutableStateOf(false)
         private set
     var isCodeDrawerOpen: Boolean by mutableStateOf(false)

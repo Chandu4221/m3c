@@ -12,6 +12,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -30,6 +31,7 @@ import dev.chandradsl.m3c.app.desktop.state.StudioViewModel
 import dev.chandradsl.m3c.app.desktop.theme.StudioColors
 import dev.chandradsl.m3c.app.desktop.theme.StudioSizes
 import dev.chandradsl.m3c.app.desktop.theme.StudioTypography
+import org.jetbrains.jewel.intui.standalone.theme.IntUiTheme
 
 fun main() = application {
     val windowState = rememberWindowState(width = 1440.dp, height = 900.dp)
@@ -41,20 +43,38 @@ fun main() = application {
     ) {
         val viewModel = remember { StudioViewModel() }
 
-        // Top-Level Studio Dark Material Theme (WCAG 2.2 AA Compliant)
-        MaterialTheme(
-            colorScheme = darkColorScheme(
-                background = StudioColors.CanvasBackdrop,
-                surface = StudioColors.PanelSurface,
-                surfaceVariant = StudioColors.CardSurface,
-                primary = StudioColors.Primary,
-                onPrimary = StudioColors.TextInverse,
-                onBackground = StudioColors.TextPrimary,
-                onSurface = StudioColors.TextPrimary,
-                outline = StudioColors.BorderSubtle,
-                outlineVariant = StudioColors.BorderActive
-            )
-        ) {
+        // JetBrains Jewel Int-UI Standalone Theme (IntelliJ New UI Dark / Light)
+        IntUiTheme(isDark = viewModel.isDarkMode) {
+            StudioColors.isDark = viewModel.isDarkMode
+
+            val colorScheme = if (viewModel.isDarkMode) {
+                darkColorScheme(
+                    background = StudioColors.CanvasBackdrop,
+                    surface = StudioColors.PanelSurface,
+                    surfaceVariant = StudioColors.CardSurface,
+                    primary = StudioColors.Primary,
+                    onPrimary = StudioColors.TextInverse,
+                    onBackground = StudioColors.TextPrimary,
+                    onSurface = StudioColors.TextPrimary,
+                    outline = StudioColors.BorderSubtle,
+                    outlineVariant = StudioColors.BorderActive
+                )
+            } else {
+                lightColorScheme(
+                    background = StudioColors.CanvasBackdrop,
+                    surface = StudioColors.PanelSurface,
+                    surfaceVariant = StudioColors.CardSurface,
+                    primary = StudioColors.Primary,
+                    onPrimary = StudioColors.TextInverse,
+                    onBackground = StudioColors.TextPrimary,
+                    onSurface = StudioColors.TextPrimary,
+                    outline = StudioColors.BorderSubtle,
+                    outlineVariant = StudioColors.BorderActive
+                )
+            }
+
+            // Material 3 bridge matching active Jewel Int-UI theme (WCAG 2.2 AA Compliant)
+            MaterialTheme(colorScheme = colorScheme) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -146,6 +166,7 @@ fun main() = application {
             }
         }
     }
+}
 }
 
 @Composable
