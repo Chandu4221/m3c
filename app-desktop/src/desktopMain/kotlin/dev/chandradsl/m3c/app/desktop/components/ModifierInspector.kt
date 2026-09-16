@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -22,6 +23,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -97,6 +99,10 @@ fun ModifierInspector(
         }
 
         // Active Modifiers List with Sorting & Deletion
+        var draggingIndex by remember { mutableStateOf<Int?>(null) }
+        var targetIndex by remember { mutableStateOf<Int?>(null) }
+        var dragAccumulatedY by remember { mutableStateOf(0f) }
+
         if (node.modifiers.isEmpty()) {
             Text(
                 text = "No modifiers attached",
@@ -104,15 +110,49 @@ fun ModifierInspector(
                 modifier = Modifier.padding(vertical = 4.dp)
             )
         } else {
-            node.modifiers.forEachIndexed { index, mod ->
-                ModifierSortableCard(
-                    index = index,
-                    totalCount = node.modifiers.size,
-                    modifierDef = mod,
-                    onMoveUp = { viewModel.reorderModifier(node.id, index, index - 1) },
-                    onMoveDown = { viewModel.reorderModifier(node.id, index, index + 1) },
-                    onDelete = { viewModel.removeModifier(node.id, index) }
-                )
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                node.modifiers.forEachIndexed { index, mod ->
+                    key(mod) {
+                        ModifierSortableCard(
+                            index = index,
+                            totalCount = node.modifiers.size,
+                            modifierDef = mod,
+                            isDragging = draggingIndex == index,
+                            isTarget = targetIndex == index && draggingIndex != index,
+                            dragOffsetY = if (draggingIndex == index) dragAccumulatedY else 0f,
+                            targetPosition = if (draggingIndex == index) (targetIndex ?: index) else index,
+                            onDragStart = {
+                                draggingIndex = index
+                                targetIndex = index
+                                dragAccumulatedY = 0f
+                            },
+                            onDrag = { dy ->
+                                dragAccumulatedY += dy
+                                val step = 56f
+                                val steps = kotlin.math.round(dragAccumulatedY / step).toInt()
+                                targetIndex = (index + steps).coerceIn(0, node.modifiers.size - 1)
+                            },
+                            onDragEnd = {
+                                val from = draggingIndex
+                                val to = targetIndex
+                                if (from != null && to != null && from != to) {
+                                    viewModel.reorderModifier(node.id, from, to)
+                                }
+                                draggingIndex = null
+                                targetIndex = null
+                                dragAccumulatedY = 0f
+                            },
+                            onDragCancel = {
+                                draggingIndex = null
+                                targetIndex = null
+                                dragAccumulatedY = 0f
+                            },
+                            onMoveUp = { viewModel.reorderModifier(node.id, index, index - 1) },
+                            onMoveDown = { viewModel.reorderModifier(node.id, index, index + 1) },
+                            onDelete = { viewModel.removeModifier(node.id, index) }
+                        )
+                    }
+                }
             }
         }
 
@@ -168,161 +208,164 @@ private fun ModifierSortableCard(
     index: Int,
     totalCount: Int,
     modifierDef: ModifierDef,
+    isDragging: Boolean,
+    isTarget: Boolean,
+    dragOffsetY: Float,
+    targetPosition: Int,
+    onDragStart: () -> Unit,
+    onDrag: (Float) -> Unit,
+    onDragEnd: () -> Unit,
+    onDragCancel: () -> Unit,
     onMoveUp: () -> Unit,
     onMoveDown: () -> Unit,
     onDelete: () -> Unit
 ) {
-    var dragAccumulatedY by remember { mutableStateOf(0f) }
-    var isDragging by remember { mutableStateOf(false) }
+    val cardElevation = if (isDragging) 12.dp else 0.dp
+    val cardBorderColor = when {
+        isDragging -> StudioColors.BorderActive
+        isTarget -> StudioColors.Primary
+        else -> StudioColors.BorderSubtle
+    }
+    val cardBackground = when {
+        isDragging -> StudioColors.ActiveSurface
+        isTarget -> StudioColors.Primary.copy(alpha = 0.08f)
+        else -> StudioColors.CardSurface
+    }
 
-    val cardElevation = if (isDragging) 8.dp else 0.dp
-    val cardBorderColor = if (isDragging) StudioColors.BorderActive else StudioColors.BorderSubtle
-    val cardBackground = if (isDragging) StudioColors.ActiveSurface else StudioColors.CardSurface
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .shadow(elevation = cardElevation, shape = RoundedCornerShape(6.dp))
-            .clip(RoundedCornerShape(6.dp))
-            .background(cardBackground)
-            .border(width = 1.dp, color = cardBorderColor, shape = RoundedCornerShape(6.dp))
-            .graphicsLayer {
-                translationY = dragAccumulatedY.coerceIn(-16f, 16f)
-            }
-            .padding(horizontal = 10.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        // Drag Handle / Index Indicator
+    Column(modifier = Modifier.fillMaxWidth()) {
         Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
             modifier = Modifier
-                .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR)))
-                .pointerInput(index, totalCount) {
-                    detectDragGestures(
-                        onDragStart = {
-                            isDragging = true
-                            dragAccumulatedY = 0f
-                        },
-                        onDrag = { change, dragAmount ->
-                            change.consume()
-                            dragAccumulatedY += dragAmount.y
-                            val threshold = 36f
-                            if (dragAccumulatedY > threshold && index < totalCount - 1) {
-                                onMoveDown()
-                                dragAccumulatedY = 0f
-                            } else if (dragAccumulatedY < -threshold && index > 0) {
-                                onMoveUp()
-                                dragAccumulatedY = 0f
-                            }
-                        },
-                        onDragEnd = {
-                            isDragging = false
-                            dragAccumulatedY = 0f
-                        },
-                        onDragCancel = {
-                            isDragging = false
-                            dragAccumulatedY = 0f
-                        }
+                .fillMaxWidth()
+                .graphicsLayer {
+                    translationY = dragOffsetY
+                    if (isDragging) {
+                        shadowElevation = 12f
+                    }
+                }
+                .shadow(elevation = cardElevation, shape = RoundedCornerShape(6.dp))
+                .clip(RoundedCornerShape(6.dp))
+                .background(cardBackground)
+                .border(width = if (isDragging || isTarget) 1.5.dp else 1.dp, color = cardBorderColor, shape = RoundedCornerShape(6.dp))
+                .padding(horizontal = 10.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Drag Handle / Index Indicator
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier
+                    .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR)))
+                    .pointerInput(Unit) {
+                        detectDragGestures(
+                            onDragStart = { onDragStart() },
+                            onDrag = { change, dragAmount ->
+                                change.consume()
+                                onDrag(dragAmount.y)
+                            },
+                            onDragEnd = { onDragEnd() },
+                            onDragCancel = { onDragCancel() }
+                        )
+                    }
+            ) {
+                Icon(
+                    imageVector = Icons.Default.DragHandle,
+                    contentDescription = "Drag to reorder",
+                    tint = if (isDragging) StudioColors.Primary else StudioColors.TextMuted,
+                    modifier = Modifier.size(StudioSizes.IconMedium)
+                )
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(if (isDragging) StudioColors.Primary else StudioColors.ActiveSurface)
+                        .border(width = 1.dp, color = StudioColors.BorderSubtle, shape = RoundedCornerShape(4.dp))
+                        .padding(horizontal = 6.dp, vertical = 2.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "${targetPosition + 1}",
+                        style = StudioTypography.Badge.copy(
+                            color = if (isDragging) StudioColors.TextInverse else StudioColors.TextPrimary
+                        )
                     )
                 }
-        ) {
-            Icon(
-                imageVector = Icons.Default.DragHandle,
-                contentDescription = "Drag to reorder",
-                tint = if (isDragging) StudioColors.Primary else StudioColors.TextMuted,
-                modifier = Modifier.size(StudioSizes.IconMedium)
-            )
-            Box(
+            }
+
+            // Modifier Name & Parameters
+            Column(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(4.dp))
-                    .background(if (isDragging) StudioColors.Primary else StudioColors.ActiveSurface)
-                    .border(width = 1.dp, color = StudioColors.BorderSubtle, shape = RoundedCornerShape(4.dp))
-                    .padding(horizontal = 6.dp, vertical = 2.dp),
-                contentAlignment = Alignment.Center
+                    .weight(1f)
+                    .padding(horizontal = 10.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
                 Text(
-                    text = "${index + 1}",
-                    style = StudioTypography.Badge.copy(
-                        color = if (isDragging) StudioColors.TextInverse else StudioColors.TextPrimary
+                    text = modifierDef::class.simpleName ?: "Modifier",
+                    style = StudioTypography.UIBody.copy(
+                        fontWeight = if (isDragging) FontWeight.SemiBold else FontWeight.Normal
                     )
                 )
-            }
-        }
-
-        // Modifier Name & Parameters
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .padding(horizontal = 10.dp),
-            verticalArrangement = Arrangement.spacedBy(2.dp)
-        ) {
-            Text(
-                text = modifierDef::class.simpleName ?: "Modifier",
-                style = StudioTypography.UIBody
-            )
-            Text(
-                text = formatModifierDetails(modifierDef),
-                style = StudioTypography.Caption,
-                maxLines = 1
-            )
-        }
-
-        // Action Controls: Move Up, Move Down, Delete
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            // Move Up Button
-            Box(
-                modifier = Modifier
-                    .size(24.dp)
-                    .clip(RoundedCornerShape(4.dp))
-                    .background(if (index > 0) StudioColors.ActiveSurface else Color.Transparent)
-                    .clickable(enabled = index > 0, onClick = onMoveUp),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.ArrowUpward,
-                    contentDescription = "Move Up",
-                    tint = if (index > 0) StudioColors.TextPrimary else StudioColors.TextMuted.copy(alpha = 0.4f),
-                    modifier = Modifier.size(StudioSizes.IconSmall)
+                Text(
+                    text = formatModifierDetails(modifierDef),
+                    style = StudioTypography.Caption,
+                    maxLines = 1
                 )
             }
 
-            // Move Down Button
-            Box(
-                modifier = Modifier
-                    .size(24.dp)
-                    .clip(RoundedCornerShape(4.dp))
-                    .background(if (index < totalCount - 1) StudioColors.ActiveSurface else Color.Transparent)
-                    .clickable(enabled = index < totalCount - 1, onClick = onMoveDown),
-                contentAlignment = Alignment.Center
+            // Action Controls: Move Up, Move Down, Delete
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Default.ArrowDownward,
-                    contentDescription = "Move Down",
-                    tint = if (index < totalCount - 1) StudioColors.TextPrimary else StudioColors.TextMuted.copy(alpha = 0.4f),
-                    modifier = Modifier.size(StudioSizes.IconSmall)
-                )
-            }
+                // Move Up Button
+                Box(
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(if (index > 0) StudioColors.ActiveSurface else Color.Transparent)
+                        .clickable(enabled = index > 0, onClick = onMoveUp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ArrowUpward,
+                        contentDescription = "Move Up",
+                        tint = if (index > 0) StudioColors.TextPrimary else StudioColors.TextMuted.copy(alpha = 0.4f),
+                        modifier = Modifier.size(StudioSizes.IconSmall)
+                    )
+                }
 
-            // Remove Button
-            Box(
-                modifier = Modifier
-                    .size(24.dp)
-                    .clip(RoundedCornerShape(4.dp))
-                    .background(StudioColors.ActiveSurface)
-                    .clickable(onClick = onDelete),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = "Remove",
-                    tint = StudioColors.Error,
-                    modifier = Modifier.size(StudioSizes.IconSmall)
-                )
+                // Move Down Button
+                Box(
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(if (index < totalCount - 1) StudioColors.ActiveSurface else Color.Transparent)
+                        .clickable(enabled = index < totalCount - 1, onClick = onMoveDown),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ArrowDownward,
+                        contentDescription = "Move Down",
+                        tint = if (index < totalCount - 1) StudioColors.TextPrimary else StudioColors.TextMuted.copy(alpha = 0.4f),
+                        modifier = Modifier.size(StudioSizes.IconSmall)
+                    )
+                }
+
+                // Remove Button
+                Box(
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(StudioColors.ActiveSurface)
+                        .clickable(onClick = onDelete),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Remove",
+                        tint = StudioColors.Error,
+                        modifier = Modifier.size(StudioSizes.IconSmall)
+                    )
+                }
             }
         }
     }
