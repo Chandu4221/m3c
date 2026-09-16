@@ -9,6 +9,7 @@ kotlinx-serialization = "1.8.0"
 kotlinx-collections-immutable = "0.3.8"
 kotlinpoet = "2.0.0"
 jewel = "0.40.0-262.10315.125"
+material-icons-extended = "1.7.3"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
@@ -36,6 +37,9 @@ compose-material3 = { module = "org.jetbrains.compose.material3:material3", vers
 compose-ui = { module = "org.jetbrains.compose.ui:ui", version.ref = "composeMultiplatform" }
 compose-components-resources = { module = "org.jetbrains.compose.components:components-resources", version.ref = "composeMultiplatform" }
 compose-uiToolingPreview = { module = "org.jetbrains.compose.ui:ui-tooling-preview", version.ref = "composeMultiplatform" }
+
+# MATERIAL ICONS
+material-icons-extended = {module = "org.jetbrains.compose.material:material-icons-extended",version.ref="material-icons-extended"}
 
 [plugins]
 composeMultiplatform = { id = "org.jetbrains.compose", version.ref = "composeMultiplatform" }

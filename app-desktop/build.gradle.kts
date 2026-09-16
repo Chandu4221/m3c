@@ -33,6 +33,9 @@ kotlin {
                 implementation(libs.kotlinx.coroutinesSwing)
                 implementation(libs.androidx.lifecycle.viewmodelCompose)
                 implementation(libs.androidx.lifecycle.runtimeCompose)
+
+                // Material Icons
+                implementation(libs.material.icons.extended)
             }
         }
     }
