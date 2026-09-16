@@ -262,6 +262,63 @@ fun main() = application {
                             }
                         }
                     }
+
+                    // 6. Global Floating Modifier Drag Avatar Overlay
+                    viewModel.activeModifierDrag?.let { dragMod ->
+                        Box(
+                            modifier = Modifier
+                                .offset {
+                                    androidx.compose.ui.unit.IntOffset(
+                                        x = (viewModel.dragPointerOffset.x + 12).toInt(),
+                                        y = (viewModel.dragPointerOffset.y + 12).toInt()
+                                    )
+                                }
+                                .shadow(elevation = 16.dp, shape = RoundedCornerShape(8.dp))
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(StudioColors.CardSurface)
+                                .border(
+                                    width = 2.dp,
+                                    color = StudioColors.Primary,
+                                    shape = RoundedCornerShape(8.dp)
+                                )
+                                .padding(horizontal = 14.dp, vertical = 8.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(4.dp))
+                                        .background(StudioColors.Primary)
+                                        .padding(horizontal = 6.dp, vertical = 2.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = "${(viewModel.modifierDropTargetIndex ?: dragMod.fromIndex) + 1}",
+                                        style = StudioTypography.Badge.copy(color = StudioColors.TextInverse)
+                                    )
+                                }
+                                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                    Text(
+                                        text = dragMod.name,
+                                        style = StudioTypography.UIBody.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            color = StudioColors.TextPrimary
+                                        )
+                                    )
+                                    if (dragMod.summary.isNotBlank()) {
+                                        Text(
+                                            text = dragMod.summary,
+                                            style = StudioTypography.Caption.copy(
+                                                color = StudioColors.TextSecondary
+                                            )
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }

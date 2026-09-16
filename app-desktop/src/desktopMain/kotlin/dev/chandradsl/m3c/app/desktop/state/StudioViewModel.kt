@@ -35,6 +35,13 @@ data class DraggedTreeNode(
     val label: String
 )
 
+data class DraggedModifier(
+    val nodeId: NodeId,
+    val fromIndex: Int,
+    val name: String,
+    val summary: String
+)
+
 enum class TreeDropPosition {
     INSIDE, ABOVE, BELOW
 }
@@ -331,6 +338,42 @@ class StudioViewModel {
         activeTreeDragNode = null
         treeDropTargetId = null
         treeDropPosition = null
+    }
+
+    // 6c. Modifier Drag & Reorder
+    var activeModifierDrag: DraggedModifier? by mutableStateOf(null)
+    var modifierDropTargetIndex: Int? by mutableStateOf(null)
+
+    fun startModifierDrag(nodeId: NodeId, fromIndex: Int, initialOffset: Offset, name: String, summary: String) {
+        if (isInteractiveMode) return
+        activeModifierDrag = DraggedModifier(nodeId, fromIndex, name, summary)
+        dragPointerOffset = initialOffset
+        modifierDropTargetIndex = fromIndex
+    }
+
+    fun updateModifierDrag(delta: Offset) {
+        dragPointerOffset += delta
+    }
+
+    fun updateModifierDropTarget(targetIndex: Int) {
+        if (activeModifierDrag != null) {
+            modifierDropTargetIndex = targetIndex
+        }
+    }
+
+    fun endModifierDrag() {
+        val drag = activeModifierDrag
+        val to = modifierDropTargetIndex
+        if (drag != null && to != null && drag.fromIndex != to) {
+            reorderModifier(drag.nodeId, drag.fromIndex, to)
+        }
+        activeModifierDrag = null
+        modifierDropTargetIndex = null
+    }
+
+    fun cancelModifierDrag() {
+        activeModifierDrag = null
+        modifierDropTargetIndex = null
     }
 
     // 6. Slot Targeting

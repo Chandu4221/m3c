@@ -3,6 +3,8 @@ package dev.chandradsl.m3c.app.desktop.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,7 +15,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Close
@@ -21,8 +22,10 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -30,11 +33,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.changedToUp
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -97,10 +105,30 @@ fun ModifierInspector(
             }
         }
 
-        // Active Modifiers List with Sorting & Deletion
-        var draggingIndex by remember { mutableStateOf<Int?>(null) }
-        var targetIndex by remember { mutableStateOf<Int?>(null) }
-        var dragAccumulatedY by remember { mutableStateOf(0f) }
+        // Active Modifiers List with Real-Time Window Hit Testing
+        val activeDrag = viewModel.activeModifierDrag
+        val isDraggingThisNode = activeDrag != null && activeDrag.nodeId == node.id
+        val cardBoundsMap = remember { mutableStateMapOf<Int, Rect>() }
+
+        // Live hover hit-testing & nearest-card snapping when dragging a modifier
+        LaunchedEffect(viewModel.dragPointerOffset, isDraggingThisNode) {
+            if (isDraggingThisNode && cardBoundsMap.isNotEmpty()) {
+                val pointerY = viewModel.dragPointerOffset.y
+                val firstBounds = cardBoundsMap[0]
+                val lastBounds = cardBoundsMap[node.modifiers.size - 1]
+
+                val target = when {
+                    firstBounds != null && pointerY <= firstBounds.center.y -> 0
+                    lastBounds != null && pointerY >= lastBounds.center.y -> node.modifiers.size - 1
+                    else -> {
+                        cardBoundsMap.minByOrNull { (_, bounds) ->
+                            kotlin.math.abs(bounds.center.y - pointerY)
+                        }?.key ?: activeDrag.fromIndex
+                    }
+                }
+                viewModel.updateModifierDropTarget(target)
+            }
+        }
 
         if (node.modifiers.isEmpty()) {
             Text(
@@ -111,40 +139,34 @@ fun ModifierInspector(
         } else {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 node.modifiers.forEachIndexed { index, mod ->
-                    key(mod) {
+                    key("$index-${mod::class.simpleName}") {
+                        val isSource = isDraggingThisNode && activeDrag.fromIndex == index
+                        val isTarget = isDraggingThisNode && viewModel.modifierDropTargetIndex == index && !isSource
+
                         ModifierSortableCard(
                             index = index,
                             totalCount = node.modifiers.size,
                             modifierDef = mod,
-                            isDragging = draggingIndex == index,
-                            isTarget = targetIndex == index && draggingIndex != index,
-                            dragOffsetY = if (draggingIndex == index) dragAccumulatedY else 0f,
-                            targetPosition = if (draggingIndex == index) (targetIndex ?: index) else index,
-                            onDragStart = {
-                                draggingIndex = index
-                                targetIndex = index
-                                dragAccumulatedY = 0f
+                            isSourceDragging = isSource,
+                            isDropTarget = isTarget,
+                            onBoundsChanged = { rect -> cardBoundsMap[index] = rect },
+                            onDragStart = { startOffset ->
+                                viewModel.startModifierDrag(
+                                    nodeId = node.id,
+                                    fromIndex = index,
+                                    initialOffset = startOffset,
+                                    name = mod::class.simpleName ?: "Modifier",
+                                    summary = formatModifierDetails(mod)
+                                )
                             },
-                            onDrag = { dy ->
-                                dragAccumulatedY += dy
-                                val step = 56f
-                                val steps = kotlin.math.round(dragAccumulatedY / step).toInt()
-                                targetIndex = (index + steps).coerceIn(0, node.modifiers.size - 1)
+                            onDragDelta = { delta ->
+                                viewModel.updateModifierDrag(delta)
                             },
                             onDragEnd = {
-                                val from = draggingIndex
-                                val to = targetIndex
-                                if (from != null && to != null && from != to) {
-                                    viewModel.reorderModifier(node.id, from, to)
-                                }
-                                draggingIndex = null
-                                targetIndex = null
-                                dragAccumulatedY = 0f
+                                viewModel.endModifierDrag()
                             },
                             onDragCancel = {
-                                draggingIndex = null
-                                targetIndex = null
-                                dragAccumulatedY = 0f
+                                viewModel.cancelModifierDrag()
                             },
                             onMoveUp = { viewModel.reorderModifier(node.id, index, index - 1) },
                             onMoveDown = { viewModel.reorderModifier(node.id, index, index + 1) },
@@ -207,44 +229,46 @@ private fun ModifierSortableCard(
     index: Int,
     totalCount: Int,
     modifierDef: ModifierDef,
-    isDragging: Boolean,
-    isTarget: Boolean,
-    dragOffsetY: Float,
-    targetPosition: Int,
-    onDragStart: () -> Unit,
-    onDrag: (Float) -> Unit,
+    isSourceDragging: Boolean,
+    isDropTarget: Boolean,
+    onBoundsChanged: (Rect) -> Unit,
+    onDragStart: (Offset) -> Unit,
+    onDragDelta: (Offset) -> Unit,
     onDragEnd: () -> Unit,
     onDragCancel: () -> Unit,
     onMoveUp: () -> Unit,
     onMoveDown: () -> Unit,
     onDelete: () -> Unit
 ) {
-    val cardElevation = if (isDragging) 12.dp else 0.dp
     val cardBorderColor = when {
-        isDragging -> StudioColors.BorderActive
-        isTarget -> StudioColors.Primary
+        isDropTarget -> StudioColors.Success
+        isSourceDragging -> StudioColors.BorderSubtle.copy(alpha = 0.5f)
         else -> StudioColors.BorderSubtle
     }
     val cardBackground = when {
-        isDragging -> StudioColors.ActiveSurface
-        isTarget -> StudioColors.Primary.copy(alpha = 0.08f)
+        isDropTarget -> StudioColors.Success.copy(alpha = 0.12f)
+        isSourceDragging -> StudioColors.ActiveSurface.copy(alpha = 0.35f)
         else -> StudioColors.CardSurface
     }
+
+    var cardPositionInWindow by remember { mutableStateOf(Offset.Zero) }
 
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .graphicsLayer {
-                    translationY = dragOffsetY
-                    if (isDragging) {
-                        shadowElevation = 12f
-                    }
+                .onGloballyPositioned { coordinates ->
+                    onBoundsChanged(coordinates.boundsInWindow())
+                    cardPositionInWindow = coordinates.positionInWindow()
                 }
-                .shadow(elevation = cardElevation, shape = RoundedCornerShape(6.dp))
+                .shadow(elevation = if (isDropTarget) 4.dp else 0.dp, shape = RoundedCornerShape(6.dp))
                 .clip(RoundedCornerShape(6.dp))
                 .background(cardBackground)
-                .border(width = if (isDragging || isTarget) 1.5.dp else 1.dp, color = cardBorderColor, shape = RoundedCornerShape(6.dp))
+                .border(
+                    width = if (isDropTarget) 2.dp else 1.dp,
+                    color = cardBorderColor,
+                    shape = RoundedCornerShape(6.dp)
+                )
                 .padding(horizontal = 10.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
@@ -256,31 +280,61 @@ private fun ModifierSortableCard(
                 modifier = Modifier
                     .weight(1f)
                     .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR)))
-                    .pointerInput(Unit) {
-                        detectDragGestures(
-                            onDragStart = { onDragStart() },
-                            onDrag = { change, dragAmount ->
-                                change.consume()
-                                onDrag(dragAmount.y)
-                            },
-                            onDragEnd = { onDragEnd() },
-                            onDragCancel = { onDragCancel() }
-                        )
+                    .pointerInput(modifierDef, index) {
+                        awaitEachGesture {
+                            val down = awaitFirstDown(requireUnconsumed = false)
+                            var isDragStarted = false
+                            var totalMovement = Offset.Zero
+                            val touchSlop = viewConfiguration.touchSlop
+
+                            try {
+                                while (true) {
+                                    val event = awaitPointerEvent()
+                                    val change = event.changes.firstOrNull { it.id == down.id } ?: break
+
+                                    if (change.changedToUp()) {
+                                        if (isDragStarted) {
+                                            onDragEnd()
+                                        }
+                                        break
+                                    }
+
+                                    val dragAmount = change.position - change.previousPosition
+                                    totalMovement += dragAmount
+
+                                    if (!isDragStarted) {
+                                        if (totalMovement.getDistance() > touchSlop) {
+                                            isDragStarted = true
+                                            val globalStart = cardPositionInWindow + change.position
+                                            onDragStart(globalStart)
+                                            change.consume()
+                                        }
+                                    } else {
+                                        change.consume()
+                                        onDragDelta(dragAmount)
+                                    }
+                                }
+                            } finally {
+                                if (isDragStarted) {
+                                    onDragCancel()
+                                }
+                            }
+                        }
                     }
             ) {
                 // Index Indicator Badge
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(4.dp))
-                        .background(if (isDragging) StudioColors.Primary else StudioColors.ActiveSurface)
+                        .background(if (isDropTarget) StudioColors.Success else StudioColors.ActiveSurface)
                         .border(width = 1.dp, color = StudioColors.BorderSubtle, shape = RoundedCornerShape(4.dp))
                         .padding(horizontal = 6.dp, vertical = 2.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "${targetPosition + 1}",
+                        text = "${index + 1}",
                         style = StudioTypography.Badge.copy(
-                            color = if (isDragging) StudioColors.TextInverse else StudioColors.TextPrimary
+                            color = if (isDropTarget) StudioColors.TextInverse else StudioColors.TextPrimary
                         )
                     )
                 }
@@ -292,12 +346,15 @@ private fun ModifierSortableCard(
                     Text(
                         text = modifierDef::class.simpleName ?: "Modifier",
                         style = StudioTypography.UIBody.copy(
-                            fontWeight = if (isDragging) FontWeight.SemiBold else FontWeight.Normal
+                            fontWeight = if (isDropTarget) FontWeight.Bold else FontWeight.Normal,
+                            color = if (isSourceDragging) StudioColors.TextMuted else StudioColors.TextPrimary
                         )
                     )
                     Text(
                         text = formatModifierDetails(modifierDef),
-                        style = StudioTypography.Caption,
+                        style = StudioTypography.Caption.copy(
+                            color = if (isSourceDragging) StudioColors.TextMuted else StudioColors.TextSecondary
+                        ),
                         maxLines = 1
                     )
                 }
