@@ -7,7 +7,7 @@ plugins {
 }
 
 kotlin {
-    jvmToolchain(21)
+    jvmToolchain(25)
     jvm("desktop")
 
     sourceSets {
@@ -44,6 +44,10 @@ kotlin {
 compose.desktop {
     application {
         mainClass = "dev.chandradsl.m3c.app.desktop.MainKt"
+        val sdkmanJavaHome = File(System.getProperty("user.home"), ".sdkman/candidates/java/current")
+        if (sdkmanJavaHome.exists()) {
+            javaHome = sdkmanJavaHome.absolutePath
+        }
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
             packageName = "m3c-studio"
