@@ -29,10 +29,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import dev.chandradsl.m3c.app.desktop.state.StudioViewModel
+import dev.chandradsl.m3c.app.desktop.theme.StudioColors
+import dev.chandradsl.m3c.app.desktop.theme.StudioTypography
 import dev.chandradsl.m3c.core.domain.store.WorkspaceIntent
 import dev.chandradsl.m3c.runtime.renderer.renderers.NodeRenderer
 
@@ -49,7 +49,7 @@ fun CanvasViewport(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Color(0xFF11111B)) // Deep dark editor backdrop
+            .background(StudioColors.CanvasBackdrop)
             .clickable(
                 interactionSource = backdropInteraction,
                 indication = null
@@ -69,36 +69,33 @@ fun CanvasViewport(
             // Device Frame Header Tag & Mode Indicator
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.padding(bottom = 8.dp)
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                modifier = Modifier.padding(bottom = 10.dp)
             ) {
                 Text(
                     text = "Mobile Device • 390 × 844",
-                    color = Color(0xFF6C7086),
-                    fontSize = 11.sp
+                    style = StudioTypography.Caption
                 )
 
                 if (viewModel.isInteractiveMode) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
                         modifier = Modifier
-                            .clip(RoundedCornerShape(10.dp))
+                            .clip(RoundedCornerShape(12.dp))
                             .background(Color(0xFF1E3A2F))
-                            .border(width = 1.dp, color = Color(0xFFA6E3A1), shape = RoundedCornerShape(10.dp))
-                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                            .border(width = 1.dp, color = StudioColors.Success, shape = RoundedCornerShape(12.dp))
+                            .padding(horizontal = 8.dp, vertical = 3.dp)
                     ) {
                         Box(
                             modifier = Modifier
                                 .size(6.dp)
                                 .clip(CircleShape)
-                                .background(Color(0xFFA6E3A1))
+                                .background(StudioColors.Success)
                         )
                         Text(
                             text = "Interactive Mode",
-                            color = Color(0xFFA6E3A1),
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.SemiBold
+                            style = StudioTypography.Badge.copy(color = StudioColors.Success)
                         )
                     }
                 }
@@ -113,7 +110,7 @@ fun CanvasViewport(
                     .clip(RoundedCornerShape(24.dp))
                     .border(
                         width = 2.dp,
-                        color = if (viewModel.isInteractiveMode) Color(0xFFA6E3A1).copy(alpha = 0.5f) else Color(0xFF313244),
+                        color = if (viewModel.isInteractiveMode) StudioColors.Success.copy(alpha = 0.5f) else StudioColors.BorderSubtle,
                         shape = RoundedCornerShape(24.dp)
                     )
             ) {

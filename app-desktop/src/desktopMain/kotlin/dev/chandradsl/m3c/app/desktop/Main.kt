@@ -21,13 +21,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import dev.chandradsl.m3c.app.desktop.components.*
 import dev.chandradsl.m3c.app.desktop.state.LeftDrawerTab
 import dev.chandradsl.m3c.app.desktop.state.StudioViewModel
+import dev.chandradsl.m3c.app.desktop.theme.StudioColors
+import dev.chandradsl.m3c.app.desktop.theme.StudioSizes
+import dev.chandradsl.m3c.app.desktop.theme.StudioTypography
 
 fun main() = application {
     val windowState = rememberWindowState(width = 1440.dp, height = 900.dp)
@@ -39,24 +41,24 @@ fun main() = application {
     ) {
         val viewModel = remember { StudioViewModel() }
 
-        // Top-Level Studio Dark Material Theme
+        // Top-Level Studio Dark Material Theme (WCAG 2.2 AA Compliant)
         MaterialTheme(
             colorScheme = darkColorScheme(
-                background = Color(0xFF11111B),
-                surface = Color(0xFF181825),
-                surfaceVariant = Color(0xFF1E1E2E),
-                primary = Color(0xFFCBA6F7),
-                onPrimary = Color(0xFF11111B),
-                onBackground = Color(0xFFCDD6F4),
-                onSurface = Color(0xFFCDD6F4),
-                outline = Color(0xFF313244),
-                outlineVariant = Color(0xFF45475A)
+                background = StudioColors.CanvasBackdrop,
+                surface = StudioColors.PanelSurface,
+                surfaceVariant = StudioColors.CardSurface,
+                primary = StudioColors.Primary,
+                onPrimary = StudioColors.TextInverse,
+                onBackground = StudioColors.TextPrimary,
+                onSurface = StudioColors.TextPrimary,
+                outline = StudioColors.BorderSubtle,
+                outlineVariant = StudioColors.BorderActive
             )
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color(0xFF11111B))
+                    .background(StudioColors.CanvasBackdrop)
             ) {
                 // 1. Top Studio Toolbar
                 StudioToolbar(viewModel = viewModel)
@@ -72,16 +74,16 @@ fun main() = application {
                         modifier = Modifier
                             .width(viewModel.leftPanelWidth)
                             .fillMaxHeight()
-                            .background(Color(0xFF181825))
-                            .border(width = 1.dp, color = Color(0xFF313244))
+                            .background(StudioColors.PanelSurface)
+                            .border(width = 1.dp, color = StudioColors.BorderSubtle)
                     ) {
                         // Tab Switcher Header
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(40.dp)
-                                .background(Color(0xFF181825))
-                                .border(width = 1.dp, color = Color(0xFF313244))
+                                .height(44.dp)
+                                .background(StudioColors.PanelSurface)
+                                .border(width = 1.dp, color = StudioColors.BorderSubtle)
                                 .padding(4.dp),
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
@@ -154,8 +156,8 @@ private fun LeftTabButton(
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
-    val bgColor = if (isActive) Color(0xFF313244) else Color.Transparent
-    val tintColor = if (isActive) Color(0xFFCBA6F7) else Color(0xFF6C7086)
+    val bgColor = if (isActive) StudioColors.ActiveSurface else Color.Transparent
+    val tintColor = if (isActive) StudioColors.Primary else StudioColors.TextSecondary
 
     Row(
         modifier = modifier
@@ -163,7 +165,7 @@ private fun LeftTabButton(
             .clip(RoundedCornerShape(4.dp))
             .background(bgColor)
             .clickable(onClick = onClick)
-            .padding(horizontal = 8.dp),
+            .padding(horizontal = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center
     ) {
@@ -171,13 +173,14 @@ private fun LeftTabButton(
             imageVector = icon,
             contentDescription = text,
             tint = tintColor,
-            modifier = Modifier.width(14.dp)
+            modifier = Modifier.size(StudioSizes.IconMedium)
         )
         Text(
             text = text,
-            color = tintColor,
-            fontSize = 11.sp,
-            fontWeight = if (isActive) FontWeight.SemiBold else FontWeight.Normal,
+            style = StudioTypography.UIBody.copy(
+                color = tintColor,
+                fontWeight = if (isActive) FontWeight.SemiBold else FontWeight.Normal
+            ),
             modifier = Modifier.padding(start = 6.dp)
         )
     }

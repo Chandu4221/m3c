@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -46,12 +45,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import dev.chandradsl.m3c.app.desktop.state.StudioViewModel
+import dev.chandradsl.m3c.app.desktop.theme.StudioColors
+import dev.chandradsl.m3c.app.desktop.theme.StudioSizes
+import dev.chandradsl.m3c.app.desktop.theme.StudioTypography
 import dev.chandradsl.m3c.core.domain.model.ComposableNode
 import dev.chandradsl.m3c.core.domain.model.DpVal
 import dev.chandradsl.m3c.core.domain.model.ModifierDef
@@ -77,11 +76,11 @@ fun ComponentPalette(
         modifier = modifier
             .fillMaxWidth()
             .fillMaxHeight()
-            .background(Color(0xFF181825))
-            .border(width = 1.dp, color = Color(0xFF313244))
-            .padding(12.dp)
+            .background(StudioColors.PanelSurface)
+            .border(width = 1.dp, color = StudioColors.BorderSubtle)
+            .padding(14.dp)
             .verticalScroll(scrollState),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
         // 1. Layout Containers
         PaletteCategory(
@@ -236,17 +235,14 @@ private fun PaletteCategory(
     isInteractive: Boolean,
     onSelect: (ComposableNode) -> Unit
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
             text = title,
-            color = Color(0xFF6C7086),
-            fontSize = 10.sp,
-            fontWeight = FontWeight.Bold,
-            letterSpacing = 1.sp,
+            style = StudioTypography.SectionHeader,
             modifier = Modifier.padding(horizontal = 4.dp)
         )
 
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             items.forEach { item ->
                 PaletteComponentCard(item = item, isInteractive = isInteractive) {
                     onSelect(item.factory())
@@ -266,31 +262,36 @@ private fun PaletteComponentCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(6.dp))
-            .background(if (isInteractive) Color(0xFF181825) else Color(0xFF1E1E2E))
-            .border(width = 1.dp, color = Color(0xFF313244), shape = RoundedCornerShape(6.dp))
+            .background(if (isInteractive) StudioColors.PanelSurface else StudioColors.CardSurface)
+            .border(
+                width = 1.dp,
+                color = StudioColors.BorderSubtle,
+                shape = RoundedCornerShape(6.dp)
+            )
             .clickable(enabled = !isInteractive, onClick = onClick)
-            .padding(8.dp),
+            .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         Icon(
             imageVector = item.icon,
             contentDescription = item.name,
-            tint = if (isInteractive) Color(0xFF585B70) else Color(0xFFCBA6F7),
-            modifier = Modifier.size(16.dp)
+            tint = if (isInteractive) StudioColors.TextMuted else StudioColors.Primary,
+            modifier = Modifier.size(StudioSizes.IconStandard)
         )
 
-        Column {
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(
                 text = item.name,
-                color = if (isInteractive) Color(0xFF6C7086) else Color(0xFFCDD6F4),
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Medium
+                style = StudioTypography.UIBody.copy(
+                    color = if (isInteractive) StudioColors.TextMuted else StudioColors.TextPrimary
+                )
             )
             Text(
                 text = item.description,
-                color = Color(0xFF585B70),
-                fontSize = 9.sp
+                style = StudioTypography.Caption.copy(
+                    color = if (isInteractive) StudioColors.TextMuted else StudioColors.TextSecondary
+                )
             )
         }
     }

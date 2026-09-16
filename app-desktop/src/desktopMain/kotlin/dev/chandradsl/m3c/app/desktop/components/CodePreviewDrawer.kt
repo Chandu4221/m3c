@@ -28,12 +28,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import dev.chandradsl.m3c.app.desktop.state.StudioViewModel
+import dev.chandradsl.m3c.app.desktop.theme.StudioColors
+import dev.chandradsl.m3c.app.desktop.theme.StudioSizes
+import dev.chandradsl.m3c.app.desktop.theme.StudioTypography
 import java.awt.Toolkit
 import java.awt.datatransfer.StringSelection
 
@@ -52,25 +52,22 @@ fun CodePreviewDrawer(
         modifier = modifier
             .fillMaxWidth()
             .height(viewModel.codeDrawerHeight)
-            .background(Color(0xFF1E1E2E))
-            .border(width = 1.dp, color = Color(0xFF313244))
+            .background(StudioColors.CardSurface)
+            .border(width = 1.dp, color = StudioColors.BorderSubtle)
     ) {
         // Drawer Header Bar
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(36.dp)
-                .background(Color(0xFF181825))
-                .padding(horizontal = 14.dp),
+                .height(42.dp)
+                .background(StudioColors.PanelSurface)
+                .padding(horizontal = 16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
                 text = "GENERATED KOTLIN SOURCE (COMPOSE MULTIPLATFORM)",
-                color = Color(0xFFCBA6F7),
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 0.5.sp
+                style = StudioTypography.SectionHeader.copy(color = StudioColors.Primary)
             )
 
             Row(
@@ -81,43 +78,46 @@ fun CodePreviewDrawer(
                 Row(
                     modifier = Modifier
                         .clip(RoundedCornerShape(4.dp))
-                        .background(if (copied) Color(0xFFA6E3A1) else Color(0xFF313244))
+                        .background(if (copied) StudioColors.Success else StudioColors.ActiveSurface)
+                        .border(width = 1.dp, color = StudioColors.BorderSubtle, shape = RoundedCornerShape(4.dp))
                         .clickable {
                             val selection = StringSelection(viewModel.generatedCode)
                             Toolkit.getDefaultToolkit().systemClipboard.setContents(selection, null)
                             copied = true
                         }
-                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                        .padding(horizontal = 10.dp, vertical = 5.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.ContentCopy,
                         contentDescription = "Copy",
-                        tint = if (copied) Color(0xFF181825) else Color(0xFFCDD6F4),
-                        modifier = Modifier.size(12.dp)
+                        tint = if (copied) StudioColors.TextInverse else StudioColors.TextPrimary,
+                        modifier = Modifier.size(StudioSizes.IconSmall)
                     )
                     Text(
                         text = if (copied) "Copied!" else "Copy Code",
-                        color = if (copied) Color(0xFF181825) else Color(0xFFCDD6F4),
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.SemiBold
+                        style = StudioTypography.Caption.copy(
+                            color = if (copied) StudioColors.TextInverse else StudioColors.TextPrimary,
+                            fontWeight = FontWeight.SemiBold
+                        )
                     )
                 }
 
                 // Close Drawer Button
                 Box(
                     modifier = Modifier
-                        .size(20.dp)
+                        .size(24.dp)
                         .clip(RoundedCornerShape(4.dp))
+                        .background(StudioColors.ActiveSurface)
                         .clickable { viewModel.isCodeDrawerOpen = false },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.Close,
                         contentDescription = "Close",
-                        tint = Color(0xFF6C7086),
-                        modifier = Modifier.size(14.dp)
+                        tint = StudioColors.TextSecondary,
+                        modifier = Modifier.size(StudioSizes.IconSmall)
                     )
                 }
             }
@@ -128,16 +128,13 @@ fun CodePreviewDrawer(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
-                .padding(12.dp)
+                .padding(14.dp)
                 .verticalScroll(vScroll)
                 .horizontalScroll(hScroll)
         ) {
             Text(
                 text = viewModel.generatedCode,
-                color = Color(0xFFA6E3A1), // IDE syntax green
-                fontFamily = FontFamily.Monospace,
-                fontSize = 12.sp,
-                lineHeight = 16.sp
+                style = StudioTypography.CodeMonospace
             )
         }
     }

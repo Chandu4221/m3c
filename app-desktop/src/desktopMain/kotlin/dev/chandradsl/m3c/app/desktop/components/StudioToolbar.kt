@@ -29,10 +29,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import dev.chandradsl.m3c.app.desktop.state.StudioViewModel
+import dev.chandradsl.m3c.app.desktop.theme.StudioColors
+import dev.chandradsl.m3c.app.desktop.theme.StudioSizes
+import dev.chandradsl.m3c.app.desktop.theme.StudioTypography
 
 @Composable
 fun StudioToolbar(
@@ -44,46 +45,40 @@ fun StudioToolbar(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(52.dp)
-            .background(Color(0xFF1E1E2E))
-            .border(width = 1.dp, color = Color(0xFF313244))
+            .height(56.dp)
+            .background(StudioColors.CardSurface)
+            .border(width = 1.dp, color = StudioColors.BorderSubtle)
             .padding(horizontal = 16.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // ====================================================================
         // Left: Branding & Current Selection Tag
-        // ====================================================================
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             Text(
                 text = "m3c studio",
-                color = Color(0xFFCBA6F7), // M3 lavender accent
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Bold
+                style = StudioTypography.AppTitle
             )
 
             state.selectedNodeId?.let { selectedId ->
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(4.dp))
-                        .background(Color(0xFF313244))
-                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                        .background(StudioColors.ActiveSurface)
+                        .border(width = 1.dp, color = StudioColors.BorderSubtle, shape = RoundedCornerShape(4.dp))
+                        .padding(horizontal = 10.dp, vertical = 4.dp)
                 ) {
                     Text(
                         text = "Selected: ${selectedId.value}",
-                        color = Color(0xFFA6ADC8),
-                        fontSize = 11.sp
+                        style = StudioTypography.Caption
                     )
                 }
             }
         }
 
-        // ====================================================================
         // Center: History & Mode Toggles
-        // ====================================================================
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -104,16 +99,17 @@ fun StudioToolbar(
 
             Box(
                 modifier = Modifier
-                    .height(20.dp)
+                    .height(24.dp)
                     .width(1.dp)
-                    .background(Color(0xFF45475A))
+                    .background(StudioColors.BorderSubtle)
             )
 
             // Mode Toggle (Design vs Interactive)
             Row(
                 modifier = Modifier
                     .clip(RoundedCornerShape(6.dp))
-                    .background(Color(0xFF313244))
+                    .background(StudioColors.ActiveSurface)
+                    .border(width = 1.dp, color = StudioColors.BorderSubtle, shape = RoundedCornerShape(6.dp))
                     .padding(2.dp)
             ) {
                 ModeTabButton(
@@ -131,9 +127,7 @@ fun StudioToolbar(
             }
         }
 
-        // ====================================================================
         // Right: Theme, Code & Delete Actions
-        // ====================================================================
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -144,7 +138,7 @@ fun StudioToolbar(
                     icon = Icons.Default.Delete,
                     label = "Delete",
                     enabled = true,
-                    activeColor = Color(0xFFF38BA8),
+                    activeColor = StudioColors.Error,
                     onClick = { viewModel.deleteSelectedNode() }
                 )
             }
@@ -175,14 +169,14 @@ private fun ToolbarIconButton(
     label: String,
     enabled: Boolean,
     isActive: Boolean = false,
-    activeColor: Color = Color(0xFFCBA6F7),
+    activeColor: Color = StudioColors.Primary,
     onClick: () -> Unit
 ) {
-    val bgColor = if (isActive) Color(0xFF45475A) else Color.Transparent
+    val bgColor = if (isActive) StudioColors.ActiveSurface else Color.Transparent
     val tintColor = when {
-        !enabled -> Color(0xFF585B70)
+        !enabled -> StudioColors.TextMuted
         isActive -> activeColor
-        else -> Color(0xFFCDD6F4)
+        else -> StudioColors.TextPrimary
     }
 
     Row(
@@ -190,7 +184,7 @@ private fun ToolbarIconButton(
             .clip(RoundedCornerShape(6.dp))
             .background(bgColor)
             .clickable(enabled = enabled, onClick = onClick)
-            .padding(horizontal = 10.dp, vertical = 6.dp),
+            .padding(horizontal = 12.dp, vertical = 7.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp)
     ) {
@@ -198,13 +192,11 @@ private fun ToolbarIconButton(
             imageVector = icon,
             contentDescription = label,
             tint = tintColor,
-            modifier = Modifier.size(16.dp)
+            modifier = Modifier.size(StudioSizes.IconMedium)
         )
         Text(
             text = label,
-            color = tintColor,
-            fontSize = 12.sp,
-            fontWeight = if (isActive) FontWeight.SemiBold else FontWeight.Normal
+            style = StudioTypography.UIBody.copy(color = tintColor)
         )
     }
 }
@@ -216,15 +208,15 @@ private fun ModeTabButton(
     isActive: Boolean,
     onClick: () -> Unit
 ) {
-    val bgColor = if (isActive) Color(0xFF1E1E2E) else Color.Transparent
-    val tintColor = if (isActive) Color(0xFFCBA6F7) else Color(0xFFA6ADC8)
+    val bgColor = if (isActive) StudioColors.CardSurface else Color.Transparent
+    val tintColor = if (isActive) StudioColors.Primary else StudioColors.TextSecondary
 
     Row(
         modifier = Modifier
             .clip(RoundedCornerShape(4.dp))
             .background(bgColor)
             .clickable(onClick = onClick)
-            .padding(horizontal = 10.dp, vertical = 4.dp),
+            .padding(horizontal = 12.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp)
     ) {
@@ -232,13 +224,11 @@ private fun ModeTabButton(
             imageVector = icon,
             contentDescription = text,
             tint = tintColor,
-            modifier = Modifier.size(14.dp)
+            modifier = Modifier.size(StudioSizes.IconMedium)
         )
         Text(
             text = text,
-            color = tintColor,
-            fontSize = 12.sp,
-            fontWeight = if (isActive) FontWeight.SemiBold else FontWeight.Normal
+            style = StudioTypography.UIBody.copy(color = tintColor)
         )
     }
 }

@@ -51,8 +51,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import dev.chandradsl.m3c.app.desktop.state.StudioViewModel
+import dev.chandradsl.m3c.app.desktop.theme.StudioColors
+import dev.chandradsl.m3c.app.desktop.theme.StudioSizes
+import dev.chandradsl.m3c.app.desktop.theme.StudioTypography
 import dev.chandradsl.m3c.core.domain.model.ComposableNode
 import dev.chandradsl.m3c.core.domain.model.NodeId
 import dev.chandradsl.m3c.core.domain.store.WorkspaceIntent
@@ -69,18 +71,15 @@ fun HierarchyTree(
         modifier = modifier
             .fillMaxWidth()
             .fillMaxHeight()
-            .background(Color(0xFF181825))
-            .border(width = 1.dp, color = Color(0xFF313244))
-            .padding(12.dp)
+            .background(StudioColors.PanelSurface)
+            .border(width = 1.dp, color = StudioColors.BorderSubtle)
+            .padding(14.dp)
             .verticalScroll(scrollState),
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         Text(
             text = "COMPONENT TREE",
-            color = Color(0xFF6C7086),
-            fontSize = 10.sp,
-            fontWeight = FontWeight.Bold,
-            letterSpacing = 1.sp,
+            style = StudioTypography.SectionHeader,
             modifier = Modifier.padding(horizontal = 4.dp, vertical = 6.dp)
         )
 
@@ -108,8 +107,8 @@ private fun RenderTreeNode(
     slotLabel: String? = null
 ) {
     val isSelected = node.id == selectedId
-    val bgColor = if (isSelected) Color(0xFF313244) else Color.Transparent
-    val accentColor = if (isSelected) Color(0xFFCBA6F7) else Color(0xFFCDD6F4)
+    val bgColor = if (isSelected) StudioColors.ActiveSurface else Color.Transparent
+    val accentColor = if (isSelected) StudioColors.Primary else StudioColors.TextPrimary
 
     Row(
         modifier = Modifier
@@ -117,42 +116,40 @@ private fun RenderTreeNode(
             .clip(RoundedCornerShape(4.dp))
             .background(bgColor)
             .clickable(enabled = !isInteractive) { onSelect(node.id) }
-            .padding(start = (depth * 14).dp, top = 4.dp, bottom = 4.dp, end = 6.dp),
+            .padding(start = (depth * 16).dp, top = 6.dp, bottom = 6.dp, end = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp)
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         // Material Icon
         Icon(
             imageVector = getNodeIcon(node),
             contentDescription = null,
             tint = accentColor,
-            modifier = Modifier.size(14.dp)
+            modifier = Modifier.size(StudioSizes.IconMedium)
         )
 
         // Slot label (if inside a named slot)
         if (slotLabel != null) {
             Text(
                 text = "[$slotLabel]",
-                color = Color(0xFFF9E2AF),
-                fontSize = 10.sp,
-                fontWeight = FontWeight.SemiBold
+                style = StudioTypography.Badge.copy(color = StudioColors.Warning)
             )
         }
 
         // Component name
         Text(
             text = getNodeLabel(node),
-            color = accentColor,
-            fontSize = 11.sp,
-            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+            style = StudioTypography.UIBody.copy(
+                color = accentColor,
+                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
+            ),
             modifier = Modifier.weight(1f)
         )
 
-        // ID tag
+        // ID tag (adheres to 12px hard floor with 7.1:1 contrast)
         Text(
             text = node.id.value.takeLast(6),
-            color = Color(0xFF585B70),
-            fontSize = 9.sp
+            style = StudioTypography.Caption
         )
     }
 
@@ -215,7 +212,7 @@ private fun getNodeLabel(node: ComposableNode): String = when (node) {
     is ComposableNode.TextButtonNode -> "Text Button"
     is ComposableNode.IconButtonNode -> "Icon Button"
     is ComposableNode.FloatingActionButtonNode -> "FAB"
-    is ComposableNode.TextNode -> "Text: \"${node.text.take(12)}\""
+    is ComposableNode.TextNode -> "Text: \"${node.text.take(16)}\""
     is ComposableNode.TextFieldNode -> "TextField: ${node.label ?: ""}"
     is ComposableNode.OutlinedTextFieldNode -> "OutlinedTextField: ${node.label ?: ""}"
     is ComposableNode.CheckboxNode -> "Checkbox"

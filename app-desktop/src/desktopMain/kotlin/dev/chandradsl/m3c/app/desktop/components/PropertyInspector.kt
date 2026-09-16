@@ -31,13 +31,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.chandradsl.m3c.app.desktop.state.StudioViewModel
+import dev.chandradsl.m3c.app.desktop.theme.StudioColors
+import dev.chandradsl.m3c.app.desktop.theme.StudioSizes
+import dev.chandradsl.m3c.app.desktop.theme.StudioTypography
 import dev.chandradsl.m3c.core.domain.model.AlignmentDef
 import dev.chandradsl.m3c.core.domain.model.AlignmentHorizontalDef
 import dev.chandradsl.m3c.core.domain.model.AlignmentVerticalDef
@@ -59,9 +60,9 @@ fun PropertyInspector(
         modifier = modifier
             .width(viewModel.rightPanelWidth)
             .fillMaxHeight()
-            .background(Color(0xFF181825))
-            .border(width = 1.dp, color = Color(0xFF313244))
-            .padding(14.dp)
+            .background(StudioColors.PanelSurface)
+            .border(width = 1.dp, color = StudioColors.BorderSubtle)
+            .padding(16.dp)
             .verticalScroll(scrollState),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
@@ -80,49 +81,47 @@ fun PropertyInspector(
                         modifier = Modifier
                             .size(48.dp)
                             .clip(RoundedCornerShape(24.dp))
-                            .background(Color(0xFF313244)),
+                            .background(StudioColors.ActiveSurface),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.TouchApp,
                             contentDescription = null,
-                            tint = Color(0xFFCBA6F7),
+                            tint = StudioColors.Primary,
                             modifier = Modifier.size(24.dp)
                         )
                     }
 
                     Text(
                         text = "Interactive Mode Active",
-                        color = Color(0xFFCDD6F4),
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold
+                        style = StudioTypography.ComponentTitle,
+                        textAlign = TextAlign.Center
                     )
 
                     Text(
                         text = "Styling edits are locked during interactive preview. Click components on the canvas to test buttons, inputs, and states directly.",
-                        color = Color(0xFF6C7086),
-                        fontSize = 11.sp,
-                        lineHeight = 15.sp,
+                        style = StudioTypography.Caption,
                         textAlign = TextAlign.Center
                     )
 
                     Button(
                         onClick = { viewModel.updateInteractiveMode(false) },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFCBA6F7)),
+                        colors = ButtonDefaults.buttonColors(containerColor = StudioColors.Primary),
                         shape = RoundedCornerShape(6.dp),
                         modifier = Modifier.padding(top = 8.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.DesignServices,
                             contentDescription = null,
-                            tint = Color(0xFF11111B),
-                            modifier = Modifier.size(14.dp).padding(end = 4.dp)
+                            tint = StudioColors.TextInverse,
+                            modifier = Modifier.size(StudioSizes.IconSmall).padding(end = 4.dp)
                         )
                         Text(
                             text = "Switch to Design Mode",
-                            color = Color(0xFF11111B),
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold
+                            style = StudioTypography.UIBody.copy(
+                                color = StudioColors.TextInverse,
+                                fontWeight = FontWeight.Bold
+                            )
                         )
                     }
                 }
@@ -133,14 +132,13 @@ fun PropertyInspector(
         // 2. Empty Selection State
         if (selectedNode == null) {
             Box(
-                modifier = Modifier.fillMaxWidth().height(200.dp),
+                modifier = Modifier.fillMaxWidth().height(220.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "Select any component on canvas to inspect properties",
-                    color = Color(0xFF6C7086),
-                    fontSize = 12.sp,
-                    lineHeight = 16.sp,
+                    text = "Select any component on canvas or tree to inspect properties",
+                    style = StudioTypography.Caption,
+                    textAlign = TextAlign.Center,
                     modifier = Modifier.padding(16.dp)
                 )
             }
@@ -153,22 +151,19 @@ fun PropertyInspector(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column {
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
                     text = selectedNode::class.simpleName?.replace("Node", "") ?: "Component",
-                    color = Color(0xFFCBA6F7),
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold
+                    style = StudioTypography.ComponentTitle
                 )
                 Text(
                     text = "ID: ${selectedNode.id.value}",
-                    color = Color(0xFF6C7086),
-                    fontSize = 10.sp
+                    style = StudioTypography.Caption
                 )
             }
         }
 
-        Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color(0xFF313244)))
+        Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(StudioColors.BorderSubtle))
 
         // 4. Specific Component Property Editors
         when (selectedNode) {
@@ -205,7 +200,7 @@ fun PropertyInspector(
                     Switch(
                         checked = selectedNode.singleLine,
                         onCheckedChange = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(singleLine = it))) },
-                        colors = SwitchDefaults.colors(checkedThumbColor = Color(0xFFCBA6F7))
+                        colors = SwitchDefaults.colors(checkedThumbColor = StudioColors.Primary)
                     )
                 }
             }
@@ -256,7 +251,7 @@ fun PropertyInspector(
                     Switch(
                         checked = selectedNode.propagateMinConstraints,
                         onCheckedChange = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(propagateMinConstraints = it))) },
-                        colors = SwitchDefaults.colors(checkedThumbColor = Color(0xFFCBA6F7))
+                        colors = SwitchDefaults.colors(checkedThumbColor = StudioColors.Primary)
                     )
                 }
             }
@@ -266,7 +261,7 @@ fun PropertyInspector(
                     Switch(
                         checked = selectedNode.enabled,
                         onCheckedChange = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(enabled = it))) },
-                        colors = SwitchDefaults.colors(checkedThumbColor = Color(0xFFCBA6F7))
+                        colors = SwitchDefaults.colors(checkedThumbColor = StudioColors.Primary)
                     )
                 }
             }
@@ -276,14 +271,14 @@ fun PropertyInspector(
                     Switch(
                         checked = selectedNode.checked,
                         onCheckedChange = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(checked = it))) },
-                        colors = SwitchDefaults.colors(checkedThumbColor = Color(0xFFCBA6F7))
+                        colors = SwitchDefaults.colors(checkedThumbColor = StudioColors.Primary)
                     )
                 }
                 InspectorField(label = "Enabled") {
                     Switch(
                         checked = selectedNode.enabled,
                         onCheckedChange = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(enabled = it))) },
-                        colors = SwitchDefaults.colors(checkedThumbColor = Color(0xFFCBA6F7))
+                        colors = SwitchDefaults.colors(checkedThumbColor = StudioColors.Primary)
                     )
                 }
             }
@@ -293,7 +288,7 @@ fun PropertyInspector(
                     Switch(
                         checked = selectedNode.checked,
                         onCheckedChange = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(checked = it))) },
-                        colors = SwitchDefaults.colors(checkedThumbColor = Color(0xFFCBA6F7))
+                        colors = SwitchDefaults.colors(checkedThumbColor = StudioColors.Primary)
                     )
                 }
             }
@@ -301,13 +296,12 @@ fun PropertyInspector(
             else -> {
                 Text(
                     text = "No custom properties for this component type.",
-                    color = Color(0xFF6C7086),
-                    fontSize = 11.sp
+                    style = StudioTypography.Caption
                 )
             }
         }
 
-        Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color(0xFF313244)))
+        Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(StudioColors.BorderSubtle))
 
         // 5. Modifiers Section
         ModifierInspector(viewModel = viewModel, node = selectedNode)
@@ -325,9 +319,10 @@ fun InspectorField(
     ) {
         Text(
             text = label,
-            color = Color(0xFFA6ADC8),
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Medium
+            style = StudioTypography.Caption.copy(
+                fontWeight = FontWeight.Medium,
+                color = StudioColors.TextPrimary
+            )
         )
         content()
     }
@@ -343,15 +338,15 @@ fun InspectorTextInput(
         onValueChange = onValueChange,
         modifier = Modifier.fillMaxWidth(),
         singleLine = true,
-        textStyle = TextStyle(color = Color(0xFFCDD6F4), fontSize = 13.sp),
+        textStyle = StudioTypography.InputText,
         colors = OutlinedTextFieldDefaults.colors(
-            focusedTextColor = Color(0xFFCDD6F4),
-            unfocusedTextColor = Color(0xFFCDD6F4),
-            focusedContainerColor = Color(0xFF1E1E2E),
-            unfocusedContainerColor = Color(0xFF181825),
-            focusedBorderColor = Color(0xFFCBA6F7),
-            unfocusedBorderColor = Color(0xFF313244),
-            cursorColor = Color(0xFFCBA6F7)
+            focusedTextColor = StudioColors.TextPrimary,
+            unfocusedTextColor = StudioColors.TextPrimary,
+            focusedContainerColor = StudioColors.CardSurface,
+            unfocusedContainerColor = StudioColors.CardSurface,
+            focusedBorderColor = StudioColors.BorderActive,
+            unfocusedBorderColor = StudioColors.BorderSubtle,
+            cursorColor = StudioColors.Primary
         )
     )
 }
@@ -362,28 +357,34 @@ fun <T : Enum<T>> EnumSelector(
     selected: T,
     onSelect: (T) -> Unit
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         values.take(6).chunked(2).forEach { rowItems ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 rowItems.forEach { item ->
                     val isChosen = item == selected
                     Box(
                         modifier = Modifier
                             .weight(1f)
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(if (isChosen) Color(0xFFCBA6F7) else Color(0xFF1E1E2E))
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(if (isChosen) StudioColors.Primary else StudioColors.CardSurface)
+                            .border(
+                                width = 1.dp,
+                                color = if (isChosen) StudioColors.Primary else StudioColors.BorderSubtle,
+                                shape = RoundedCornerShape(6.dp)
+                            )
                             .clickable { onSelect(item) }
-                            .padding(vertical = 4.dp),
+                            .padding(vertical = 6.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = item.name,
-                            color = if (isChosen) Color(0xFF1E1E2E) else Color(0xFFCDD6F4),
-                            fontSize = 10.sp,
-                            fontWeight = if (isChosen) FontWeight.Bold else FontWeight.Normal
+                            style = StudioTypography.Caption.copy(
+                                color = if (isChosen) StudioColors.TextInverse else StudioColors.TextPrimary,
+                                fontWeight = if (isChosen) FontWeight.Bold else FontWeight.Normal
+                            )
                         )
                     }
                 }
