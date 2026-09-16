@@ -3,7 +3,9 @@ package dev.chandradsl.m3c.app.desktop.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -22,7 +24,29 @@ import androidx.compose.material.icons.filled.CheckBox
 import androidx.compose.material.icons.filled.CheckBoxOutlineBlank
 import androidx.compose.material.icons.filled.CropLandscape
 import androidx.compose.material.icons.filled.CropPortrait
+import androidx.compose.material.icons.filled.DragIndicator
 import androidx.compose.material.icons.filled.EditNote
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.ui.unit.dp
+import dev.chandradsl.m3c.app.desktop.state.DraggedPaletteItem
+import dev.chandradsl.m3c.app.desktop.state.StudioViewModel
+import java.awt.Cursor
 import androidx.compose.material.icons.filled.Highlight
 import androidx.compose.material.icons.filled.HorizontalDistribute
 import androidx.compose.material.icons.filled.HorizontalRule
@@ -39,15 +63,6 @@ import androidx.compose.material.icons.filled.VerticalDistribute
 import androidx.compose.material.icons.filled.ViewColumn
 import androidx.compose.material.icons.filled.ViewStream
 import androidx.compose.material.icons.filled.WebAsset
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.unit.dp
-import dev.chandradsl.m3c.app.desktop.state.StudioViewModel
 import dev.chandradsl.m3c.app.desktop.theme.StudioColors
 import dev.chandradsl.m3c.app.desktop.theme.StudioSizes
 import dev.chandradsl.m3c.app.desktop.theme.StudioTypography
@@ -99,8 +114,7 @@ fun ComponentPalette(
                     ComposableNode.SpacerNode(modifiers = listOf(ModifierDef.Height(DpVal(16f))))
                 }
             ),
-            isInteractive = viewModel.isInteractiveMode,
-            onSelect = viewModel::insertComponent
+            viewModel = viewModel
         )
 
         // 2. Surfaces & Cards
@@ -129,8 +143,7 @@ fun ComponentPalette(
                     )
                 }
             ),
-            isInteractive = viewModel.isInteractiveMode,
-            onSelect = viewModel::insertComponent
+            viewModel = viewModel
         )
 
         // 3. Buttons & Actions
@@ -162,8 +175,7 @@ fun ComponentPalette(
                     )
                 }
             ),
-            isInteractive = viewModel.isInteractiveMode,
-            onSelect = viewModel::insertComponent
+            viewModel = viewModel
         )
 
         // 4. Text & Inputs
@@ -180,8 +192,7 @@ fun ComponentPalette(
                     ComposableNode.OutlinedTextFieldNode(label = "Input Label")
                 }
             ),
-            isInteractive = viewModel.isInteractiveMode,
-            onSelect = viewModel::insertComponent
+            viewModel = viewModel
         )
 
         // 5. Selection & Feedback
@@ -207,8 +218,7 @@ fun ComponentPalette(
                     ComposableNode.LinearProgressIndicatorNode(progress = 0.6f)
                 }
             ),
-            isInteractive = viewModel.isInteractiveMode,
-            onSelect = viewModel::insertComponent
+            viewModel = viewModel
         )
 
         // 6. Dividers
@@ -222,8 +232,7 @@ fun ComponentPalette(
                     ComposableNode.VerticalDividerNode(modifiers = listOf(ModifierDef.Height(DpVal(24f))))
                 }
             ),
-            isInteractive = viewModel.isInteractiveMode,
-            onSelect = viewModel::insertComponent
+            viewModel = viewModel
         )
     }
 }
@@ -232,8 +241,7 @@ fun ComponentPalette(
 private fun PaletteCategory(
     title: String,
     items: List<PaletteItem>,
-    isInteractive: Boolean,
-    onSelect: (ComposableNode) -> Unit
+    viewModel: StudioViewModel
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
@@ -244,8 +252,8 @@ private fun PaletteCategory(
 
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             items.forEach { item ->
-                PaletteComponentCard(item = item, isInteractive = isInteractive) {
-                    onSelect(item.factory())
+                PaletteComponentCard(item = item, viewModel = viewModel) {
+                    viewModel.insertComponent(item.factory())
                 }
             }
         }
@@ -255,9 +263,12 @@ private fun PaletteCategory(
 @Composable
 private fun PaletteComponentCard(
     item: PaletteItem,
-    isInteractive: Boolean,
+    viewModel: StudioViewModel,
     onClick: () -> Unit
 ) {
+    val isInteractive = viewModel.isInteractiveMode
+    var cardPositionInWindow by remember { mutableStateOf(Offset.Zero) }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -268,31 +279,82 @@ private fun PaletteComponentCard(
                 color = StudioColors.BorderSubtle,
                 shape = RoundedCornerShape(6.dp)
             )
+            .onGloballyPositioned { coordinates ->
+                cardPositionInWindow = coordinates.positionInWindow()
+            }
             .clickable(enabled = !isInteractive, onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
+        horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Icon(
-            imageVector = item.icon,
-            contentDescription = item.name,
-            tint = if (isInteractive) StudioColors.TextMuted else StudioColors.Primary,
-            modifier = Modifier.size(StudioSizes.IconStandard)
-        )
+        Row(
+            modifier = Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Icon(
+                imageVector = item.icon,
+                contentDescription = item.name,
+                tint = if (isInteractive) StudioColors.TextMuted else StudioColors.Primary,
+                modifier = Modifier.size(StudioSizes.IconStandard)
+            )
 
-        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(
-                text = item.name,
-                style = StudioTypography.UIBody.copy(
-                    color = if (isInteractive) StudioColors.TextMuted else StudioColors.TextPrimary
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    text = item.name,
+                    style = StudioTypography.UIBody.copy(
+                        color = if (isInteractive) StudioColors.TextMuted else StudioColors.TextPrimary
+                    )
                 )
-            )
-            Text(
-                text = item.description,
-                style = StudioTypography.Caption.copy(
-                    color = if (isInteractive) StudioColors.TextMuted else StudioColors.TextSecondary
+                Text(
+                    text = item.description,
+                    style = StudioTypography.Caption.copy(
+                        color = if (isInteractive) StudioColors.TextMuted else StudioColors.TextSecondary
+                    )
                 )
-            )
+            }
+        }
+
+        // Drag Handle Grip
+        if (!isInteractive) {
+            Box(
+                modifier = Modifier
+                    .size(28.dp)
+                    .clip(RoundedCornerShape(4.dp))
+                    .pointerHoverIcon(PointerIcon(Cursor(Cursor.HAND_CURSOR)))
+                    .pointerInput(item) {
+                        detectDragGestures(
+                            onDragStart = { localOffset ->
+                                val globalStart = cardPositionInWindow + localOffset
+                                val dragItem = DraggedPaletteItem(
+                                    name = item.name,
+                                    description = item.description,
+                                    icon = item.icon,
+                                    factory = item.factory
+                                )
+                                viewModel.startPaletteDrag(dragItem, globalStart)
+                            },
+                            onDrag = { change, dragAmount ->
+                                change.consume()
+                                viewModel.updatePaletteDrag(dragAmount)
+                            },
+                            onDragEnd = {
+                                viewModel.endPaletteDrag()
+                            },
+                            onDragCancel = {
+                                viewModel.cancelPaletteDrag()
+                            }
+                        )
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.DragIndicator,
+                    contentDescription = "Drag to canvas",
+                    tint = StudioColors.TextMuted,
+                    modifier = Modifier.size(StudioSizes.IconMedium)
+                )
+            }
         }
     }
 }

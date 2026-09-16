@@ -20,12 +20,14 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.DesktopWindows
 import androidx.compose.material.icons.filled.FitScreen
 import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.StayCurrentLandscape
 import androidx.compose.material.icons.filled.StayCurrentPortrait
 import androidx.compose.material.icons.filled.TabletMac
+import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material.icons.filled.ZoomIn
 import androidx.compose.material.icons.filled.ZoomOut
 import androidx.compose.material3.Icon
@@ -44,6 +46,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import dev.chandradsl.m3c.app.desktop.state.DevicePreset
@@ -194,6 +198,9 @@ fun CanvasViewport(
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .onGloballyPositioned { coordinates ->
+                    viewModel.updateCanvasBounds(coordinates.boundsInWindow())
+                }
                 .clickable(
                     interactionSource = backdropInteraction,
                     indication = null
@@ -206,22 +213,68 @@ fun CanvasViewport(
                 .horizontalScroll(hScrollState),
             contentAlignment = Alignment.TopCenter
         ) {
+            val isDraggingComponent = viewModel.activeDragItem != null
+            val isDropHovered = viewModel.isCanvasDropHovered
+
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier
-                    .padding(vertical = 32.dp, horizontal = 32.dp)
+                    .padding(vertical = 24.dp, horizontal = 32.dp)
                     .graphicsLayer(
                         scaleX = viewModel.canvasZoom,
                         scaleY = viewModel.canvasZoom,
                         transformOrigin = TransformOrigin(0.5f, 0f)
                     )
             ) {
+                // Drop Indicator Overlay Banner
+                if (isDraggingComponent) {
+                    Box(
+                        modifier = Modifier
+                            .padding(bottom = 14.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(if (isDropHovered) StudioColors.Success.copy(alpha = 0.15f) else StudioColors.PanelSurface)
+                            .border(
+                                width = 1.5.dp,
+                                color = if (isDropHovered) StudioColors.Success else StudioColors.Primary,
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (isDropHovered) Icons.Default.AddCircle else Icons.Default.TouchApp,
+                                contentDescription = null,
+                                tint = if (isDropHovered) StudioColors.Success else StudioColors.Primary,
+                                modifier = Modifier.size(StudioSizes.IconMedium)
+                            )
+                            Text(
+                                text = if (isDropHovered) "Release to drop ${viewModel.activeDragItem?.name} into screen" else "Drag into viewport to insert",
+                                style = StudioTypography.UIBody.copy(
+                                    color = if (isDropHovered) StudioColors.Success else StudioColors.TextPrimary,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            )
+                        }
+                    }
+                }
+
                 // Device Frame Label
                 Text(
                     text = "${viewModel.currentDevicePreset.label} • ${viewModel.currentDevicePreset.width.value.toInt()} × ${viewModel.currentDevicePreset.height.value.toInt()}",
                     style = StudioTypography.Caption,
                     modifier = Modifier.padding(bottom = 10.dp)
                 )
+
+                val frameBorderColor = when {
+                    viewModel.isInteractiveMode -> StudioColors.Success.copy(alpha = 0.5f)
+                    isDraggingComponent && isDropHovered -> StudioColors.Success
+                    isDraggingComponent -> StudioColors.Primary.copy(alpha = 0.6f)
+                    else -> StudioColors.BorderSubtle
+                }
+                val frameBorderWidth = if (isDraggingComponent && isDropHovered) 3.dp else 2.dp
 
                 // Simulated Device Frame
                 Box(
@@ -231,8 +284,8 @@ fun CanvasViewport(
                         .shadow(elevation = 16.dp, shape = RoundedCornerShape(24.dp))
                         .clip(RoundedCornerShape(24.dp))
                         .border(
-                            width = 2.dp,
-                            color = if (viewModel.isInteractiveMode) StudioColors.Success.copy(alpha = 0.5f) else StudioColors.BorderSubtle,
+                            width = frameBorderWidth,
+                            color = frameBorderColor,
                             shape = RoundedCornerShape(24.dp)
                         )
                 ) {

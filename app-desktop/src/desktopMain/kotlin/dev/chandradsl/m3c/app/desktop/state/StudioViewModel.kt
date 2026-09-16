@@ -3,6 +3,9 @@ package dev.chandradsl.m3c.app.desktop.state
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import dev.chandradsl.m3c.core.codegen.ComposeCodeGenerator
@@ -18,6 +21,13 @@ import dev.chandradsl.m3c.core.domain.model.TypographyToken
 import dev.chandradsl.m3c.core.domain.store.WorkspaceIntent
 import dev.chandradsl.m3c.core.domain.store.WorkspaceState
 import dev.chandradsl.m3c.core.domain.store.WorkspaceStore
+
+data class DraggedPaletteItem(
+    val name: String,
+    val description: String,
+    val icon: ImageVector,
+    val factory: () -> ComposableNode
+)
 
 enum class LeftDrawerTab {
     Palette,
@@ -131,6 +141,44 @@ class StudioViewModel {
 
     fun setDevicePreset(preset: DevicePreset) {
         currentDevicePreset = preset
+    }
+
+    // 6. Global Drag & Drop Engine (Palette -> Canvas)
+    var activeDragItem: DraggedPaletteItem? by mutableStateOf(null)
+    var dragPointerOffset: Offset by mutableStateOf(Offset.Zero)
+    var isCanvasDropHovered: Boolean by mutableStateOf(false)
+    var canvasBoundsInWindow: Rect by mutableStateOf(Rect.Zero)
+
+    fun startPaletteDrag(item: DraggedPaletteItem, initialOffset: Offset) {
+        if (isInteractiveMode) return
+        activeDragItem = item
+        dragPointerOffset = initialOffset
+        isCanvasDropHovered = canvasBoundsInWindow.contains(initialOffset)
+    }
+
+    fun updatePaletteDrag(delta: Offset) {
+        val newOffset = dragPointerOffset + delta
+        dragPointerOffset = newOffset
+        isCanvasDropHovered = canvasBoundsInWindow.contains(newOffset)
+    }
+
+    fun updateCanvasBounds(bounds: Rect) {
+        canvasBoundsInWindow = bounds
+    }
+
+    fun endPaletteDrag() {
+        val item = activeDragItem
+        if (item != null && isCanvasDropHovered) {
+            val newNode = item.factory()
+            insertComponent(newNode)
+        }
+        activeDragItem = null
+        isCanvasDropHovered = false
+    }
+
+    fun cancelPaletteDrag() {
+        activeDragItem = null
+        isCanvasDropHovered = false
     }
 
     // 6. Slot Targeting

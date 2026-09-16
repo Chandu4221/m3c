@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Close
@@ -20,13 +21,23 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import java.awt.Cursor
 import dev.chandradsl.m3c.app.desktop.state.StudioViewModel
 import dev.chandradsl.m3c.app.desktop.theme.StudioColors
 import dev.chandradsl.m3c.app.desktop.theme.StudioSizes
@@ -161,12 +172,23 @@ private fun ModifierSortableCard(
     onMoveDown: () -> Unit,
     onDelete: () -> Unit
 ) {
+    var dragAccumulatedY by remember { mutableStateOf(0f) }
+    var isDragging by remember { mutableStateOf(false) }
+
+    val cardElevation = if (isDragging) 8.dp else 0.dp
+    val cardBorderColor = if (isDragging) StudioColors.BorderActive else StudioColors.BorderSubtle
+    val cardBackground = if (isDragging) StudioColors.ActiveSurface else StudioColors.CardSurface
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .shadow(elevation = cardElevation, shape = RoundedCornerShape(6.dp))
             .clip(RoundedCornerShape(6.dp))
-            .background(StudioColors.CardSurface)
-            .border(width = 1.dp, color = StudioColors.BorderSubtle, shape = RoundedCornerShape(6.dp))
+            .background(cardBackground)
+            .border(width = 1.dp, color = cardBorderColor, shape = RoundedCornerShape(6.dp))
+            .graphicsLayer {
+                translationY = dragAccumulatedY.coerceIn(-16f, 16f)
+            }
             .padding(horizontal = 10.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
@@ -174,25 +196,57 @@ private fun ModifierSortableCard(
         // Drag Handle / Index Indicator
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            modifier = Modifier
+                .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR)))
+                .pointerInput(index, totalCount) {
+                    detectDragGestures(
+                        onDragStart = {
+                            isDragging = true
+                            dragAccumulatedY = 0f
+                        },
+                        onDrag = { change, dragAmount ->
+                            change.consume()
+                            dragAccumulatedY += dragAmount.y
+                            val threshold = 36f
+                            if (dragAccumulatedY > threshold && index < totalCount - 1) {
+                                onMoveDown()
+                                dragAccumulatedY = 0f
+                            } else if (dragAccumulatedY < -threshold && index > 0) {
+                                onMoveUp()
+                                dragAccumulatedY = 0f
+                            }
+                        },
+                        onDragEnd = {
+                            isDragging = false
+                            dragAccumulatedY = 0f
+                        },
+                        onDragCancel = {
+                            isDragging = false
+                            dragAccumulatedY = 0f
+                        }
+                    )
+                }
         ) {
             Icon(
                 imageVector = Icons.Default.DragHandle,
-                contentDescription = null,
-                tint = StudioColors.TextMuted,
+                contentDescription = "Drag to reorder",
+                tint = if (isDragging) StudioColors.Primary else StudioColors.TextMuted,
                 modifier = Modifier.size(StudioSizes.IconMedium)
             )
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(4.dp))
-                    .background(StudioColors.ActiveSurface)
+                    .background(if (isDragging) StudioColors.Primary else StudioColors.ActiveSurface)
                     .border(width = 1.dp, color = StudioColors.BorderSubtle, shape = RoundedCornerShape(4.dp))
                     .padding(horizontal = 6.dp, vertical = 2.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = "${index + 1}",
-                    style = StudioTypography.Badge.copy(color = StudioColors.TextPrimary)
+                    style = StudioTypography.Badge.copy(
+                        color = if (isDragging) StudioColors.TextInverse else StudioColors.TextPrimary
+                    )
                 )
             }
         }

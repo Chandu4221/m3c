@@ -18,6 +18,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -75,98 +76,141 @@ fun main() = application {
 
             // Material 3 bridge matching active Jewel Int-UI theme (WCAG 2.2 AA Compliant)
             MaterialTheme(colorScheme = colorScheme) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(StudioColors.CanvasBackdrop)
-            ) {
-                // 1. Top Studio Toolbar
-                StudioToolbar(viewModel = viewModel)
-
-                // 2. Central Workstation
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f)
-                ) {
-                    // Left Panel: Tabs for Palette & Hierarchy Tree (Resizable)
+                Box(modifier = Modifier.fillMaxSize()) {
                     Column(
                         modifier = Modifier
-                            .width(viewModel.leftPanelWidth)
-                            .fillMaxHeight()
-                            .background(StudioColors.PanelSurface)
-                            .border(width = 1.dp, color = StudioColors.BorderSubtle)
+                            .fillMaxSize()
+                            .background(StudioColors.CanvasBackdrop)
                     ) {
-                        // Tab Switcher Header
+                        // 1. Top Studio Toolbar
+                        StudioToolbar(viewModel = viewModel)
+
+                        // 2. Central Workstation
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(44.dp)
-                                .background(StudioColors.PanelSurface)
-                                .border(width = 1.dp, color = StudioColors.BorderSubtle)
-                                .padding(4.dp),
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                .weight(1f)
                         ) {
-                            LeftTabButton(
-                                icon = Icons.Default.Widgets,
-                                text = "Palette",
-                                isActive = viewModel.leftDrawerTab == LeftDrawerTab.Palette,
-                                modifier = Modifier.weight(1f),
-                                onClick = { viewModel.leftDrawerTab = LeftDrawerTab.Palette }
+                            // Left Panel: Tabs for Palette & Hierarchy Tree (Resizable)
+                            Column(
+                                modifier = Modifier
+                                    .width(viewModel.leftPanelWidth)
+                                    .fillMaxHeight()
+                                    .background(StudioColors.PanelSurface)
+                                    .border(width = 1.dp, color = StudioColors.BorderSubtle)
+                            ) {
+                                // Tab Switcher Header
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(44.dp)
+                                        .background(StudioColors.PanelSurface)
+                                        .border(width = 1.dp, color = StudioColors.BorderSubtle)
+                                        .padding(4.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    LeftTabButton(
+                                        icon = Icons.Default.Widgets,
+                                        text = "Palette",
+                                        isActive = viewModel.leftDrawerTab == LeftDrawerTab.Palette,
+                                        modifier = Modifier.weight(1f),
+                                        onClick = { viewModel.leftDrawerTab = LeftDrawerTab.Palette }
+                                    )
+                                    LeftTabButton(
+                                        icon = Icons.Default.AccountTree,
+                                        text = "Tree",
+                                        isActive = viewModel.leftDrawerTab == LeftDrawerTab.Hierarchy,
+                                        modifier = Modifier.weight(1f),
+                                        onClick = { viewModel.leftDrawerTab = LeftDrawerTab.Hierarchy }
+                                    )
+                                }
+
+                                // Active Tab Content
+                                if (viewModel.leftDrawerTab == LeftDrawerTab.Palette) {
+                                    ComponentPalette(viewModel = viewModel, modifier = Modifier.weight(1f))
+                                } else {
+                                    HierarchyTree(viewModel = viewModel, modifier = Modifier.weight(1f))
+                                }
+                            }
+
+                            // Left-to-Center Vertical Splitter
+                            DraggableSplitter(
+                                orientation = SplitterOrientation.Vertical,
+                                onDelta = viewModel::resizeLeftPanel
                             )
-                            LeftTabButton(
-                                icon = Icons.Default.AccountTree,
-                                text = "Tree",
-                                isActive = viewModel.leftDrawerTab == LeftDrawerTab.Hierarchy,
-                                modifier = Modifier.weight(1f),
-                                onClick = { viewModel.leftDrawerTab = LeftDrawerTab.Hierarchy }
+
+                            // Center: Zoomable/Pannable Device Canvas
+                            CanvasViewport(
+                                viewModel = viewModel,
+                                modifier = Modifier.weight(1f)
+                            )
+
+                            // Center-to-Right Vertical Splitter
+                            DraggableSplitter(
+                                orientation = SplitterOrientation.Vertical,
+                                onDelta = { delta -> viewModel.resizeRightPanel(-delta) }
+                            )
+
+                            // Right: Two-Way Property & Modifier Inspector (Resizable)
+                            PropertyInspector(
+                                viewModel = viewModel
                             )
                         }
 
-                        // Active Tab Content
-                        if (viewModel.leftDrawerTab == LeftDrawerTab.Palette) {
-                            ComponentPalette(viewModel = viewModel, modifier = Modifier.weight(1f))
-                        } else {
-                            HierarchyTree(viewModel = viewModel, modifier = Modifier.weight(1f))
+                        // 3. Bottom: Code Drawer Horizontal Splitter & Code Preview Drawer
+                        if (viewModel.isCodeDrawerOpen) {
+                            DraggableSplitter(
+                                orientation = SplitterOrientation.Horizontal,
+                                onDelta = { delta -> viewModel.resizeCodeDrawer(-delta) }
+                            )
+                            CodePreviewDrawer(viewModel = viewModel)
                         }
                     }
 
-                    // Left-to-Center Vertical Splitter
-                    DraggableSplitter(
-                        orientation = SplitterOrientation.Vertical,
-                        onDelta = viewModel::resizeLeftPanel
-                    )
-
-                    // Center: Zoomable/Pannable Device Canvas
-                    CanvasViewport(
-                        viewModel = viewModel,
-                        modifier = Modifier.weight(1f)
-                    )
-
-                    // Center-to-Right Vertical Splitter
-                    DraggableSplitter(
-                        orientation = SplitterOrientation.Vertical,
-                        onDelta = { delta -> viewModel.resizeRightPanel(-delta) }
-                    )
-
-                    // Right: Two-Way Property & Modifier Inspector (Resizable)
-                    PropertyInspector(
-                        viewModel = viewModel
-                    )
-                }
-
-                // 3. Bottom: Code Drawer Horizontal Splitter & Code Preview Drawer
-                if (viewModel.isCodeDrawerOpen) {
-                    DraggableSplitter(
-                        orientation = SplitterOrientation.Horizontal,
-                        onDelta = { delta -> viewModel.resizeCodeDrawer(-delta) }
-                    )
-                    CodePreviewDrawer(viewModel = viewModel)
+                    // 4. Global Floating Drag Avatar Overlay
+                    viewModel.activeDragItem?.let { dragItem ->
+                        Box(
+                            modifier = Modifier
+                                .offset {
+                                    androidx.compose.ui.unit.IntOffset(
+                                        x = (viewModel.dragPointerOffset.x - 24).toInt(),
+                                        y = (viewModel.dragPointerOffset.y - 24).toInt()
+                                    )
+                                }
+                                .shadow(elevation = 16.dp, shape = RoundedCornerShape(8.dp))
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(StudioColors.CardSurface)
+                                .border(
+                                    width = 2.dp,
+                                    color = if (viewModel.isCanvasDropHovered) StudioColors.Success else StudioColors.Primary,
+                                    shape = RoundedCornerShape(8.dp)
+                                )
+                                .padding(horizontal = 14.dp, vertical = 10.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = dragItem.icon,
+                                    contentDescription = null,
+                                    tint = if (viewModel.isCanvasDropHovered) StudioColors.Success else StudioColors.Primary,
+                                    modifier = Modifier.size(StudioSizes.IconStandard)
+                                )
+                                Text(
+                                    text = dragItem.name,
+                                    style = StudioTypography.UIBody.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = StudioColors.TextPrimary
+                                    )
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
     }
-}
 }
 
 @Composable

@@ -3,6 +3,7 @@ package dev.chandradsl.m3c.app.desktop.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,6 +28,7 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.CropLandscape
 import androidx.compose.material.icons.filled.CropPortrait
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.HorizontalDistribute
 import androidx.compose.material.icons.filled.HorizontalRule
@@ -49,13 +51,23 @@ import androidx.compose.material.icons.filled.WebAsset
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import java.awt.Cursor
 import dev.chandradsl.m3c.app.desktop.state.StudioViewModel
 import dev.chandradsl.m3c.app.desktop.theme.StudioColors
 import dev.chandradsl.m3c.app.desktop.theme.StudioSizes
@@ -151,6 +163,7 @@ fun HierarchyTree(
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             RenderTreeNode(
+                viewModel = viewModel,
                 node = state.rootNode,
                 depth = 0,
                 selectedId = if (viewModel.isInteractiveMode) null else state.selectedNodeId,
@@ -213,6 +226,7 @@ private fun TreeTextButton(
 
 @Composable
 private fun RenderTreeNode(
+    viewModel: StudioViewModel,
     node: ComposableNode,
     depth: Int,
     selectedId: NodeId?,
@@ -220,20 +234,81 @@ private fun RenderTreeNode(
     onSelect: (NodeId) -> Unit,
     slotLabel: String? = null
 ) {
+    var dragAccumulatedY by remember { mutableStateOf(0f) }
+    var isDragging by remember { mutableStateOf(false) }
+
     val isSelected = node.id == selectedId
-    val bgColor = if (isSelected) StudioColors.ActiveSurface else Color.Transparent
-    val accentColor = if (isSelected) StudioColors.Primary else StudioColors.TextPrimary
+    val bgColor = when {
+        isDragging -> StudioColors.ActiveSurface
+        isSelected -> StudioColors.ActiveSurface
+        else -> Color.Transparent
+    }
+    val borderColor = when {
+        isDragging -> StudioColors.BorderActive
+        isSelected -> StudioColors.BorderActive.copy(alpha = 0.5f)
+        else -> Color.Transparent
+    }
+    val accentColor = if (isSelected || isDragging) StudioColors.Primary else StudioColors.TextPrimary
+    val canReorder = !isInteractive && (viewModel.canMoveUp(node.id) || viewModel.canMoveDown(node.id))
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .shadow(elevation = if (isDragging) 6.dp else 0.dp, shape = RoundedCornerShape(4.dp))
             .clip(RoundedCornerShape(4.dp))
             .background(bgColor)
+            .border(width = 1.dp, color = borderColor, shape = RoundedCornerShape(4.dp))
+            .graphicsLayer {
+                if (isDragging) {
+                    translationY = dragAccumulatedY.coerceIn(-14f, 14f)
+                }
+            }
             .clickable(enabled = !isInteractive) { onSelect(node.id) }
-            .padding(start = (depth * 16).dp, top = 6.dp, bottom = 6.dp, end = 8.dp),
+            .padding(start = (depth * 16).dp, top = 5.dp, bottom = 5.dp, end = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
     ) {
+        // Drag reorder handle for movable nodes
+        if (canReorder) {
+            Icon(
+                imageVector = Icons.Default.DragHandle,
+                contentDescription = "Drag to reorder hierarchy",
+                tint = if (isDragging) StudioColors.Primary else StudioColors.TextMuted.copy(alpha = 0.6f),
+                modifier = Modifier
+                    .size(StudioSizes.IconSmall)
+                    .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR)))
+                    .pointerInput(node.id) {
+                        detectDragGestures(
+                            onDragStart = {
+                                isDragging = true
+                                dragAccumulatedY = 0f
+                                onSelect(node.id)
+                            },
+                            onDrag = { change, dragAmount ->
+                                change.consume()
+                                dragAccumulatedY += dragAmount.y
+                                val threshold = 28f
+                                if (dragAccumulatedY > threshold && viewModel.canMoveDown(node.id)) {
+                                    viewModel.moveNodeDown(node.id)
+                                    dragAccumulatedY = 0f
+                                } else if (dragAccumulatedY < -threshold && viewModel.canMoveUp(node.id)) {
+                                    viewModel.moveNodeUp(node.id)
+                                    dragAccumulatedY = 0f
+                                }
+                            },
+                            onDragEnd = {
+                                isDragging = false
+                                dragAccumulatedY = 0f
+                            },
+                            onDragCancel = {
+                                isDragging = false
+                                dragAccumulatedY = 0f
+                            }
+                        )
+                    }
+            )
+        }
+
         // Material Icon
         Icon(
             imageVector = getNodeIcon(node),
@@ -269,43 +344,43 @@ private fun RenderTreeNode(
 
     // Recursively render children & slots
     when (node) {
-        is ComposableNode.ColumnNode -> node.children.forEach { RenderTreeNode(it, depth + 1, selectedId, isInteractive, onSelect) }
-        is ComposableNode.RowNode -> node.children.forEach { RenderTreeNode(it, depth + 1, selectedId, isInteractive, onSelect) }
-        is ComposableNode.BoxNode -> node.children.forEach { RenderTreeNode(it, depth + 1, selectedId, isInteractive, onSelect) }
-        is ComposableNode.SurfaceNode -> node.children.forEach { RenderTreeNode(it, depth + 1, selectedId, isInteractive, onSelect) }
-        is ComposableNode.CardNode -> node.content.forEach { RenderTreeNode(it, depth + 1, selectedId, isInteractive, onSelect) }
-        is ComposableNode.ElevatedCardNode -> node.content.forEach { RenderTreeNode(it, depth + 1, selectedId, isInteractive, onSelect) }
-        is ComposableNode.OutlinedCardNode -> node.content.forEach { RenderTreeNode(it, depth + 1, selectedId, isInteractive, onSelect) }
-        is ComposableNode.ButtonNode -> node.content.forEach { RenderTreeNode(it, depth + 1, selectedId, isInteractive, onSelect) }
-        is ComposableNode.ElevatedButtonNode -> node.content.forEach { RenderTreeNode(it, depth + 1, selectedId, isInteractive, onSelect) }
-        is ComposableNode.FilledTonalButtonNode -> node.content.forEach { RenderTreeNode(it, depth + 1, selectedId, isInteractive, onSelect) }
-        is ComposableNode.OutlinedButtonNode -> node.content.forEach { RenderTreeNode(it, depth + 1, selectedId, isInteractive, onSelect) }
-        is ComposableNode.TextButtonNode -> node.content.forEach { RenderTreeNode(it, depth + 1, selectedId, isInteractive, onSelect) }
-        is ComposableNode.IconButtonNode -> node.content.forEach { RenderTreeNode(it, depth + 1, selectedId, isInteractive, onSelect) }
-        is ComposableNode.FloatingActionButtonNode -> node.content.forEach { RenderTreeNode(it, depth + 1, selectedId, isInteractive, onSelect) }
+        is ComposableNode.ColumnNode -> node.children.forEach { RenderTreeNode(viewModel, it, depth + 1, selectedId, isInteractive, onSelect) }
+        is ComposableNode.RowNode -> node.children.forEach { RenderTreeNode(viewModel, it, depth + 1, selectedId, isInteractive, onSelect) }
+        is ComposableNode.BoxNode -> node.children.forEach { RenderTreeNode(viewModel, it, depth + 1, selectedId, isInteractive, onSelect) }
+        is ComposableNode.SurfaceNode -> node.children.forEach { RenderTreeNode(viewModel, it, depth + 1, selectedId, isInteractive, onSelect) }
+        is ComposableNode.CardNode -> node.content.forEach { RenderTreeNode(viewModel, it, depth + 1, selectedId, isInteractive, onSelect) }
+        is ComposableNode.ElevatedCardNode -> node.content.forEach { RenderTreeNode(viewModel, it, depth + 1, selectedId, isInteractive, onSelect) }
+        is ComposableNode.OutlinedCardNode -> node.content.forEach { RenderTreeNode(viewModel, it, depth + 1, selectedId, isInteractive, onSelect) }
+        is ComposableNode.ButtonNode -> node.content.forEach { RenderTreeNode(viewModel, it, depth + 1, selectedId, isInteractive, onSelect) }
+        is ComposableNode.ElevatedButtonNode -> node.content.forEach { RenderTreeNode(viewModel, it, depth + 1, selectedId, isInteractive, onSelect) }
+        is ComposableNode.FilledTonalButtonNode -> node.content.forEach { RenderTreeNode(viewModel, it, depth + 1, selectedId, isInteractive, onSelect) }
+        is ComposableNode.OutlinedButtonNode -> node.content.forEach { RenderTreeNode(viewModel, it, depth + 1, selectedId, isInteractive, onSelect) }
+        is ComposableNode.TextButtonNode -> node.content.forEach { RenderTreeNode(viewModel, it, depth + 1, selectedId, isInteractive, onSelect) }
+        is ComposableNode.IconButtonNode -> node.content.forEach { RenderTreeNode(viewModel, it, depth + 1, selectedId, isInteractive, onSelect) }
+        is ComposableNode.FloatingActionButtonNode -> node.content.forEach { RenderTreeNode(viewModel, it, depth + 1, selectedId, isInteractive, onSelect) }
         is ComposableNode.ScaffoldNode -> {
-            node.topBar?.let { RenderTreeNode(it, depth + 1, selectedId, isInteractive, onSelect, "topBar") }
-            node.bottomBar?.let { RenderTreeNode(it, depth + 1, selectedId, isInteractive, onSelect, "bottomBar") }
-            node.floatingActionButton?.let { RenderTreeNode(it, depth + 1, selectedId, isInteractive, onSelect, "fab") }
-            node.content?.let { RenderTreeNode(it, depth + 1, selectedId, isInteractive, onSelect, "content") }
+            node.topBar?.let { RenderTreeNode(viewModel, it, depth + 1, selectedId, isInteractive, onSelect, "topBar") }
+            node.bottomBar?.let { RenderTreeNode(viewModel, it, depth + 1, selectedId, isInteractive, onSelect, "bottomBar") }
+            node.floatingActionButton?.let { RenderTreeNode(viewModel, it, depth + 1, selectedId, isInteractive, onSelect, "fab") }
+            node.content?.let { RenderTreeNode(viewModel, it, depth + 1, selectedId, isInteractive, onSelect, "content") }
         }
         is ComposableNode.TopAppBarNode -> {
-            RenderTreeNode(node.title, depth + 1, selectedId, isInteractive, onSelect, "title")
-            node.navigationIcon?.let { RenderTreeNode(it, depth + 1, selectedId, isInteractive, onSelect, "navIcon") }
-            node.actions.forEach { RenderTreeNode(it, depth + 1, selectedId, isInteractive, onSelect, "action") }
+            RenderTreeNode(viewModel, node.title, depth + 1, selectedId, isInteractive, onSelect, "title")
+            node.navigationIcon?.let { RenderTreeNode(viewModel, it, depth + 1, selectedId, isInteractive, onSelect, "navIcon") }
+            node.actions.forEach { RenderTreeNode(viewModel, it, depth + 1, selectedId, isInteractive, onSelect, "action") }
         }
-        is ComposableNode.NavigationBarNode -> node.items.forEach { RenderTreeNode(it, depth + 1, selectedId, isInteractive, onSelect) }
+        is ComposableNode.NavigationBarNode -> node.items.forEach { RenderTreeNode(viewModel, it, depth + 1, selectedId, isInteractive, onSelect) }
         is ComposableNode.TextFieldNode -> {
-            node.leadingIcon?.let { RenderTreeNode(it, depth + 1, selectedId, isInteractive, onSelect, "leading") }
-            node.trailingIcon?.let { RenderTreeNode(it, depth + 1, selectedId, isInteractive, onSelect, "trailing") }
+            node.leadingIcon?.let { RenderTreeNode(viewModel, it, depth + 1, selectedId, isInteractive, onSelect, "leading") }
+            node.trailingIcon?.let { RenderTreeNode(viewModel, it, depth + 1, selectedId, isInteractive, onSelect, "trailing") }
         }
         is ComposableNode.OutlinedTextFieldNode -> {
-            node.leadingIcon?.let { RenderTreeNode(it, depth + 1, selectedId, isInteractive, onSelect, "leading") }
-            node.trailingIcon?.let { RenderTreeNode(it, depth + 1, selectedId, isInteractive, onSelect, "trailing") }
+            node.leadingIcon?.let { RenderTreeNode(viewModel, it, depth + 1, selectedId, isInteractive, onSelect, "leading") }
+            node.trailingIcon?.let { RenderTreeNode(viewModel, it, depth + 1, selectedId, isInteractive, onSelect, "trailing") }
         }
         is ComposableNode.NavigationBarItemNode -> {
-            RenderTreeNode(node.icon, depth + 1, selectedId, isInteractive, onSelect, "icon")
-            node.label?.let { RenderTreeNode(it, depth + 1, selectedId, isInteractive, onSelect, "label") }
+            RenderTreeNode(viewModel, node.icon, depth + 1, selectedId, isInteractive, onSelect, "icon")
+            node.label?.let { RenderTreeNode(viewModel, it, depth + 1, selectedId, isInteractive, onSelect, "label") }
         }
         else -> Unit
     }
