@@ -24,13 +24,18 @@ import androidx.compose.material.icons.filled.CheckBoxOutlineBlank
 import androidx.compose.material.icons.filled.CropLandscape
 import androidx.compose.material.icons.filled.CropPortrait
 import androidx.compose.material.icons.filled.EditNote
+import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import org.jetbrains.jewel.ui.component.Badge
+import org.jetbrains.jewel.ui.component.GroupHeader
+import org.jetbrains.jewel.ui.component.Text
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -242,17 +247,38 @@ private fun PaletteCategory(
     items: List<PaletteItem>,
     viewModel: StudioViewModel
 ) {
+    var isExpanded by remember { mutableStateOf(true) }
+
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(
+        GroupHeader(
             text = title,
-            style = StudioTypography.SectionHeader,
-            modifier = Modifier.padding(horizontal = 4.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(4.dp))
+                .clickable { isExpanded = !isExpanded }
+                .pointerHoverIcon(PointerIcon(Cursor(Cursor.HAND_CURSOR)))
+                .padding(vertical = 2.dp),
+            startComponent = {
+                Icon(
+                    imageVector = if (isExpanded) Icons.Default.KeyboardArrowDown else Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = if (isExpanded) "Collapse" else "Expand",
+                    tint = StudioColors.TextSecondary,
+                    modifier = Modifier.size(16.dp)
+                )
+            },
+            endComponent = {
+                Badge {
+                    Text("${items.size}")
+                }
+            }
         )
 
-        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            items.forEach { item ->
-                PaletteComponentCard(item = item, viewModel = viewModel) {
-                    viewModel.insertComponent(item.factory())
+        if (isExpanded) {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                items.forEach { item ->
+                    PaletteComponentCard(item = item, viewModel = viewModel) {
+                        viewModel.insertComponent(item.factory())
+                    }
                 }
             }
         }

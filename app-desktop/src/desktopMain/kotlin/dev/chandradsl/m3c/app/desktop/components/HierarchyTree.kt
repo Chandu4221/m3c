@@ -2,8 +2,8 @@ package dev.chandradsl.m3c.app.desktop.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,16 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.layout.boundsInWindow
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInWindow
-import dev.chandradsl.m3c.app.desktop.state.TreeDropPosition
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.FeaturedPlayList
 import androidx.compose.material.icons.filled.AddCircle
@@ -36,10 +27,11 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.CropLandscape
 import androidx.compose.material.icons.filled.CropPortrait
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.HorizontalDistribute
 import androidx.compose.material.icons.filled.HorizontalRule
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.LinearScale
 import androidx.compose.material.icons.filled.Menu
@@ -57,8 +49,8 @@ import androidx.compose.material.icons.filled.ViewColumn
 import androidx.compose.material.icons.filled.ViewStream
 import androidx.compose.material.icons.filled.WebAsset
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -66,32 +58,69 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.input.pointer.PointerIcon
-import androidx.compose.ui.input.pointer.pointerHoverIcon
+import androidx.compose.ui.input.pointer.changedToUp
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import java.awt.Cursor
 import dev.chandradsl.m3c.app.desktop.state.StudioViewModel
+import dev.chandradsl.m3c.app.desktop.state.TreeDropPosition
 import dev.chandradsl.m3c.app.desktop.theme.StudioColors
 import dev.chandradsl.m3c.app.desktop.theme.StudioSizes
 import dev.chandradsl.m3c.app.desktop.theme.StudioTypography
 import dev.chandradsl.m3c.core.domain.model.ComposableNode
 import dev.chandradsl.m3c.core.domain.model.NodeId
 import dev.chandradsl.m3c.core.domain.store.WorkspaceIntent
+import org.jetbrains.jewel.foundation.ExperimentalJewelApi
+import org.jetbrains.jewel.foundation.lazy.tree.Tree
+import org.jetbrains.jewel.foundation.lazy.tree.TreeGeneratorScope
+import org.jetbrains.jewel.foundation.lazy.tree.buildTree
+import org.jetbrains.jewel.foundation.lazy.tree.rememberTreeState
+import org.jetbrains.jewel.ui.component.Badge
+import org.jetbrains.jewel.ui.component.GroupHeader
+import org.jetbrains.jewel.ui.component.IconButton
+import org.jetbrains.jewel.ui.component.LazyTree
+import org.jetbrains.jewel.ui.component.OutlinedSlimButton
+import org.jetbrains.jewel.ui.component.Text
+import org.jetbrains.jewel.ui.component.Tooltip
 
+data class AstTreeNodeData(
+    val node: ComposableNode,
+    val slotLabel: String? = null
+)
+
+@OptIn(ExperimentalJewelApi::class, androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun HierarchyTree(
     viewModel: StudioViewModel,
     modifier: Modifier = Modifier
 ) {
-    val scrollState = rememberScrollState()
     val state = viewModel.workspaceState
     val selectedNodeId = state.selectedNodeId
+    val tree = remember(state.rootNode) { buildJewelTree(state.rootNode) }
+    val treeState = rememberTreeState()
+
+    // Initialize all container nodes as open
+    var initialized by remember { mutableStateOf(false) }
+    LaunchedEffect(state.rootNode.id) {
+        if (!initialized) {
+            treeState.openNodes(collectAllContainerIds(state.rootNode).toList())
+            initialized = true
+        }
+    }
+
+    // Sync external selection with Jewel LazyTree selection
+    LaunchedEffect(selectedNodeId) {
+        val selKey = selectedNodeId?.value
+        treeState.selectedKeys = if (selKey != null) setOf(selKey) else emptySet()
+    }
 
     Column(
         modifier = modifier
@@ -101,14 +130,47 @@ fun HierarchyTree(
             .border(width = 1.dp, color = StudioColors.BorderSubtle)
             .padding(14.dp)
     ) {
-        // Tree Header
-        Text(
+        // Jewel GroupHeader with Expand/Collapse All buttons
+        GroupHeader(
             text = "COMPONENT TREE",
-            style = StudioTypography.SectionHeader,
-            modifier = Modifier.padding(horizontal = 4.dp, vertical = 6.dp)
+            modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp),
+            endComponent = {
+                Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Tooltip(tooltip = { Text("Expand All") }) {
+                        IconButton(
+                            onClick = {
+                                treeState.openNodes(collectAllContainerIds(state.rootNode).toList())
+                            },
+                            modifier = Modifier.size(20.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.KeyboardArrowDown,
+                                contentDescription = "Expand All",
+                                tint = StudioColors.TextSecondary,
+                                modifier = Modifier.size(14.dp)
+                            )
+                        }
+                    }
+                    Tooltip(tooltip = { Text("Collapse All") }) {
+                        IconButton(
+                            onClick = {
+                                treeState.openNodes = emptySet()
+                            },
+                            modifier = Modifier.size(20.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.KeyboardArrowUp,
+                                contentDescription = "Collapse All",
+                                tint = StudioColors.TextSecondary,
+                                modifier = Modifier.size(14.dp)
+                            )
+                        }
+                    }
+                }
+            }
         )
 
-        // Selected Node Quick Action Bar
+        // Selected Node Quick Action Bar (Jewel Components)
         if (selectedNodeId != null && selectedNodeId != state.rootNode.id && !viewModel.isInteractiveMode) {
             Row(
                 modifier = Modifier
@@ -116,388 +178,398 @@ fun HierarchyTree(
                     .clip(RoundedCornerShape(6.dp))
                     .background(StudioColors.CardSurface)
                     .border(width = 1.dp, color = StudioColors.BorderSubtle, shape = RoundedCornerShape(6.dp))
-                    .padding(6.dp),
+                    .padding(4.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    // Move Up
-                    TreeActionButton(
-                        icon = Icons.Default.ArrowUpward,
-                        tooltip = "Move Up",
-                        enabled = viewModel.canMoveUp(selectedNodeId),
-                        onClick = { viewModel.moveNodeUp(selectedNodeId) }
-                    )
-                    // Move Down
-                    TreeActionButton(
-                        icon = Icons.Default.ArrowDownward,
-                        tooltip = "Move Down",
-                        enabled = viewModel.canMoveDown(selectedNodeId),
-                        onClick = { viewModel.moveNodeDown(selectedNodeId) }
-                    )
-                    // Duplicate
-                    TreeActionButton(
-                        icon = Icons.Default.ContentCopy,
-                        tooltip = "Duplicate",
-                        enabled = true,
-                        onClick = { viewModel.duplicateNode(selectedNodeId) }
-                    )
+                Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Tooltip(tooltip = { Text("Move Up") }) {
+                        IconButton(
+                            onClick = { viewModel.moveNodeUp(selectedNodeId) },
+                            enabled = viewModel.canMoveUp(selectedNodeId),
+                            modifier = Modifier.size(26.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ArrowUpward,
+                                contentDescription = "Move Up",
+                                tint = if (viewModel.canMoveUp(selectedNodeId)) StudioColors.TextPrimary else StudioColors.TextMuted.copy(alpha = 0.4f),
+                                modifier = Modifier.size(StudioSizes.IconSmall)
+                            )
+                        }
+                    }
+                    Tooltip(tooltip = { Text("Move Down") }) {
+                        IconButton(
+                            onClick = { viewModel.moveNodeDown(selectedNodeId) },
+                            enabled = viewModel.canMoveDown(selectedNodeId),
+                            modifier = Modifier.size(26.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ArrowDownward,
+                                contentDescription = "Move Down",
+                                tint = if (viewModel.canMoveDown(selectedNodeId)) StudioColors.TextPrimary else StudioColors.TextMuted.copy(alpha = 0.4f),
+                                modifier = Modifier.size(StudioSizes.IconSmall)
+                            )
+                        }
+                    }
+                    Tooltip(tooltip = { Text("Duplicate") }) {
+                        IconButton(
+                            onClick = { viewModel.duplicateNode(selectedNodeId) },
+                            enabled = true,
+                            modifier = Modifier.size(26.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ContentCopy,
+                                contentDescription = "Duplicate",
+                                tint = StudioColors.TextPrimary,
+                                modifier = Modifier.size(StudioSizes.IconSmall)
+                            )
+                        }
+                    }
                 }
 
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    // Outdent (Move out of parent container)
-                    TreeTextButton(
-                        text = "Out",
-                        enabled = viewModel.canMoveOut(selectedNodeId)
-                    ) { viewModel.moveNodeOut(selectedNodeId) }
-                    // Indent (Move into preceding container)
-                    TreeTextButton(
-                        text = "In",
-                        enabled = viewModel.canMoveIn(selectedNodeId)
-                    ) { viewModel.moveNodeIn(selectedNodeId) }
-                    // Wrap in Column
-                    TreeTextButton(text = "Col") { viewModel.wrapInContainer(selectedNodeId, "Column") }
-                    // Wrap in Row
-                    TreeTextButton(text = "Row") { viewModel.wrapInContainer(selectedNodeId, "Row") }
-                    // Delete
-                    TreeActionButton(
-                        icon = Icons.Default.Delete,
-                        tooltip = "Delete",
-                        enabled = true,
-                        tint = StudioColors.Error,
-                        onClick = { viewModel.deleteSelectedNode() }
-                    )
+                Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Tooltip(tooltip = { Text("Move out of parent container") }) {
+                        OutlinedSlimButton(
+                            onClick = { viewModel.moveNodeOut(selectedNodeId) },
+                            enabled = viewModel.canMoveOut(selectedNodeId)
+                        ) {
+                            Text("Out")
+                        }
+                    }
+                    Tooltip(tooltip = { Text("Move into preceding container") }) {
+                        OutlinedSlimButton(
+                            onClick = { viewModel.moveNodeIn(selectedNodeId) },
+                            enabled = viewModel.canMoveIn(selectedNodeId)
+                        ) {
+                            Text("In")
+                        }
+                    }
+                    Tooltip(tooltip = { Text("Wrap in Column") }) {
+                        OutlinedSlimButton(
+                            onClick = { viewModel.wrapInContainer(selectedNodeId, "Column") }
+                        ) {
+                            Text("Col")
+                        }
+                    }
+                    Tooltip(tooltip = { Text("Wrap in Row") }) {
+                        OutlinedSlimButton(
+                            onClick = { viewModel.wrapInContainer(selectedNodeId, "Row") }
+                        ) {
+                            Text("Row")
+                        }
+                    }
+                    Tooltip(tooltip = { Text("Delete") }) {
+                        IconButton(
+                            onClick = { viewModel.deleteSelectedNode() },
+                            enabled = true,
+                            modifier = Modifier.size(26.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = "Delete",
+                                tint = StudioColors.Error,
+                                modifier = Modifier.size(StudioSizes.IconSmall)
+                            )
+                        }
+                    }
                 }
             }
         }
 
-        // Scrollable Tree
-        Column(
+        // Jewel LazyTree Component
+        LazyTree(
+            tree = tree,
+            treeState = treeState,
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
-                .padding(top = 8.dp)
-                .verticalScroll(scrollState),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            RenderTreeNode(
-                viewModel = viewModel,
-                node = state.rootNode,
-                depth = 0,
-                selectedId = if (viewModel.isInteractiveMode) null else state.selectedNodeId,
-                isInteractive = viewModel.isInteractiveMode,
-                onSelect = {
-                    if (!viewModel.isInteractiveMode) {
-                        viewModel.dispatch(WorkspaceIntent.SelectNode(it))
+                .padding(top = 8.dp),
+            onElementClick = { element ->
+                if (!viewModel.isInteractiveMode) {
+                    viewModel.dispatch(WorkspaceIntent.SelectNode(element.data.node.id))
+                }
+            },
+            nodeContent = { element ->
+                val node = element.data.node
+                val slotLabel = element.data.slotLabel
+                val isRoot = node.id == viewModel.workspaceState.rootNode.id
+                val isDraggable = !viewModel.isInteractiveMode && !isRoot
+
+                var itemBoundsInWindow by remember { mutableStateOf<Rect?>(null) }
+                var itemPositionInWindow by remember { mutableStateOf(Offset.Zero) }
+
+                val activeDrag = viewModel.activeTreeDragNode
+                val isBeingDragged = activeDrag?.nodeId == node.id
+                val isDropTarget = viewModel.treeDropTargetId == node.id
+                val dropPos = if (isDropTarget) viewModel.treeDropPosition else null
+                val isInsideTarget = isDropTarget && dropPos == TreeDropPosition.INSIDE
+
+                // Real-time hover tracking when another tree node is actively dragged
+                LaunchedEffect(viewModel.dragPointerOffset, activeDrag) {
+                    if (activeDrag != null && !isBeingDragged) {
+                        val bounds = itemBoundsInWindow
+                        if (bounds != null && bounds.contains(viewModel.dragPointerOffset)) {
+                            val relY = viewModel.dragPointerOffset.y - bounds.top
+                            val h = bounds.height
+                            val isContainer = viewModel.isContainerNode(node)
+                            val pos = when {
+                                isContainer && relY in (h * 0.25f)..(h * 0.75f) -> TreeDropPosition.INSIDE
+                                relY < (if (isContainer) h * 0.25f else h * 0.5f) -> TreeDropPosition.ABOVE
+                                else -> TreeDropPosition.BELOW
+                            }
+                            viewModel.updateTreeDropTarget(node.id, pos)
+                        }
                     }
                 }
-            )
-        }
-    }
-}
 
-@Composable
-private fun TreeActionButton(
-    icon: ImageVector,
-    tooltip: String,
-    enabled: Boolean,
-    tint: Color = StudioColors.TextPrimary,
-    onClick: () -> Unit
-) {
-    Box(
-        modifier = Modifier
-            .size(24.dp)
-            .clip(RoundedCornerShape(4.dp))
-            .background(if (enabled) StudioColors.ActiveSurface else Color.Transparent)
-            .clickable(enabled = enabled, onClick = onClick),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = tooltip,
-            tint = if (enabled) tint else StudioColors.TextMuted.copy(alpha = 0.4f),
-            modifier = Modifier.size(StudioSizes.IconSmall)
-        )
-    }
-}
-
-@Composable
-private fun TreeTextButton(
-    text: String,
-    enabled: Boolean = true,
-    onClick: () -> Unit
-) {
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(4.dp))
-            .background(if (enabled) StudioColors.ActiveSurface else Color.Transparent)
-            .border(
-                width = 1.dp,
-                color = if (enabled) StudioColors.BorderSubtle else StudioColors.BorderSubtle.copy(alpha = 0.25f),
-                shape = RoundedCornerShape(4.dp)
-            )
-            .clickable(enabled = enabled, onClick = onClick)
-            .padding(horizontal = 6.dp, vertical = 2.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = text,
-            style = StudioTypography.Badge.copy(
-                color = if (enabled) StudioColors.TextSecondary else StudioColors.TextMuted.copy(alpha = 0.35f)
-            )
-        )
-    }
-}
-
-@Composable
-private fun RenderTreeNode(
-    viewModel: StudioViewModel,
-    node: ComposableNode,
-    depth: Int,
-    selectedId: NodeId?,
-    isInteractive: Boolean,
-    onSelect: (NodeId) -> Unit,
-    slotLabel: String? = null
-) {
-    var itemPositionInWindow by remember { mutableStateOf(Offset.Zero) }
-    var itemBoundsInWindow by remember { mutableStateOf<Rect?>(null) }
-
-    val isSelected = node.id == selectedId
-    val isRoot = node.id == viewModel.workspaceState.rootNode.id
-    val isDraggable = !isInteractive && !isRoot
-
-    val activeDrag = viewModel.activeTreeDragNode
-    val isBeingDragged = activeDrag?.nodeId == node.id
-    val isDropTarget = viewModel.treeDropTargetId == node.id
-    val dropPos = if (isDropTarget) viewModel.treeDropPosition else null
-    val isInsideTarget = isDropTarget && dropPos == TreeDropPosition.INSIDE
-
-    // Real-time hover tracking when another tree node is actively dragged
-    LaunchedEffect(viewModel.dragPointerOffset, activeDrag) {
-        if (activeDrag != null && !isBeingDragged) {
-            val bounds = itemBoundsInWindow
-            if (bounds != null && bounds.contains(viewModel.dragPointerOffset)) {
-                val relY = viewModel.dragPointerOffset.y - bounds.top
-                val h = bounds.height
-                val isContainer = viewModel.isContainerNode(node)
-                val pos = when {
-                    isContainer && relY in (h * 0.25f)..(h * 0.75f) -> TreeDropPosition.INSIDE
-                    relY < (if (isContainer) h * 0.25f else h * 0.5f) -> TreeDropPosition.ABOVE
-                    else -> TreeDropPosition.BELOW
-                }
-                viewModel.updateTreeDropTarget(node.id, pos)
-            }
-        }
-    }
-
-    val bgColor = when {
-        isInsideTarget -> StudioColors.Success.copy(alpha = 0.15f)
-        isBeingDragged -> StudioColors.ActiveSurface.copy(alpha = 0.35f)
-        isSelected -> StudioColors.ActiveSurface
-        else -> Color.Transparent
-    }
-    val borderColor = when {
-        isInsideTarget -> StudioColors.Success
-        isSelected -> StudioColors.BorderActive.copy(alpha = 0.6f)
-        else -> Color.Transparent
-    }
-    val accentColor = when {
-        isInsideTarget -> StudioColors.Success
-        isSelected -> StudioColors.Primary
-        else -> StudioColors.TextPrimary
-    }
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .onGloballyPositioned { coords ->
-                itemBoundsInWindow = coords.boundsInWindow()
-                itemPositionInWindow = coords.positionInWindow()
-            }
-    ) {
-        // Insertion indicator ABOVE node
-        if (isDropTarget && dropPos == TreeDropPosition.ABOVE) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = (depth * 16).dp, top = 2.dp, bottom = 2.dp, end = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                Box(
+                Column(
                     modifier = Modifier
-                        .size(6.dp)
-                        .clip(RoundedCornerShape(3.dp))
-                        .background(StudioColors.Primary)
-                )
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(2.dp)
-                        .background(StudioColors.Primary)
-                )
-                Text(
-                    text = "↑ Insert Before",
-                    style = StudioTypography.Badge.copy(color = StudioColors.Primary)
-                )
-            }
-        }
-
-        // Tree Node Row
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .shadow(elevation = if (isInsideTarget) 4.dp else 0.dp, shape = RoundedCornerShape(4.dp))
-                .clip(RoundedCornerShape(4.dp))
-                .background(bgColor)
-                .border(width = if (isInsideTarget) 2.dp else 1.dp, color = borderColor, shape = RoundedCornerShape(4.dp))
-                .clickable(enabled = !isInteractive) { onSelect(node.id) }
-                .padding(start = (depth * 16).dp, top = 5.dp, bottom = 5.dp, end = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            // Drag handle for non-root nodes
-            if (isDraggable) {
-                Icon(
-                    imageVector = Icons.Default.DragHandle,
-                    contentDescription = "Drag to reparent or reorder",
-                    tint = if (isBeingDragged) StudioColors.Primary else StudioColors.TextMuted.copy(alpha = 0.6f),
-                    modifier = Modifier
-                        .size(StudioSizes.IconSmall)
-                        .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR)))
-                        .pointerInput(node.id) {
-                            detectDragGestures(
-                                onDragStart = { localOffset ->
-                                    val windowOffset = itemPositionInWindow + localOffset
-                                    viewModel.startTreeDrag(node, windowOffset, getNodeLabel(node))
-                                    onSelect(node.id)
-                                },
-                                onDrag = { change, dragAmount ->
-                                    change.consume()
-                                    viewModel.updateTreeDrag(dragAmount)
-                                },
-                                onDragEnd = {
-                                    viewModel.endTreeDrag()
-                                },
-                                onDragCancel = {
-                                    viewModel.cancelTreeDrag()
-                                }
+                        .fillMaxWidth()
+                        .onGloballyPositioned { coords ->
+                            itemBoundsInWindow = coords.boundsInWindow()
+                            itemPositionInWindow = coords.positionInWindow()
+                        }
+                ) {
+                    // Insertion indicator ABOVE node
+                    if (isDropTarget && dropPos == TreeDropPosition.ABOVE) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 2.dp, horizontal = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(6.dp)
+                                    .clip(RoundedCornerShape(3.dp))
+                                    .background(StudioColors.Primary)
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(2.dp)
+                                    .background(StudioColors.Primary)
+                            )
+                            Text(
+                                text = "↑ Insert Before",
+                                style = StudioTypography.Badge.copy(color = StudioColors.Primary)
                             )
                         }
-                )
+                    }
+
+                    // Tree Node Row Content
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(
+                                when {
+                                    isInsideTarget -> StudioColors.Success.copy(alpha = 0.15f)
+                                    isBeingDragged -> StudioColors.ActiveSurface.copy(alpha = 0.35f)
+                                    else -> Color.Transparent
+                                }
+                            )
+                            .border(
+                                width = if (isInsideTarget) 1.5.dp else 0.dp,
+                                color = if (isInsideTarget) StudioColors.Success else Color.Transparent,
+                                shape = RoundedCornerShape(4.dp)
+                            )
+                            .then(
+                                if (isDraggable) {
+                                    Modifier.pointerInput(node.id) {
+                                        awaitEachGesture {
+                                            val down = awaitFirstDown(requireUnconsumed = false)
+                                            var isDragStarted = false
+                                            var totalMovement = Offset.Zero
+                                            val touchSlop = viewConfiguration.touchSlop
+
+                                            try {
+                                                while (true) {
+                                                    val event = awaitPointerEvent()
+                                                    val change = event.changes.firstOrNull { it.id == down.id } ?: break
+
+                                                    if (change.changedToUp()) {
+                                                        if (isDragStarted) {
+                                                            viewModel.endTreeDrag()
+                                                        }
+                                                        break
+                                                    }
+
+                                                    val dragAmount = change.position - change.previousPosition
+                                                    totalMovement += dragAmount
+
+                                                    if (!isDragStarted) {
+                                                        if (totalMovement.getDistance() > touchSlop) {
+                                                            isDragStarted = true
+                                                            val windowOffset = itemPositionInWindow + change.position
+                                                            viewModel.startTreeDrag(node, windowOffset, getNodeLabel(node))
+                                                            change.consume()
+                                                        }
+                                                    } else {
+                                                        change.consume()
+                                                        viewModel.updateTreeDrag(dragAmount)
+                                                    }
+                                                }
+                                            } finally {
+                                                if (isDragStarted && viewModel.activeTreeDragNode != null) {
+                                                    viewModel.cancelTreeDrag()
+                                                }
+                                            }
+                                        }
+                                    }
+                                } else Modifier
+                            )
+                            .padding(vertical = 3.dp, horizontal = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        // Component Icon
+                        Icon(
+                            imageVector = getNodeIcon(node),
+                            contentDescription = null,
+                            tint = if (isInsideTarget) StudioColors.Success else StudioColors.Primary,
+                            modifier = Modifier.size(StudioSizes.IconSmall)
+                        )
+
+                        // Slot badge (Jewel Badge)
+                        if (slotLabel != null) {
+                            Badge {
+                                Text(slotLabel)
+                            }
+                        }
+
+                        // Component Label
+                        Text(
+                            text = getNodeLabel(node),
+                            style = StudioTypography.UIBody.copy(
+                                fontWeight = if (isInsideTarget) FontWeight.SemiBold else FontWeight.Normal
+                            ),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false)
+                        )
+
+                        // Inside drop badge or subtle node ID
+                        if (isInsideTarget) {
+                            Text(
+                                text = "↳ Drop Inside",
+                                style = StudioTypography.Badge.copy(color = StudioColors.Success, fontWeight = FontWeight.Bold)
+                            )
+                        } else {
+                            Text(
+                                text = "#${node.id.value.takeLast(4)}",
+                                style = StudioTypography.Caption.copy(
+                                    color = StudioColors.TextMuted.copy(alpha = 0.5f)
+                                )
+                            )
+                        }
+                    }
+
+                    // Insertion indicator BELOW node
+                    if (isDropTarget && dropPos == TreeDropPosition.BELOW) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 2.dp, horizontal = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(6.dp)
+                                    .clip(RoundedCornerShape(3.dp))
+                                    .background(StudioColors.Primary)
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(2.dp)
+                                    .background(StudioColors.Primary)
+                            )
+                            Text(
+                                text = "↓ Insert After",
+                                style = StudioTypography.Badge.copy(color = StudioColors.Primary)
+                            )
+                        }
+                    }
+                }
             }
+        )
+    }
+}
 
-            // Material Icon
-            Icon(
-                imageVector = getNodeIcon(node),
-                contentDescription = null,
-                tint = accentColor,
-                modifier = Modifier.size(StudioSizes.IconMedium)
-            )
-
-            // Slot label (if inside a named slot)
-            if (slotLabel != null) {
-                Text(
-                    text = "[$slotLabel]",
-                    style = StudioTypography.Badge.copy(color = StudioColors.Warning)
-                )
-            }
-
-            // Component name
-            Text(
-                text = getNodeLabel(node),
-                style = StudioTypography.UIBody.copy(
-                    color = accentColor,
-                    fontWeight = if (isSelected || isInsideTarget) FontWeight.SemiBold else FontWeight.Normal
-                ),
-                modifier = Modifier.weight(1f)
-            )
-
-            // "Drop inside" badge or ID tag
-            if (isInsideTarget) {
-                Text(
-                    text = "↳ Drop Inside",
-                    style = StudioTypography.Badge.copy(color = StudioColors.Success, fontWeight = FontWeight.Bold)
-                )
-            } else {
-                Text(
-                    text = node.id.value.takeLast(6),
-                    style = StudioTypography.Caption
-                )
-            }
-        }
-
-        // Insertion indicator BELOW node
-        if (isDropTarget && dropPos == TreeDropPosition.BELOW) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = (depth * 16).dp, top = 2.dp, bottom = 2.dp, end = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(6.dp)
-                        .clip(RoundedCornerShape(3.dp))
-                        .background(StudioColors.Primary)
-                )
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(2.dp)
-                        .background(StudioColors.Primary)
-                )
-                Text(
-                    text = "↓ Insert After",
-                    style = StudioTypography.Badge.copy(color = StudioColors.Primary)
-                )
+private fun TreeGeneratorScope<AstTreeNodeData>.populateAstTree(node: ComposableNode, slotLabel: String?) {
+    val children = getChildNodesWithSlots(node)
+    val itemData = AstTreeNodeData(node, slotLabel)
+    if (children.isEmpty()) {
+        addLeaf(itemData, id = node.id.value)
+    } else {
+        addNode(itemData, id = node.id.value) {
+            children.forEach { (child, childSlot) ->
+                populateAstTree(child, childSlot)
             }
         }
     }
+}
 
-    // Recursively render children & slots
-    when (node) {
-        is ComposableNode.ColumnNode -> node.children.forEach { RenderTreeNode(viewModel, it, depth + 1, selectedId, isInteractive, onSelect) }
-        is ComposableNode.RowNode -> node.children.forEach { RenderTreeNode(viewModel, it, depth + 1, selectedId, isInteractive, onSelect) }
-        is ComposableNode.BoxNode -> node.children.forEach { RenderTreeNode(viewModel, it, depth + 1, selectedId, isInteractive, onSelect) }
-        is ComposableNode.SurfaceNode -> node.children.forEach { RenderTreeNode(viewModel, it, depth + 1, selectedId, isInteractive, onSelect) }
-        is ComposableNode.CardNode -> node.content.forEach { RenderTreeNode(viewModel, it, depth + 1, selectedId, isInteractive, onSelect) }
-        is ComposableNode.ElevatedCardNode -> node.content.forEach { RenderTreeNode(viewModel, it, depth + 1, selectedId, isInteractive, onSelect) }
-        is ComposableNode.OutlinedCardNode -> node.content.forEach { RenderTreeNode(viewModel, it, depth + 1, selectedId, isInteractive, onSelect) }
-        is ComposableNode.ButtonNode -> node.content.forEach { RenderTreeNode(viewModel, it, depth + 1, selectedId, isInteractive, onSelect) }
-        is ComposableNode.ElevatedButtonNode -> node.content.forEach { RenderTreeNode(viewModel, it, depth + 1, selectedId, isInteractive, onSelect) }
-        is ComposableNode.FilledTonalButtonNode -> node.content.forEach { RenderTreeNode(viewModel, it, depth + 1, selectedId, isInteractive, onSelect) }
-        is ComposableNode.OutlinedButtonNode -> node.content.forEach { RenderTreeNode(viewModel, it, depth + 1, selectedId, isInteractive, onSelect) }
-        is ComposableNode.TextButtonNode -> node.content.forEach { RenderTreeNode(viewModel, it, depth + 1, selectedId, isInteractive, onSelect) }
-        is ComposableNode.IconButtonNode -> node.content.forEach { RenderTreeNode(viewModel, it, depth + 1, selectedId, isInteractive, onSelect) }
-        is ComposableNode.FloatingActionButtonNode -> node.content.forEach { RenderTreeNode(viewModel, it, depth + 1, selectedId, isInteractive, onSelect) }
-        is ComposableNode.ScaffoldNode -> {
-            node.topBar?.let { RenderTreeNode(viewModel, it, depth + 1, selectedId, isInteractive, onSelect, "topBar") }
-            node.bottomBar?.let { RenderTreeNode(viewModel, it, depth + 1, selectedId, isInteractive, onSelect, "bottomBar") }
-            node.floatingActionButton?.let { RenderTreeNode(viewModel, it, depth + 1, selectedId, isInteractive, onSelect, "fab") }
-            node.content?.let { RenderTreeNode(viewModel, it, depth + 1, selectedId, isInteractive, onSelect, "content") }
-        }
-        is ComposableNode.TopAppBarNode -> {
-            RenderTreeNode(viewModel, node.title, depth + 1, selectedId, isInteractive, onSelect, "title")
-            node.navigationIcon?.let { RenderTreeNode(viewModel, it, depth + 1, selectedId, isInteractive, onSelect, "navIcon") }
-            node.actions.forEach { RenderTreeNode(viewModel, it, depth + 1, selectedId, isInteractive, onSelect, "action") }
-        }
-        is ComposableNode.NavigationBarNode -> node.items.forEach { RenderTreeNode(viewModel, it, depth + 1, selectedId, isInteractive, onSelect) }
-        is ComposableNode.TextFieldNode -> {
-            node.leadingIcon?.let { RenderTreeNode(viewModel, it, depth + 1, selectedId, isInteractive, onSelect, "leading") }
-            node.trailingIcon?.let { RenderTreeNode(viewModel, it, depth + 1, selectedId, isInteractive, onSelect, "trailing") }
-        }
-        is ComposableNode.OutlinedTextFieldNode -> {
-            node.leadingIcon?.let { RenderTreeNode(viewModel, it, depth + 1, selectedId, isInteractive, onSelect, "leading") }
-            node.trailingIcon?.let { RenderTreeNode(viewModel, it, depth + 1, selectedId, isInteractive, onSelect, "trailing") }
-        }
-        is ComposableNode.NavigationBarItemNode -> {
-            RenderTreeNode(viewModel, node.icon, depth + 1, selectedId, isInteractive, onSelect, "icon")
-            node.label?.let { RenderTreeNode(viewModel, it, depth + 1, selectedId, isInteractive, onSelect, "label") }
-        }
-        else -> Unit
+fun buildJewelTree(rootNode: ComposableNode): Tree<AstTreeNodeData> = buildTree {
+    populateAstTree(rootNode, null)
+}
+
+fun getChildNodesWithSlots(node: ComposableNode): List<Pair<ComposableNode, String?>> = when (node) {
+    is ComposableNode.ColumnNode -> node.children.map { it to null }
+    is ComposableNode.RowNode -> node.children.map { it to null }
+    is ComposableNode.BoxNode -> node.children.map { it to null }
+    is ComposableNode.SurfaceNode -> node.children.map { it to null }
+    is ComposableNode.CardNode -> node.content.map { it to null }
+    is ComposableNode.ElevatedCardNode -> node.content.map { it to null }
+    is ComposableNode.OutlinedCardNode -> node.content.map { it to null }
+    is ComposableNode.ButtonNode -> node.content.map { it to null }
+    is ComposableNode.ElevatedButtonNode -> node.content.map { it to null }
+    is ComposableNode.FilledTonalButtonNode -> node.content.map { it to null }
+    is ComposableNode.OutlinedButtonNode -> node.content.map { it to null }
+    is ComposableNode.TextButtonNode -> node.content.map { it to null }
+    is ComposableNode.IconButtonNode -> node.content.map { it to null }
+    is ComposableNode.FloatingActionButtonNode -> node.content.map { it to null }
+    is ComposableNode.ScaffoldNode -> buildList {
+        node.topBar?.let { add(it to "topBar") }
+        node.bottomBar?.let { add(it to "bottomBar") }
+        node.floatingActionButton?.let { add(it to "fab") }
+        node.content?.let { add(it to "content") }
     }
+    is ComposableNode.TopAppBarNode -> buildList {
+        add(node.title to "title")
+        node.navigationIcon?.let { add(it to "navIcon") }
+        node.actions.forEach { add(it to "action") }
+    }
+    is ComposableNode.NavigationBarNode -> node.items.map { it to null }
+    is ComposableNode.NavigationBarItemNode -> buildList {
+        add(node.icon to "icon")
+        node.label?.let { add(it to "label") }
+    }
+    is ComposableNode.TextFieldNode -> buildList {
+        node.leadingIcon?.let { add(it to "leading") }
+        node.trailingIcon?.let { add(it to "trailing") }
+    }
+    is ComposableNode.OutlinedTextFieldNode -> buildList {
+        node.leadingIcon?.let { add(it to "leading") }
+        node.trailingIcon?.let { add(it to "trailing") }
+    }
+    else -> emptyList()
+}
+
+fun collectAllContainerIds(node: ComposableNode): Set<String> {
+    val ids = mutableSetOf<String>()
+    fun walk(n: ComposableNode) {
+        val children = getChildNodesWithSlots(n)
+        if (children.isNotEmpty()) {
+            ids.add(n.id.value)
+            children.forEach { walk(it.first) }
+        }
+    }
+    walk(node)
+    return ids
 }
 
 private fun getNodeLabel(node: ComposableNode): String = when (node) {
