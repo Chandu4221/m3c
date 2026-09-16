@@ -200,13 +200,11 @@ fun PropertyInspector(
                         onValueChange = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(placeholder = it.ifBlank { null }))) }
                     )
                 }
-                InspectorField(label = "Single Line") {
-                    Switch(
-                        checked = selectedNode.singleLine,
-                        onCheckedChange = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(singleLine = it))) },
-                        colors = SwitchDefaults.colors(checkedThumbColor = StudioColors.Primary)
-                    )
-                }
+                InspectorSwitchField(
+                    label = "Single Line",
+                    checked = selectedNode.singleLine,
+                    onCheckedChange = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(singleLine = it))) }
+                )
             }
 
             is ComposableNode.OutlinedTextFieldNode -> {
@@ -222,13 +220,11 @@ fun PropertyInspector(
                         onValueChange = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(placeholder = it.ifBlank { null }))) }
                     )
                 }
-                InspectorField(label = "Single Line") {
-                    Switch(
-                        checked = selectedNode.singleLine,
-                        onCheckedChange = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(singleLine = it))) },
-                        colors = SwitchDefaults.colors(checkedThumbColor = StudioColors.Primary)
-                    )
-                }
+                InspectorSwitchField(
+                    label = "Single Line",
+                    checked = selectedNode.singleLine,
+                    onCheckedChange = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(singleLine = it))) }
+                )
             }
 
             is ComposableNode.CardNode -> {
@@ -281,13 +277,11 @@ fun PropertyInspector(
                         )
                     )
                 }
-                InspectorField(label = "Enabled") {
-                    Switch(
-                        checked = selectedNode.enabled,
-                        onCheckedChange = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(enabled = it))) },
-                        colors = SwitchDefaults.colors(checkedThumbColor = StudioColors.Primary)
-                    )
-                }
+                InspectorSwitchField(
+                    label = "Enabled",
+                    checked = selectedNode.enabled,
+                    onCheckedChange = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(enabled = it))) }
+                )
             }
 
             is ComposableNode.LinearProgressIndicatorNode -> {
@@ -351,20 +345,16 @@ fun PropertyInspector(
             }
 
             is ComposableNode.NavigationBarItemNode -> {
-                InspectorField(label = "Selected") {
-                    Switch(
-                        checked = selectedNode.selected,
-                        onCheckedChange = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(selected = it))) },
-                        colors = SwitchDefaults.colors(checkedThumbColor = StudioColors.Primary)
-                    )
-                }
-                InspectorField(label = "Always Show Label") {
-                    Switch(
-                        checked = selectedNode.alwaysShowLabel,
-                        onCheckedChange = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(alwaysShowLabel = it))) },
-                        colors = SwitchDefaults.colors(checkedThumbColor = StudioColors.Primary)
-                    )
-                }
+                InspectorSwitchField(
+                    label = "Selected",
+                    checked = selectedNode.selected,
+                    onCheckedChange = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(selected = it))) }
+                )
+                InspectorSwitchField(
+                    label = "Always Show Label",
+                    checked = selectedNode.alwaysShowLabel,
+                    onCheckedChange = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(alwaysShowLabel = it))) }
+                )
             }
 
             is ComposableNode.ColumnNode -> {
@@ -409,67 +399,98 @@ fun PropertyInspector(
                         onSelect = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(contentAlignment = it))) }
                     )
                 }
-                InspectorField(label = "Propagate Min Constraints") {
-                    Switch(
-                        checked = selectedNode.propagateMinConstraints,
-                        onCheckedChange = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(propagateMinConstraints = it))) },
-                        colors = SwitchDefaults.colors(checkedThumbColor = StudioColors.Primary)
-                    )
-                }
+                InspectorSwitchField(
+                    label = "Propagate Min Constraints",
+                    checked = selectedNode.propagateMinConstraints,
+                    onCheckedChange = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(propagateMinConstraints = it))) }
+                )
             }
 
             is ComposableNode.ButtonNode -> {
-                InspectorField(label = "Enabled") {
-                    Switch(
-                        checked = selectedNode.enabled,
-                        onCheckedChange = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(enabled = it))) },
-                        colors = SwitchDefaults.colors(checkedThumbColor = StudioColors.Primary)
-                    )
-                }
+                InspectorSwitchField(
+                    label = "Enabled",
+                    checked = selectedNode.enabled,
+                    onCheckedChange = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(enabled = it))) }
+                )
+            }
+
+            is ComposableNode.ElevatedButtonNode -> {
+                InspectorSwitchField(
+                    label = "Enabled",
+                    checked = selectedNode.enabled,
+                    onCheckedChange = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(enabled = it))) }
+                )
+            }
+
+            is ComposableNode.FilledTonalButtonNode -> {
+                InspectorSwitchField(
+                    label = "Enabled",
+                    checked = selectedNode.enabled,
+                    onCheckedChange = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(enabled = it))) }
+                )
+            }
+
+            is ComposableNode.OutlinedButtonNode -> {
+                InspectorSwitchField(
+                    label = "Enabled",
+                    checked = selectedNode.enabled,
+                    onCheckedChange = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(enabled = it))) }
+                )
+            }
+
+            is ComposableNode.TextButtonNode -> {
+                InspectorSwitchField(
+                    label = "Enabled",
+                    checked = selectedNode.enabled,
+                    onCheckedChange = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(enabled = it))) }
+                )
+            }
+
+            is ComposableNode.IconButtonNode -> {
+                InspectorSwitchField(
+                    label = "Enabled",
+                    checked = selectedNode.enabled,
+                    onCheckedChange = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(enabled = it))) }
+                )
             }
 
             is ComposableNode.SwitchNode -> {
-                InspectorField(label = "Checked") {
-                    Switch(
-                        checked = selectedNode.checked,
-                        onCheckedChange = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(checked = it))) },
-                        colors = SwitchDefaults.colors(checkedThumbColor = StudioColors.Primary)
-                    )
-                }
-                InspectorField(label = "Enabled") {
-                    Switch(
-                        checked = selectedNode.enabled,
-                        onCheckedChange = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(enabled = it))) },
-                        colors = SwitchDefaults.colors(checkedThumbColor = StudioColors.Primary)
-                    )
-                }
+                InspectorSwitchField(
+                    label = "Checked",
+                    checked = selectedNode.checked,
+                    onCheckedChange = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(checked = it))) }
+                )
+                InspectorSwitchField(
+                    label = "Enabled",
+                    checked = selectedNode.enabled,
+                    onCheckedChange = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(enabled = it))) }
+                )
             }
 
             is ComposableNode.CheckboxNode -> {
-                InspectorField(label = "Checked") {
-                    Switch(
-                        checked = selectedNode.checked,
-                        onCheckedChange = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(checked = it))) },
-                        colors = SwitchDefaults.colors(checkedThumbColor = StudioColors.Primary)
-                    )
-                }
+                InspectorSwitchField(
+                    label = "Checked",
+                    checked = selectedNode.checked,
+                    onCheckedChange = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(checked = it))) }
+                )
+                InspectorSwitchField(
+                    label = "Enabled",
+                    checked = selectedNode.enabled,
+                    onCheckedChange = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(enabled = it))) }
+                )
             }
 
             is ComposableNode.RadioButtonNode -> {
-                InspectorField(label = "Selected") {
-                    Switch(
-                        checked = selectedNode.selected,
-                        onCheckedChange = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(selected = it))) },
-                        colors = SwitchDefaults.colors(checkedThumbColor = StudioColors.Primary)
-                    )
-                }
-                InspectorField(label = "Enabled") {
-                    Switch(
-                        checked = selectedNode.enabled,
-                        onCheckedChange = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(enabled = it))) },
-                        colors = SwitchDefaults.colors(checkedThumbColor = StudioColors.Primary)
-                    )
-                }
+                InspectorSwitchField(
+                    label = "Selected",
+                    checked = selectedNode.selected,
+                    onCheckedChange = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(selected = it))) }
+                )
+                InspectorSwitchField(
+                    label = "Enabled",
+                    checked = selectedNode.enabled,
+                    onCheckedChange = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(enabled = it))) }
+                )
             }
 
             else -> {
@@ -484,6 +505,43 @@ fun PropertyInspector(
 
         // 5. Modifiers Section
         ModifierInspector(viewModel = viewModel, node = selectedNode)
+    }
+}
+
+@Composable
+fun InspectorSwitchField(
+    label: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(6.dp))
+            .clickable { onCheckedChange(!checked) }
+            .padding(vertical = 4.dp, horizontal = 2.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            style = StudioTypography.Caption.copy(
+                fontWeight = FontWeight.Medium,
+                color = StudioColors.TextPrimary
+            )
+        )
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = StudioColors.TextInverse,
+                checkedTrackColor = StudioColors.Primary,
+                checkedBorderColor = StudioColors.Primary,
+                uncheckedThumbColor = StudioColors.TextSecondary,
+                uncheckedTrackColor = StudioColors.ActiveSurface,
+                uncheckedBorderColor = StudioColors.BorderSubtle
+            )
+        )
     }
 }
 
