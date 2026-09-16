@@ -2,10 +2,9 @@ package dev.chandradsl.m3c.app.desktop.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -39,6 +38,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.changedToUp
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -282,7 +282,60 @@ private fun PaletteComponentCard(
             .onGloballyPositioned { coordinates ->
                 cardPositionInWindow = coordinates.positionInWindow()
             }
-            .clickable(enabled = !isInteractive, onClick = onClick)
+            .pointerHoverIcon(if (!isInteractive) PointerIcon(Cursor(Cursor.HAND_CURSOR)) else PointerIcon.Default)
+            .then(
+                if (!isInteractive) {
+                    Modifier.pointerInput(item) {
+                        awaitEachGesture {
+                            val down = awaitFirstDown(requireUnconsumed = false)
+                            var isDragStarted = false
+                            var totalMovement = Offset.Zero
+                            val touchSlop = viewConfiguration.touchSlop
+
+                            try {
+                                while (true) {
+                                    val event = awaitPointerEvent()
+                                    val change = event.changes.firstOrNull { it.id == down.id } ?: break
+
+                                    if (change.changedToUp()) {
+                                        if (!isDragStarted) {
+                                            onClick()
+                                        } else {
+                                            viewModel.endPaletteDrag()
+                                        }
+                                        break
+                                    }
+
+                                    val dragAmount = change.position - change.previousPosition
+                                    totalMovement += dragAmount
+
+                                    if (!isDragStarted) {
+                                        if (totalMovement.getDistance() > touchSlop) {
+                                            isDragStarted = true
+                                            val globalStart = cardPositionInWindow + change.position
+                                            val dragItem = DraggedPaletteItem(
+                                                name = item.name,
+                                                description = item.description,
+                                                icon = item.icon,
+                                                factory = item.factory
+                                            )
+                                            viewModel.startPaletteDrag(dragItem, globalStart)
+                                            change.consume()
+                                        }
+                                    } else {
+                                        change.consume()
+                                        viewModel.updatePaletteDrag(dragAmount)
+                                    }
+                                }
+                            } finally {
+                                if (isDragStarted && viewModel.activeDragItem != null) {
+                                    viewModel.cancelPaletteDrag()
+                                }
+                            }
+                        }
+                    }
+                } else Modifier
+            )
             .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
@@ -315,46 +368,14 @@ private fun PaletteComponentCard(
             }
         }
 
-        // Drag Handle Grip
+        // Drag Handle Grip (visual affordance)
         if (!isInteractive) {
-            Box(
-                modifier = Modifier
-                    .size(28.dp)
-                    .clip(RoundedCornerShape(4.dp))
-                    .pointerHoverIcon(PointerIcon(Cursor(Cursor.HAND_CURSOR)))
-                    .pointerInput(item) {
-                        detectDragGestures(
-                            onDragStart = { localOffset ->
-                                val globalStart = cardPositionInWindow + localOffset
-                                val dragItem = DraggedPaletteItem(
-                                    name = item.name,
-                                    description = item.description,
-                                    icon = item.icon,
-                                    factory = item.factory
-                                )
-                                viewModel.startPaletteDrag(dragItem, globalStart)
-                            },
-                            onDrag = { change, dragAmount ->
-                                change.consume()
-                                viewModel.updatePaletteDrag(dragAmount)
-                            },
-                            onDragEnd = {
-                                viewModel.endPaletteDrag()
-                            },
-                            onDragCancel = {
-                                viewModel.cancelPaletteDrag()
-                            }
-                        )
-                    },
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.DragIndicator,
-                    contentDescription = "Drag to canvas",
-                    tint = StudioColors.TextMuted,
-                    modifier = Modifier.size(StudioSizes.IconMedium)
-                )
-            }
+            Icon(
+                imageVector = Icons.Default.DragIndicator,
+                contentDescription = "Drag to canvas",
+                tint = StudioColors.TextMuted,
+                modifier = Modifier.size(StudioSizes.IconMedium)
+            )
         }
     }
 }
