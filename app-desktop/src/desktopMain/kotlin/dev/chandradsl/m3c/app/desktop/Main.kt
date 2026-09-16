@@ -207,6 +207,61 @@ fun main() = application {
                             }
                         }
                     }
+
+                    // 5. Global Floating Tree Drag Avatar Overlay
+                    viewModel.activeTreeDragNode?.let { treeDrag ->
+                        Box(
+                            modifier = Modifier
+                                .offset {
+                                    androidx.compose.ui.unit.IntOffset(
+                                        x = (viewModel.dragPointerOffset.x + 16).toInt(),
+                                        y = (viewModel.dragPointerOffset.y + 16).toInt()
+                                    )
+                                }
+                                .shadow(elevation = 16.dp, shape = RoundedCornerShape(8.dp))
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(StudioColors.CardSurface)
+                                .border(
+                                    width = 2.dp,
+                                    color = if (viewModel.treeDropTargetId != null) StudioColors.Success else StudioColors.Primary,
+                                    shape = RoundedCornerShape(8.dp)
+                                )
+                                .padding(horizontal = 14.dp, vertical = 8.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.AccountTree,
+                                    contentDescription = null,
+                                    tint = if (viewModel.treeDropTargetId != null) StudioColors.Success else StudioColors.Primary,
+                                    modifier = Modifier.size(StudioSizes.IconStandard)
+                                )
+                                Column {
+                                    Text(
+                                        text = treeDrag.label,
+                                        style = StudioTypography.UIBody.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            color = StudioColors.TextPrimary
+                                        )
+                                    )
+                                    val actionText = when (viewModel.treeDropPosition) {
+                                        dev.chandradsl.m3c.app.desktop.state.TreeDropPosition.INSIDE -> "Drop inside container"
+                                        dev.chandradsl.m3c.app.desktop.state.TreeDropPosition.ABOVE -> "Insert before"
+                                        dev.chandradsl.m3c.app.desktop.state.TreeDropPosition.BELOW -> "Insert after"
+                                        null -> "Drag to reparent or reorder"
+                                    }
+                                    Text(
+                                        text = actionText,
+                                        style = StudioTypography.Caption.copy(
+                                            color = if (viewModel.treeDropTargetId != null) StudioColors.Success else StudioColors.TextSecondary
+                                        )
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }

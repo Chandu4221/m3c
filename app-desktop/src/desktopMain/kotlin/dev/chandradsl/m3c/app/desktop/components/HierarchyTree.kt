@@ -10,11 +10,19 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
+import dev.chandradsl.m3c.app.desktop.state.TreeDropPosition
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.FeaturedPlayList
 import androidx.compose.material.icons.filled.AddCircle
@@ -137,6 +145,16 @@ fun HierarchyTree(
                 }
 
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    // Outdent (Move out of parent container)
+                    TreeTextButton(
+                        text = "Out",
+                        enabled = viewModel.canMoveOut(selectedNodeId)
+                    ) { viewModel.moveNodeOut(selectedNodeId) }
+                    // Indent (Move into preceding container)
+                    TreeTextButton(
+                        text = "In",
+                        enabled = viewModel.canMoveIn(selectedNodeId)
+                    ) { viewModel.moveNodeIn(selectedNodeId) }
                     // Wrap in Column
                     TreeTextButton(text = "Col") { viewModel.wrapInContainer(selectedNodeId, "Column") }
                     // Wrap in Row
@@ -206,20 +224,27 @@ private fun TreeActionButton(
 @Composable
 private fun TreeTextButton(
     text: String,
+    enabled: Boolean = true,
     onClick: () -> Unit
 ) {
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(4.dp))
-            .background(StudioColors.ActiveSurface)
-            .border(width = 1.dp, color = StudioColors.BorderSubtle, shape = RoundedCornerShape(4.dp))
-            .clickable(onClick = onClick)
+            .background(if (enabled) StudioColors.ActiveSurface else Color.Transparent)
+            .border(
+                width = 1.dp,
+                color = if (enabled) StudioColors.BorderSubtle else StudioColors.BorderSubtle.copy(alpha = 0.25f),
+                shape = RoundedCornerShape(4.dp)
+            )
+            .clickable(enabled = enabled, onClick = onClick)
             .padding(horizontal = 6.dp, vertical = 2.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = text,
-            style = StudioTypography.Badge.copy(color = StudioColors.TextSecondary)
+            style = StudioTypography.Badge.copy(
+                color = if (enabled) StudioColors.TextSecondary else StudioColors.TextMuted.copy(alpha = 0.35f)
+            )
         )
     }
 }
@@ -234,112 +259,201 @@ private fun RenderTreeNode(
     onSelect: (NodeId) -> Unit,
     slotLabel: String? = null
 ) {
-    var dragAccumulatedY by remember { mutableStateOf(0f) }
-    var isDragging by remember { mutableStateOf(false) }
+    var itemPositionInWindow by remember { mutableStateOf(Offset.Zero) }
+    var itemBoundsInWindow by remember { mutableStateOf<Rect?>(null) }
 
     val isSelected = node.id == selectedId
+    val isRoot = node.id == viewModel.workspaceState.rootNode.id
+    val isDraggable = !isInteractive && !isRoot
+
+    val activeDrag = viewModel.activeTreeDragNode
+    val isBeingDragged = activeDrag?.nodeId == node.id
+    val isDropTarget = viewModel.treeDropTargetId == node.id
+    val dropPos = if (isDropTarget) viewModel.treeDropPosition else null
+    val isInsideTarget = isDropTarget && dropPos == TreeDropPosition.INSIDE
+
+    // Real-time hover tracking when another tree node is actively dragged
+    LaunchedEffect(viewModel.dragPointerOffset, activeDrag) {
+        if (activeDrag != null && !isBeingDragged) {
+            val bounds = itemBoundsInWindow
+            if (bounds != null && bounds.contains(viewModel.dragPointerOffset)) {
+                val relY = viewModel.dragPointerOffset.y - bounds.top
+                val h = bounds.height
+                val isContainer = viewModel.isContainerNode(node)
+                val pos = when {
+                    isContainer && relY in (h * 0.25f)..(h * 0.75f) -> TreeDropPosition.INSIDE
+                    relY < (if (isContainer) h * 0.25f else h * 0.5f) -> TreeDropPosition.ABOVE
+                    else -> TreeDropPosition.BELOW
+                }
+                viewModel.updateTreeDropTarget(node.id, pos)
+            }
+        }
+    }
+
     val bgColor = when {
-        isDragging -> StudioColors.ActiveSurface
+        isInsideTarget -> StudioColors.Success.copy(alpha = 0.15f)
+        isBeingDragged -> StudioColors.ActiveSurface.copy(alpha = 0.35f)
         isSelected -> StudioColors.ActiveSurface
         else -> Color.Transparent
     }
     val borderColor = when {
-        isDragging -> StudioColors.BorderActive
-        isSelected -> StudioColors.BorderActive.copy(alpha = 0.5f)
+        isInsideTarget -> StudioColors.Success
+        isSelected -> StudioColors.BorderActive.copy(alpha = 0.6f)
         else -> Color.Transparent
     }
-    val accentColor = if (isSelected || isDragging) StudioColors.Primary else StudioColors.TextPrimary
-    val canReorder = !isInteractive && (viewModel.canMoveUp(node.id) || viewModel.canMoveDown(node.id))
+    val accentColor = when {
+        isInsideTarget -> StudioColors.Success
+        isSelected -> StudioColors.Primary
+        else -> StudioColors.TextPrimary
+    }
 
-    Row(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(elevation = if (isDragging) 6.dp else 0.dp, shape = RoundedCornerShape(4.dp))
-            .clip(RoundedCornerShape(4.dp))
-            .background(bgColor)
-            .border(width = 1.dp, color = borderColor, shape = RoundedCornerShape(4.dp))
-            .graphicsLayer {
-                if (isDragging) {
-                    translationY = dragAccumulatedY.coerceIn(-14f, 14f)
-                }
+            .onGloballyPositioned { coords ->
+                itemBoundsInWindow = coords.boundsInWindow()
+                itemPositionInWindow = coords.positionInWindow()
             }
-            .clickable(enabled = !isInteractive) { onSelect(node.id) }
-            .padding(start = (depth * 16).dp, top = 5.dp, bottom = 5.dp, end = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        // Drag reorder handle for movable nodes
-        if (canReorder) {
-            Icon(
-                imageVector = Icons.Default.DragHandle,
-                contentDescription = "Drag to reorder hierarchy",
-                tint = if (isDragging) StudioColors.Primary else StudioColors.TextMuted.copy(alpha = 0.6f),
+        // Insertion indicator ABOVE node
+        if (isDropTarget && dropPos == TreeDropPosition.ABOVE) {
+            Row(
                 modifier = Modifier
-                    .size(StudioSizes.IconSmall)
-                    .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR)))
-                    .pointerInput(node.id) {
-                        detectDragGestures(
-                            onDragStart = {
-                                isDragging = true
-                                dragAccumulatedY = 0f
-                                onSelect(node.id)
-                            },
-                            onDrag = { change, dragAmount ->
-                                change.consume()
-                                dragAccumulatedY += dragAmount.y
-                                val threshold = 28f
-                                if (dragAccumulatedY > threshold && viewModel.canMoveDown(node.id)) {
-                                    viewModel.moveNodeDown(node.id)
-                                    dragAccumulatedY = 0f
-                                } else if (dragAccumulatedY < -threshold && viewModel.canMoveUp(node.id)) {
-                                    viewModel.moveNodeUp(node.id)
-                                    dragAccumulatedY = 0f
+                    .fillMaxWidth()
+                    .padding(start = (depth * 16).dp, top = 2.dp, bottom = 2.dp, end = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(6.dp)
+                        .clip(RoundedCornerShape(3.dp))
+                        .background(StudioColors.Primary)
+                )
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(2.dp)
+                        .background(StudioColors.Primary)
+                )
+                Text(
+                    text = "↑ Insert Before",
+                    style = StudioTypography.Badge.copy(color = StudioColors.Primary)
+                )
+            }
+        }
+
+        // Tree Node Row
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .shadow(elevation = if (isInsideTarget) 4.dp else 0.dp, shape = RoundedCornerShape(4.dp))
+                .clip(RoundedCornerShape(4.dp))
+                .background(bgColor)
+                .border(width = if (isInsideTarget) 2.dp else 1.dp, color = borderColor, shape = RoundedCornerShape(4.dp))
+                .clickable(enabled = !isInteractive) { onSelect(node.id) }
+                .padding(start = (depth * 16).dp, top = 5.dp, bottom = 5.dp, end = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            // Drag handle for non-root nodes
+            if (isDraggable) {
+                Icon(
+                    imageVector = Icons.Default.DragHandle,
+                    contentDescription = "Drag to reparent or reorder",
+                    tint = if (isBeingDragged) StudioColors.Primary else StudioColors.TextMuted.copy(alpha = 0.6f),
+                    modifier = Modifier
+                        .size(StudioSizes.IconSmall)
+                        .pointerHoverIcon(PointerIcon(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR)))
+                        .pointerInput(node.id) {
+                            detectDragGestures(
+                                onDragStart = { localOffset ->
+                                    val windowOffset = itemPositionInWindow + localOffset
+                                    viewModel.startTreeDrag(node, windowOffset, getNodeLabel(node))
+                                    onSelect(node.id)
+                                },
+                                onDrag = { change, dragAmount ->
+                                    change.consume()
+                                    viewModel.updateTreeDrag(dragAmount)
+                                },
+                                onDragEnd = {
+                                    viewModel.endTreeDrag()
+                                },
+                                onDragCancel = {
+                                    viewModel.cancelTreeDrag()
                                 }
-                            },
-                            onDragEnd = {
-                                isDragging = false
-                                dragAccumulatedY = 0f
-                            },
-                            onDragCancel = {
-                                isDragging = false
-                                dragAccumulatedY = 0f
-                            }
-                        )
-                    }
+                            )
+                        }
+                )
+            }
+
+            // Material Icon
+            Icon(
+                imageVector = getNodeIcon(node),
+                contentDescription = null,
+                tint = accentColor,
+                modifier = Modifier.size(StudioSizes.IconMedium)
             )
-        }
 
-        // Material Icon
-        Icon(
-            imageVector = getNodeIcon(node),
-            contentDescription = null,
-            tint = accentColor,
-            modifier = Modifier.size(StudioSizes.IconMedium)
-        )
+            // Slot label (if inside a named slot)
+            if (slotLabel != null) {
+                Text(
+                    text = "[$slotLabel]",
+                    style = StudioTypography.Badge.copy(color = StudioColors.Warning)
+                )
+            }
 
-        // Slot label (if inside a named slot)
-        if (slotLabel != null) {
+            // Component name
             Text(
-                text = "[$slotLabel]",
-                style = StudioTypography.Badge.copy(color = StudioColors.Warning)
+                text = getNodeLabel(node),
+                style = StudioTypography.UIBody.copy(
+                    color = accentColor,
+                    fontWeight = if (isSelected || isInsideTarget) FontWeight.SemiBold else FontWeight.Normal
+                ),
+                modifier = Modifier.weight(1f)
             )
+
+            // "Drop inside" badge or ID tag
+            if (isInsideTarget) {
+                Text(
+                    text = "↳ Drop Inside",
+                    style = StudioTypography.Badge.copy(color = StudioColors.Success, fontWeight = FontWeight.Bold)
+                )
+            } else {
+                Text(
+                    text = node.id.value.takeLast(6),
+                    style = StudioTypography.Caption
+                )
+            }
         }
 
-        // Component name
-        Text(
-            text = getNodeLabel(node),
-            style = StudioTypography.UIBody.copy(
-                color = accentColor,
-                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
-            ),
-            modifier = Modifier.weight(1f)
-        )
-
-        // ID tag
-        Text(
-            text = node.id.value.takeLast(6),
-            style = StudioTypography.Caption
-        )
+        // Insertion indicator BELOW node
+        if (isDropTarget && dropPos == TreeDropPosition.BELOW) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = (depth * 16).dp, top = 2.dp, bottom = 2.dp, end = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(6.dp)
+                        .clip(RoundedCornerShape(3.dp))
+                        .background(StudioColors.Primary)
+                )
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(2.dp)
+                        .background(StudioColors.Primary)
+                )
+                Text(
+                    text = "↓ Insert After",
+                    style = StudioTypography.Badge.copy(color = StudioColors.Primary)
+                )
+            }
+        }
     }
 
     // Recursively render children & slots

@@ -18,6 +18,7 @@ import dev.chandradsl.m3c.core.domain.model.NodeId
 import dev.chandradsl.m3c.core.domain.model.ShapeDef
 import dev.chandradsl.m3c.core.domain.model.ShapeToken
 import dev.chandradsl.m3c.core.domain.model.TypographyToken
+import dev.chandradsl.m3c.core.domain.store.TreeMutator
 import dev.chandradsl.m3c.core.domain.store.WorkspaceIntent
 import dev.chandradsl.m3c.core.domain.store.WorkspaceState
 import dev.chandradsl.m3c.core.domain.store.WorkspaceStore
@@ -28,6 +29,15 @@ data class DraggedPaletteItem(
     val icon: ImageVector,
     val factory: () -> ComposableNode
 )
+
+data class DraggedTreeNode(
+    val nodeId: NodeId,
+    val label: String
+)
+
+enum class TreeDropPosition {
+    INSIDE, ABOVE, BELOW
+}
 
 enum class LeftDrawerTab {
     Palette,
@@ -181,6 +191,62 @@ class StudioViewModel {
         isCanvasDropHovered = false
     }
 
+    // 6b. Tree Hierarchy Drag & Drop
+    var activeTreeDragNode: DraggedTreeNode? by mutableStateOf(null)
+    var treeDropTargetId: NodeId? by mutableStateOf(null)
+    var treeDropPosition: TreeDropPosition? by mutableStateOf(null)
+
+    fun startTreeDrag(node: ComposableNode, initialOffset: Offset, label: String) {
+        if (isInteractiveMode) return
+        if (node.id == workspaceState.rootNode.id) return
+        activeTreeDragNode = DraggedTreeNode(node.id, label)
+        dragPointerOffset = initialOffset
+        treeDropTargetId = null
+        treeDropPosition = null
+    }
+
+    fun updateTreeDrag(delta: Offset) {
+        dragPointerOffset += delta
+    }
+
+    fun updateTreeDropTarget(targetId: NodeId?, position: TreeDropPosition?) {
+        val dragged = activeTreeDragNode ?: return
+        if (targetId == null || position == null) {
+            treeDropTargetId = null
+            treeDropPosition = null
+            return
+        }
+        if (canDropTreeNode(dragged.nodeId, targetId, position)) {
+            treeDropTargetId = targetId
+            treeDropPosition = position
+        } else {
+            treeDropTargetId = null
+            treeDropPosition = null
+        }
+    }
+
+    fun endTreeDrag() {
+        val dragged = activeTreeDragNode
+        val targetId = treeDropTargetId
+        val position = treeDropPosition
+        if (dragged != null && targetId != null && position != null) {
+            when (position) {
+                TreeDropPosition.INSIDE -> moveNodeInto(dragged.nodeId, targetId)
+                TreeDropPosition.ABOVE -> moveNodeRelative(dragged.nodeId, targetId, placeAfter = false)
+                TreeDropPosition.BELOW -> moveNodeRelative(dragged.nodeId, targetId, placeAfter = true)
+            }
+        }
+        activeTreeDragNode = null
+        treeDropTargetId = null
+        treeDropPosition = null
+    }
+
+    fun cancelTreeDrag() {
+        activeTreeDragNode = null
+        treeDropTargetId = null
+        treeDropPosition = null
+    }
+
     // 6. Slot Targeting
     var targetedSlot: Pair<NodeId, String>? by mutableStateOf(null)
 
@@ -287,6 +353,122 @@ class StudioViewModel {
         }
         dispatch(WorkspaceIntent.UpdateNode(newContainer))
         dispatch(WorkspaceIntent.SelectNode(newContainer.id))
+    }
+
+    // Hierarchical Drag-and-Drop & Reparenting Operations
+    fun isContainerNode(node: ComposableNode): Boolean = when (node) {
+        is ComposableNode.ColumnNode,
+        is ComposableNode.RowNode,
+        is ComposableNode.BoxNode,
+        is ComposableNode.SurfaceNode,
+        is ComposableNode.CardNode,
+        is ComposableNode.ElevatedCardNode,
+        is ComposableNode.OutlinedCardNode,
+        is ComposableNode.ButtonNode,
+        is ComposableNode.ElevatedButtonNode,
+        is ComposableNode.FilledTonalButtonNode,
+        is ComposableNode.OutlinedButtonNode,
+        is ComposableNode.TextButtonNode,
+        is ComposableNode.IconButtonNode,
+        is ComposableNode.FloatingActionButtonNode,
+        is ComposableNode.NavigationBarNode -> true
+        else -> false
+    }
+
+    fun isDescendant(root: ComposableNode, ancestorId: NodeId, candidateId: NodeId): Boolean {
+        val ancestor = findNodeRecursive(root, ancestorId) ?: return false
+        return findNodeRecursive(ancestor, candidateId) != null
+    }
+
+    fun canDropTreeNode(sourceId: NodeId, targetId: NodeId, position: TreeDropPosition): Boolean {
+        if (sourceId == targetId) return false
+        if (sourceId == workspaceState.rootNode.id) return false
+        if (isDescendant(workspaceState.rootNode, sourceId, targetId)) return false
+
+        return when (position) {
+            TreeDropPosition.INSIDE -> {
+                val targetNode = findNodeRecursive(workspaceState.rootNode, targetId) ?: return false
+                isContainerNode(targetNode)
+            }
+            TreeDropPosition.ABOVE, TreeDropPosition.BELOW -> {
+                if (targetId == workspaceState.rootNode.id) return false
+                val targetParent = findParentRecursive(workspaceState.rootNode, targetId) ?: return false
+                targetParent.id != sourceId && !isDescendant(workspaceState.rootNode, sourceId, targetParent.id)
+            }
+        }
+    }
+
+    fun moveNodeInto(sourceId: NodeId, targetContainerId: NodeId, insertIndex: Int = -1) {
+        if (sourceId == targetContainerId) return
+        if (sourceId == workspaceState.rootNode.id) return
+        if (isDescendant(workspaceState.rootNode, sourceId, targetContainerId)) return
+
+        val sourceNode = findNodeRecursive(workspaceState.rootNode, sourceId) ?: return
+        val targetNode = findNodeRecursive(workspaceState.rootNode, targetContainerId) ?: return
+        if (!isContainerNode(targetNode)) return
+
+        val treeWithoutSource = TreeMutator.removeNode(workspaceState.rootNode, sourceId) ?: return
+        val finalTree = TreeMutator.insertChild(treeWithoutSource, targetContainerId, sourceNode, insertIndex)
+
+        dispatch(WorkspaceIntent.UpdateNode(finalTree))
+        dispatch(WorkspaceIntent.SelectNode(sourceId))
+    }
+
+    fun moveNodeRelative(sourceId: NodeId, targetNodeId: NodeId, placeAfter: Boolean) {
+        if (sourceId == targetNodeId) return
+        if (sourceId == workspaceState.rootNode.id || targetNodeId == workspaceState.rootNode.id) return
+
+        val targetParent = findParentRecursive(workspaceState.rootNode, targetNodeId) ?: return
+        if (sourceId == targetParent.id) return
+        if (isDescendant(workspaceState.rootNode, sourceId, targetParent.id)) return
+
+        val sourceNode = findNodeRecursive(workspaceState.rootNode, sourceId) ?: return
+        val treeWithoutSource = TreeMutator.removeNode(workspaceState.rootNode, sourceId) ?: return
+
+        val newTargetParent = findParentRecursive(treeWithoutSource, targetNodeId) ?: return
+        val siblings = getChildrenOf(newTargetParent)
+        val targetIndex = siblings.indexOfFirst { it.id == targetNodeId }
+        if (targetIndex < 0) return
+
+        val insertIndex = if (placeAfter) targetIndex + 1 else targetIndex
+        val finalTree = TreeMutator.insertChild(treeWithoutSource, newTargetParent.id, sourceNode, insertIndex)
+
+        dispatch(WorkspaceIntent.UpdateNode(finalTree))
+        dispatch(WorkspaceIntent.SelectNode(sourceId))
+    }
+
+    fun canMoveOut(nodeId: NodeId): Boolean {
+        if (nodeId == workspaceState.rootNode.id) return false
+        val parent = findParentRecursive(workspaceState.rootNode, nodeId) ?: return false
+        if (parent.id == workspaceState.rootNode.id) return false
+        val grandParent = findParentRecursive(workspaceState.rootNode, parent.id) ?: return false
+        return isContainerNode(grandParent)
+    }
+
+    fun moveNodeOut(nodeId: NodeId) {
+        if (!canMoveOut(nodeId)) return
+        val parent = findParentRecursive(workspaceState.rootNode, nodeId) ?: return
+        moveNodeRelative(sourceId = nodeId, targetNodeId = parent.id, placeAfter = true)
+    }
+
+    fun canMoveIn(nodeId: NodeId): Boolean {
+        if (nodeId == workspaceState.rootNode.id) return false
+        val parent = findParentRecursive(workspaceState.rootNode, nodeId) ?: return false
+        val siblings = getChildrenOf(parent)
+        val index = siblings.indexOfFirst { it.id == nodeId }
+        if (index <= 0) return false
+        val prevSibling = siblings[index - 1]
+        return isContainerNode(prevSibling)
+    }
+
+    fun moveNodeIn(nodeId: NodeId) {
+        if (!canMoveIn(nodeId)) return
+        val parent = findParentRecursive(workspaceState.rootNode, nodeId) ?: return
+        val siblings = getChildrenOf(parent)
+        val index = siblings.indexOfFirst { it.id == nodeId }
+        if (index <= 0) return
+        val prevSibling = siblings[index - 1]
+        moveNodeInto(sourceId = nodeId, targetContainerId = prevSibling.id)
     }
 
     // 10. Modifier Reordering & Management
