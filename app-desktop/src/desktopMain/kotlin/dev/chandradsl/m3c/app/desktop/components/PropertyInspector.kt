@@ -24,6 +24,8 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -34,7 +36,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import dev.chandradsl.m3c.app.desktop.state.StudioViewModel
 import dev.chandradsl.m3c.app.desktop.theme.StudioColors
 import dev.chandradsl.m3c.app.desktop.theme.StudioSizes
@@ -45,6 +46,9 @@ import dev.chandradsl.m3c.core.domain.model.AlignmentVerticalDef
 import dev.chandradsl.m3c.core.domain.model.ArrangementHorizontalDef
 import dev.chandradsl.m3c.core.domain.model.ArrangementVerticalDef
 import dev.chandradsl.m3c.core.domain.model.ComposableNode
+import dev.chandradsl.m3c.core.domain.model.DpVal
+import dev.chandradsl.m3c.core.domain.model.ShapeDef
+import dev.chandradsl.m3c.core.domain.model.ShapeToken
 import dev.chandradsl.m3c.core.domain.model.TypographyToken
 import dev.chandradsl.m3c.core.domain.store.WorkspaceIntent
 
@@ -205,6 +209,164 @@ fun PropertyInspector(
                 }
             }
 
+            is ComposableNode.OutlinedTextFieldNode -> {
+                InspectorField(label = "Input Value") {
+                    InspectorTextInput(
+                        value = selectedNode.value,
+                        onValueChange = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(value = it))) }
+                    )
+                }
+                InspectorField(label = "Placeholder") {
+                    InspectorTextInput(
+                        value = selectedNode.placeholder ?: "",
+                        onValueChange = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(placeholder = it.ifBlank { null }))) }
+                    )
+                }
+                InspectorField(label = "Single Line") {
+                    Switch(
+                        checked = selectedNode.singleLine,
+                        onCheckedChange = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(singleLine = it))) },
+                        colors = SwitchDefaults.colors(checkedThumbColor = StudioColors.Primary)
+                    )
+                }
+            }
+
+            is ComposableNode.CardNode -> {
+                InspectorField(label = "Elevation") {
+                    DpOptionChips(
+                        options = listOf(0f, 1f, 2f, 4f, 8f),
+                        selected = selectedNode.elevation.value,
+                        onSelect = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(elevation = DpVal(it)))) }
+                    )
+                }
+            }
+
+            is ComposableNode.ElevatedCardNode -> {
+                InspectorField(label = "Elevation") {
+                    DpOptionChips(
+                        options = listOf(2f, 4f, 6f, 8f, 12f),
+                        selected = selectedNode.elevation.value,
+                        onSelect = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(elevation = DpVal(it)))) }
+                    )
+                }
+            }
+
+            is ComposableNode.SurfaceNode -> {
+                InspectorField(label = "Tonal Elevation") {
+                    DpOptionChips(
+                        options = listOf(0f, 1f, 2f, 4f, 8f),
+                        selected = selectedNode.tonalElevation.value,
+                        onSelect = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(tonalElevation = DpVal(it)))) }
+                    )
+                }
+                InspectorField(label = "Shadow Elevation") {
+                    DpOptionChips(
+                        options = listOf(0f, 2f, 4f, 8f, 16f),
+                        selected = selectedNode.shadowElevation.value,
+                        onSelect = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(shadowElevation = DpVal(it)))) }
+                    )
+                }
+            }
+
+            is ComposableNode.SliderNode -> {
+                InspectorField(label = "Value (${(selectedNode.value * 100).toInt()}%)") {
+                    Slider(
+                        value = selectedNode.value,
+                        onValueChange = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(value = it))) },
+                        valueRange = selectedNode.valueRangeStart..selectedNode.valueRangeEnd,
+                        steps = selectedNode.steps,
+                        colors = SliderDefaults.colors(
+                            thumbColor = StudioColors.Primary,
+                            activeTrackColor = StudioColors.Primary
+                        )
+                    )
+                }
+                InspectorField(label = "Enabled") {
+                    Switch(
+                        checked = selectedNode.enabled,
+                        onCheckedChange = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(enabled = it))) },
+                        colors = SwitchDefaults.colors(checkedThumbColor = StudioColors.Primary)
+                    )
+                }
+            }
+
+            is ComposableNode.LinearProgressIndicatorNode -> {
+                val current = selectedNode.progress ?: 0.5f
+                InspectorField(label = "Progress (${(current * 100).toInt()}%)") {
+                    Slider(
+                        value = current,
+                        onValueChange = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(progress = it))) },
+                        valueRange = 0f..1f,
+                        colors = SliderDefaults.colors(
+                            thumbColor = StudioColors.Primary,
+                            activeTrackColor = StudioColors.Primary
+                        )
+                    )
+                }
+            }
+
+            is ComposableNode.CircularProgressIndicatorNode -> {
+                val current = selectedNode.progress ?: 0.5f
+                InspectorField(label = "Progress (${(current * 100).toInt()}%)") {
+                    Slider(
+                        value = current,
+                        onValueChange = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(progress = it))) },
+                        valueRange = 0f..1f,
+                        colors = SliderDefaults.colors(
+                            thumbColor = StudioColors.Primary,
+                            activeTrackColor = StudioColors.Primary
+                        )
+                    )
+                }
+            }
+
+            is ComposableNode.HorizontalDividerNode -> {
+                InspectorField(label = "Thickness") {
+                    DpOptionChips(
+                        options = listOf(1f, 2f, 4f),
+                        selected = selectedNode.thickness.value,
+                        onSelect = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(thickness = DpVal(it)))) }
+                    )
+                }
+            }
+
+            is ComposableNode.VerticalDividerNode -> {
+                InspectorField(label = "Thickness") {
+                    DpOptionChips(
+                        options = listOf(1f, 2f, 4f),
+                        selected = selectedNode.thickness.value,
+                        onSelect = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(thickness = DpVal(it)))) }
+                    )
+                }
+            }
+
+            is ComposableNode.FloatingActionButtonNode -> {
+                InspectorField(label = "Shape") {
+                    EnumSelector(
+                        values = ShapeToken.entries,
+                        selected = (selectedNode.shape as? ShapeDef.Token)?.token ?: ShapeToken.Large,
+                        onSelect = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(shape = ShapeDef.Token(it)))) }
+                    )
+                }
+            }
+
+            is ComposableNode.NavigationBarItemNode -> {
+                InspectorField(label = "Selected") {
+                    Switch(
+                        checked = selectedNode.selected,
+                        onCheckedChange = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(selected = it))) },
+                        colors = SwitchDefaults.colors(checkedThumbColor = StudioColors.Primary)
+                    )
+                }
+                InspectorField(label = "Always Show Label") {
+                    Switch(
+                        checked = selectedNode.alwaysShowLabel,
+                        onCheckedChange = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(alwaysShowLabel = it))) },
+                        colors = SwitchDefaults.colors(checkedThumbColor = StudioColors.Primary)
+                    )
+                }
+            }
+
             is ComposableNode.ColumnNode -> {
                 InspectorField(label = "Vertical Arrangement") {
                     EnumSelector(
@@ -293,6 +455,23 @@ fun PropertyInspector(
                 }
             }
 
+            is ComposableNode.RadioButtonNode -> {
+                InspectorField(label = "Selected") {
+                    Switch(
+                        checked = selectedNode.selected,
+                        onCheckedChange = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(selected = it))) },
+                        colors = SwitchDefaults.colors(checkedThumbColor = StudioColors.Primary)
+                    )
+                }
+                InspectorField(label = "Enabled") {
+                    Switch(
+                        checked = selectedNode.enabled,
+                        onCheckedChange = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(enabled = it))) },
+                        colors = SwitchDefaults.colors(checkedThumbColor = StudioColors.Primary)
+                    )
+                }
+            }
+
             else -> {
                 Text(
                     text = "No custom properties for this component type.",
@@ -349,6 +528,44 @@ fun InspectorTextInput(
             cursorColor = StudioColors.Primary
         )
     )
+}
+
+@Composable
+fun DpOptionChips(
+    options: List<Float>,
+    selected: Float,
+    onSelect: (Float) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        options.forEach { option ->
+            val isChosen = option == selected
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(if (isChosen) StudioColors.Primary else StudioColors.CardSurface)
+                    .border(
+                        width = 1.dp,
+                        color = if (isChosen) StudioColors.Primary else StudioColors.BorderSubtle,
+                        shape = RoundedCornerShape(6.dp)
+                    )
+                    .clickable { onSelect(option) }
+                    .padding(vertical = 6.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "${option.toInt()}dp",
+                    style = StudioTypography.Caption.copy(
+                        color = if (isChosen) StudioColors.TextInverse else StudioColors.TextPrimary,
+                        fontWeight = if (isChosen) FontWeight.Bold else FontWeight.Normal
+                    )
+                )
+            }
+        }
+    }
 }
 
 @Composable

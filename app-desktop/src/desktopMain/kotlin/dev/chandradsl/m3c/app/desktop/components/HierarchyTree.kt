@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -17,11 +18,15 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.FeaturedPlayList
 import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.AdsClick
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Autorenew
 import androidx.compose.material.icons.filled.CheckBox
 import androidx.compose.material.icons.filled.CheckBoxOutlineBlank
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.CropLandscape
 import androidx.compose.material.icons.filled.CropPortrait
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.HorizontalDistribute
 import androidx.compose.material.icons.filled.HorizontalRule
@@ -66,6 +71,7 @@ fun HierarchyTree(
 ) {
     val scrollState = rememberScrollState()
     val state = viewModel.workspaceState
+    val selectedNodeId = state.selectedNodeId
 
     Column(
         modifier = modifier
@@ -74,25 +80,133 @@ fun HierarchyTree(
             .background(StudioColors.PanelSurface)
             .border(width = 1.dp, color = StudioColors.BorderSubtle)
             .padding(14.dp)
-            .verticalScroll(scrollState),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
+        // Tree Header
         Text(
             text = "COMPONENT TREE",
             style = StudioTypography.SectionHeader,
             modifier = Modifier.padding(horizontal = 4.dp, vertical = 6.dp)
         )
 
-        RenderTreeNode(
-            node = state.rootNode,
-            depth = 0,
-            selectedId = if (viewModel.isInteractiveMode) null else state.selectedNodeId,
-            isInteractive = viewModel.isInteractiveMode,
-            onSelect = {
-                if (!viewModel.isInteractiveMode) {
-                    viewModel.dispatch(WorkspaceIntent.SelectNode(it))
+        // Selected Node Quick Action Bar
+        if (selectedNodeId != null && selectedNodeId != state.rootNode.id && !viewModel.isInteractiveMode) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(StudioColors.CardSurface)
+                    .border(width = 1.dp, color = StudioColors.BorderSubtle, shape = RoundedCornerShape(6.dp))
+                    .padding(6.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    // Move Up
+                    TreeActionButton(
+                        icon = Icons.Default.ArrowUpward,
+                        tooltip = "Move Up",
+                        enabled = viewModel.canMoveUp(selectedNodeId),
+                        onClick = { viewModel.moveNodeUp(selectedNodeId) }
+                    )
+                    // Move Down
+                    TreeActionButton(
+                        icon = Icons.Default.ArrowDownward,
+                        tooltip = "Move Down",
+                        enabled = viewModel.canMoveDown(selectedNodeId),
+                        onClick = { viewModel.moveNodeDown(selectedNodeId) }
+                    )
+                    // Duplicate
+                    TreeActionButton(
+                        icon = Icons.Default.ContentCopy,
+                        tooltip = "Duplicate",
+                        enabled = true,
+                        onClick = { viewModel.duplicateNode(selectedNodeId) }
+                    )
+                }
+
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    // Wrap in Column
+                    TreeTextButton(text = "Col") { viewModel.wrapInContainer(selectedNodeId, "Column") }
+                    // Wrap in Row
+                    TreeTextButton(text = "Row") { viewModel.wrapInContainer(selectedNodeId, "Row") }
+                    // Delete
+                    TreeActionButton(
+                        icon = Icons.Default.Delete,
+                        tooltip = "Delete",
+                        enabled = true,
+                        tint = StudioColors.Error,
+                        onClick = { viewModel.deleteSelectedNode() }
+                    )
                 }
             }
+        }
+
+        // Scrollable Tree
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+                .padding(top = 8.dp)
+                .verticalScroll(scrollState),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            RenderTreeNode(
+                node = state.rootNode,
+                depth = 0,
+                selectedId = if (viewModel.isInteractiveMode) null else state.selectedNodeId,
+                isInteractive = viewModel.isInteractiveMode,
+                onSelect = {
+                    if (!viewModel.isInteractiveMode) {
+                        viewModel.dispatch(WorkspaceIntent.SelectNode(it))
+                    }
+                }
+            )
+        }
+    }
+}
+
+@Composable
+private fun TreeActionButton(
+    icon: ImageVector,
+    tooltip: String,
+    enabled: Boolean,
+    tint: Color = StudioColors.TextPrimary,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .size(24.dp)
+            .clip(RoundedCornerShape(4.dp))
+            .background(if (enabled) StudioColors.ActiveSurface else Color.Transparent)
+            .clickable(enabled = enabled, onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = tooltip,
+            tint = if (enabled) tint else StudioColors.TextMuted.copy(alpha = 0.4f),
+            modifier = Modifier.size(StudioSizes.IconSmall)
+        )
+    }
+}
+
+@Composable
+private fun TreeTextButton(
+    text: String,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(4.dp))
+            .background(StudioColors.ActiveSurface)
+            .border(width = 1.dp, color = StudioColors.BorderSubtle, shape = RoundedCornerShape(4.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 6.dp, vertical = 2.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = text,
+            style = StudioTypography.Badge.copy(color = StudioColors.TextSecondary)
         )
     }
 }
@@ -146,7 +260,7 @@ private fun RenderTreeNode(
             modifier = Modifier.weight(1f)
         )
 
-        // ID tag (adheres to 12px hard floor with 7.1:1 contrast)
+        // ID tag
         Text(
             text = node.id.value.takeLast(6),
             style = StudioTypography.Caption
