@@ -11,10 +11,17 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DesignServices
+import androidx.compose.material.icons.filled.TouchApp
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Switch
@@ -27,6 +34,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.chandradsl.m3c.app.desktop.state.StudioViewModel
@@ -49,7 +57,7 @@ fun PropertyInspector(
 
     Column(
         modifier = modifier
-            .width(280.dp)
+            .width(viewModel.rightPanelWidth)
             .fillMaxHeight()
             .background(Color(0xFF181825))
             .border(width = 1.dp, color = Color(0xFF313244))
@@ -57,6 +65,72 @@ fun PropertyInspector(
             .verticalScroll(scrollState),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        // 1. Guard for Interactive Mode: Lock editing and inform user
+        if (viewModel.isInteractiveMode) {
+            Box(
+                modifier = Modifier.fillMaxWidth().fillMaxHeight(),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(RoundedCornerShape(24.dp))
+                            .background(Color(0xFF313244)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.TouchApp,
+                            contentDescription = null,
+                            tint = Color(0xFFCBA6F7),
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+
+                    Text(
+                        text = "Interactive Mode Active",
+                        color = Color(0xFFCDD6F4),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+
+                    Text(
+                        text = "Styling edits are locked during interactive preview. Click components on the canvas to test buttons, inputs, and states directly.",
+                        color = Color(0xFF6C7086),
+                        fontSize = 11.sp,
+                        lineHeight = 15.sp,
+                        textAlign = TextAlign.Center
+                    )
+
+                    Button(
+                        onClick = { viewModel.updateInteractiveMode(false) },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFCBA6F7)),
+                        shape = RoundedCornerShape(6.dp),
+                        modifier = Modifier.padding(top = 8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.DesignServices,
+                            contentDescription = null,
+                            tint = Color(0xFF11111B),
+                            modifier = Modifier.size(14.dp).padding(end = 4.dp)
+                        )
+                        Text(
+                            text = "Switch to Design Mode",
+                            color = Color(0xFF11111B),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+            return@Column
+        }
+
+        // 2. Empty Selection State
         if (selectedNode == null) {
             Box(
                 modifier = Modifier.fillMaxWidth().height(200.dp),
@@ -73,7 +147,7 @@ fun PropertyInspector(
             return@Column
         }
 
-        // Selected Node Header
+        // 3. Selected Node Header
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -96,7 +170,7 @@ fun PropertyInspector(
 
         Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color(0xFF313244)))
 
-        // Specific Component Property Editors
+        // 4. Specific Component Property Editors
         when (selectedNode) {
             is ComposableNode.TextNode -> {
                 InspectorField(label = "Text Content") {
@@ -235,7 +309,7 @@ fun PropertyInspector(
 
         Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color(0xFF313244)))
 
-        // Modifiers Section
+        // 5. Modifiers Section
         ModifierInspector(viewModel = viewModel, node = selectedNode)
     }
 }

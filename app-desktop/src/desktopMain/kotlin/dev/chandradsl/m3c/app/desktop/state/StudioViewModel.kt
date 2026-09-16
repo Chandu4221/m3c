@@ -3,6 +3,8 @@ package dev.chandradsl.m3c.app.desktop.state
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import dev.chandradsl.m3c.core.codegen.ComposeCodeGenerator
 import dev.chandradsl.m3c.core.domain.model.ColorSource
 import dev.chandradsl.m3c.core.domain.model.ColorToken
@@ -67,14 +69,43 @@ class StudioViewModel {
     // 3. Studio UI Settings
     var isDarkMode: Boolean by mutableStateOf(false)
     var isInteractiveMode: Boolean by mutableStateOf(false)
+        private set
     var isCodeDrawerOpen: Boolean by mutableStateOf(false)
     var leftDrawerTab: LeftDrawerTab by mutableStateOf(LeftDrawerTab.Palette)
 
-    // 4. Live Generated Code
+    // 4. Resizable Panel Dimensions
+    var leftPanelWidth: Dp by mutableStateOf(260.dp)
+    var rightPanelWidth: Dp by mutableStateOf(300.dp)
+    var codeDrawerHeight: Dp by mutableStateOf(260.dp)
+
+    fun resizeLeftPanel(deltaDp: Float) {
+        val newWidth = (leftPanelWidth.value + deltaDp).coerceIn(180f, 500f)
+        leftPanelWidth = newWidth.dp
+    }
+
+    fun resizeRightPanel(deltaDp: Float) {
+        val newWidth = (rightPanelWidth.value + deltaDp).coerceIn(240f, 550f)
+        rightPanelWidth = newWidth.dp
+    }
+
+    fun resizeCodeDrawer(deltaDp: Float) {
+        val newHeight = (codeDrawerHeight.value + deltaDp).coerceIn(120f, 600f)
+        codeDrawerHeight = newHeight.dp
+    }
+
+    fun updateInteractiveMode(enabled: Boolean) {
+        isInteractiveMode = enabled
+        if (enabled) {
+            // Deselect any active node so editing outlines and inspector are cleared
+            dispatch(WorkspaceIntent.SelectNode(null))
+        }
+    }
+
+    // 5. Live Generated Code
     var generatedCode: String by mutableStateOf(generateCode())
         private set
 
-    // 5. Selected Node in the AST
+    // 6. Selected Node in the AST
     val selectedNode: ComposableNode?
         get() {
             val id = workspaceState.selectedNodeId ?: return null
@@ -88,15 +119,38 @@ class StudioViewModel {
     }
 
     fun insertComponent(newNode: ComposableNode) {
+        if (isInteractiveMode) return // Guard against mutations during interactive preview
         val targetParentId = workspaceState.selectedNodeId ?: workspaceState.rootNode.id
         dispatch(WorkspaceIntent.InsertChild(parentId = targetParentId, node = newNode))
         dispatch(WorkspaceIntent.SelectNode(newNode.id))
     }
 
     fun deleteSelectedNode() {
+        if (isInteractiveMode) return
         val id = workspaceState.selectedNodeId ?: return
         if (id == workspaceState.rootNode.id) return // Don't delete root
         dispatch(WorkspaceIntent.RemoveNode(id))
+    }
+
+    // 7. Modifier Reordering & Management
+    fun reorderModifier(targetId: NodeId, fromIndex: Int, toIndex: Int) {
+        val targetNode = findNodeRecursive(workspaceState.rootNode, targetId) ?: return
+        val currentModifiers = targetNode.modifiers.toMutableList()
+        if (fromIndex !in currentModifiers.indices || toIndex !in currentModifiers.indices) return
+        val item = currentModifiers.removeAt(fromIndex)
+        currentModifiers.add(toIndex, item)
+        dispatch(WorkspaceIntent.UpdateModifiers(targetId = targetId, modifiers = currentModifiers))
+    }
+
+    fun removeModifier(targetId: NodeId, index: Int) {
+        val targetNode = findNodeRecursive(workspaceState.rootNode, targetId) ?: return
+        val newModifiers = targetNode.modifiers.filterIndexed { i, _ -> i != index }
+        dispatch(WorkspaceIntent.UpdateModifiers(targetId = targetId, modifiers = newModifiers))
+    }
+
+    fun addModifier(targetId: NodeId, modifierDef: ModifierDef) {
+        val targetNode = findNodeRecursive(workspaceState.rootNode, targetId) ?: return
+        dispatch(WorkspaceIntent.UpdateModifiers(targetId = targetId, modifiers = targetNode.modifiers + modifierDef))
     }
 
     fun undo() = dispatch(WorkspaceIntent.Undo)

@@ -120,13 +120,13 @@ fun StudioToolbar(
                     icon = Icons.Default.Brush,
                     text = "Design",
                     isActive = !viewModel.isInteractiveMode,
-                    onClick = { viewModel.isInteractiveMode = false }
+                    onClick = { viewModel.updateInteractiveMode(false) }
                 )
                 ModeTabButton(
                     icon = Icons.Default.PlayArrow,
                     text = "Interactive",
                     isActive = viewModel.isInteractiveMode,
-                    onClick = { viewModel.isInteractiveMode = true }
+                    onClick = { viewModel.updateInteractiveMode(true) }
                 )
             }
         }
@@ -139,7 +139,7 @@ fun StudioToolbar(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             // Delete Selected Node Button
-            if (state.selectedNodeId != null && state.selectedNodeId != state.rootNode.id) {
+            if (state.selectedNodeId != null && state.selectedNodeId != state.rootNode.id && !viewModel.isInteractiveMode) {
                 ToolbarIconButton(
                     icon = Icons.Default.Delete,
                     label = "Delete",

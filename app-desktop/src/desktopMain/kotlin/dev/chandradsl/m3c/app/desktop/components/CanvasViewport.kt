@@ -4,13 +4,17 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
@@ -25,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.chandradsl.m3c.app.desktop.state.StudioViewModel
@@ -49,8 +54,10 @@ fun CanvasViewport(
                 interactionSource = backdropInteraction,
                 indication = null
             ) {
-                // Click on empty canvas deselects active node
-                viewModel.dispatch(WorkspaceIntent.SelectNode(null))
+                // Click on empty canvas deselects active node in design mode
+                if (!viewModel.isInteractiveMode) {
+                    viewModel.dispatch(WorkspaceIntent.SelectNode(null))
+                }
             }
             .verticalScroll(scrollState),
         contentAlignment = Alignment.Center
@@ -59,13 +66,43 @@ fun CanvasViewport(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.padding(vertical = 32.dp)
         ) {
-            // Device Frame Header Tag
-            Text(
-                text = "Mobile Device • 390 × 844",
-                color = Color(0xFF6C7086),
-                fontSize = 11.sp,
+            // Device Frame Header Tag & Mode Indicator
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.padding(bottom = 8.dp)
-            )
+            ) {
+                Text(
+                    text = "Mobile Device • 390 × 844",
+                    color = Color(0xFF6C7086),
+                    fontSize = 11.sp
+                )
+
+                if (viewModel.isInteractiveMode) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(Color(0xFF1E3A2F))
+                            .border(width = 1.dp, color = Color(0xFFA6E3A1), shape = RoundedCornerShape(10.dp))
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(6.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFFA6E3A1))
+                        )
+                        Text(
+                            text = "Interactive Mode",
+                            color = Color(0xFFA6E3A1),
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+            }
 
             // Simulated Device Frame
             Box(
@@ -74,7 +111,11 @@ fun CanvasViewport(
                     .height(844.dp)
                     .shadow(elevation = 16.dp, shape = RoundedCornerShape(24.dp))
                     .clip(RoundedCornerShape(24.dp))
-                    .border(width = 2.dp, color = Color(0xFF313244), shape = RoundedCornerShape(24.dp))
+                    .border(
+                        width = 2.dp,
+                        color = if (viewModel.isInteractiveMode) Color(0xFFA6E3A1).copy(alpha = 0.5f) else Color(0xFF313244),
+                        shape = RoundedCornerShape(24.dp)
+                    )
             ) {
                 // Material 3 Live Theme Provider
                 val colorScheme = if (viewModel.isDarkMode) darkColorScheme() else lightColorScheme()
@@ -86,8 +127,13 @@ fun CanvasViewport(
                     ) {
                         NodeRenderer(
                             node = state.rootNode,
-                            state = state,
-                            onIntent = viewModel::dispatch
+                            state = if (viewModel.isInteractiveMode) state.copy(selectedNodeId = null) else state,
+                            onIntent = { intent ->
+                                if (viewModel.isInteractiveMode && intent is WorkspaceIntent.SelectNode) {
+                                    return@NodeRenderer
+                                }
+                                viewModel.dispatch(intent)
+                            }
                         )
                     }
                 }

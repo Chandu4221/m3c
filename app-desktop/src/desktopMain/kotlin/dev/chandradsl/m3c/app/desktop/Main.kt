@@ -39,13 +39,18 @@ fun main() = application {
     ) {
         val viewModel = remember { StudioViewModel() }
 
+        // Top-Level Studio Dark Material Theme
         MaterialTheme(
             colorScheme = darkColorScheme(
                 background = Color(0xFF11111B),
                 surface = Color(0xFF181825),
+                surfaceVariant = Color(0xFF1E1E2E),
                 primary = Color(0xFFCBA6F7),
+                onPrimary = Color(0xFF11111B),
                 onBackground = Color(0xFFCDD6F4),
-                onSurface = Color(0xFFCDD6F4)
+                onSurface = Color(0xFFCDD6F4),
+                outline = Color(0xFF313244),
+                outlineVariant = Color(0xFF45475A)
             )
         ) {
             Column(
@@ -62,10 +67,10 @@ fun main() = application {
                         .fillMaxWidth()
                         .weight(1f)
                 ) {
-                    // Left Panel: Tabs for Palette & Hierarchy Tree
+                    // Left Panel: Tabs for Palette & Hierarchy Tree (Resizable)
                     Column(
                         modifier = Modifier
-                            .width(260.dp)
+                            .width(viewModel.leftPanelWidth)
                             .fillMaxHeight()
                             .background(Color(0xFF181825))
                             .border(width = 1.dp, color = Color(0xFF313244))
@@ -104,20 +109,38 @@ fun main() = application {
                         }
                     }
 
+                    // Left-to-Center Vertical Splitter
+                    DraggableSplitter(
+                        orientation = SplitterOrientation.Vertical,
+                        onDelta = viewModel::resizeLeftPanel
+                    )
+
                     // Center: Zoomable/Pannable Device Canvas
                     CanvasViewport(
                         viewModel = viewModel,
                         modifier = Modifier.weight(1f)
                     )
 
-                    // Right: Two-Way Property & Modifier Inspector
+                    // Center-to-Right Vertical Splitter
+                    DraggableSplitter(
+                        orientation = SplitterOrientation.Vertical,
+                        onDelta = { delta -> viewModel.resizeRightPanel(-delta) }
+                    )
+
+                    // Right: Two-Way Property & Modifier Inspector (Resizable)
                     PropertyInspector(
                         viewModel = viewModel
                     )
                 }
 
-                // 3. Bottom: Real-Time Generated Kotlin Source Code Drawer
-                CodePreviewDrawer(viewModel = viewModel)
+                // 3. Bottom: Code Drawer Horizontal Splitter & Code Preview Drawer
+                if (viewModel.isCodeDrawerOpen) {
+                    DraggableSplitter(
+                        orientation = SplitterOrientation.Horizontal,
+                        onDelta = { delta -> viewModel.resizeCodeDrawer(-delta) }
+                    )
+                    CodePreviewDrawer(viewModel = viewModel)
+                }
             }
         }
     }

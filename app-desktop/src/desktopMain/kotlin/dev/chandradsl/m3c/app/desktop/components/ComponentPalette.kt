@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -76,7 +75,7 @@ fun ComponentPalette(
 
     Column(
         modifier = modifier
-            .width(260.dp)
+            .fillMaxWidth()
             .fillMaxHeight()
             .background(Color(0xFF181825))
             .border(width = 1.dp, color = Color(0xFF313244))
@@ -84,219 +83,215 @@ fun ComponentPalette(
             .verticalScroll(scrollState),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        PaletteSection(title = "Layout Containers", items = layoutItems, onSelect = viewModel::insertComponent)
-        PaletteSection(title = "Surfaces & Cards", items = surfaceItems, onSelect = viewModel::insertComponent)
-        PaletteSection(title = "Buttons & Actions", items = buttonItems, onSelect = viewModel::insertComponent)
-        PaletteSection(title = "Text & Inputs", items = textItems, onSelect = viewModel::insertComponent)
-        PaletteSection(title = "Selection & Feedback", items = selectionItems, onSelect = viewModel::insertComponent)
-        PaletteSection(title = "Dividers & Utilities", items = utilityItems, onSelect = viewModel::insertComponent)
+        // 1. Layout Containers
+        PaletteCategory(
+            title = "LAYOUT CONTAINERS",
+            items = listOf(
+                PaletteItem("Column", "Vertical layout container", Icons.Default.ViewColumn) {
+                    ComposableNode.ColumnNode(modifiers = listOf(ModifierDef.Padding.all(DpVal(8f))))
+                },
+                PaletteItem("Row", "Horizontal layout container", Icons.Default.ViewStream) {
+                    ComposableNode.RowNode(modifiers = listOf(ModifierDef.Padding.all(DpVal(8f))))
+                },
+                PaletteItem("Box", "Freeform stacking layout", Icons.Default.Layers) {
+                    ComposableNode.BoxNode()
+                },
+                PaletteItem("Spacer", "Flexible layout gap", Icons.Default.SpaceBar) {
+                    ComposableNode.SpacerNode(modifiers = listOf(ModifierDef.Height(DpVal(16f))))
+                }
+            ),
+            isInteractive = viewModel.isInteractiveMode,
+            onSelect = viewModel::insertComponent
+        )
+
+        // 2. Surfaces & Cards
+        PaletteCategory(
+            title = "SURFACES & CARDS",
+            items = listOf(
+                PaletteItem("Surface", "Material elevation canvas", Icons.Default.WebAsset) {
+                    ComposableNode.SurfaceNode()
+                },
+                PaletteItem("Card", "Filled container card", Icons.Default.CropPortrait) {
+                    ComposableNode.CardNode(
+                        modifiers = listOf(ModifierDef.Padding.all(DpVal(8f))),
+                        content = listOf(ComposableNode.TextNode(text = "Card Content"))
+                    )
+                },
+                PaletteItem("Elevated Card", "Card with shadow elevation", Icons.AutoMirrored.Filled.FeaturedPlayList) {
+                    ComposableNode.ElevatedCardNode(
+                        modifiers = listOf(ModifierDef.Padding.all(DpVal(8f))),
+                        content = listOf(ComposableNode.TextNode(text = "Elevated Card"))
+                    )
+                },
+                PaletteItem("Outlined Card", "Card with subtle border", Icons.Default.CheckBoxOutlineBlank) {
+                    ComposableNode.OutlinedCardNode(
+                        modifiers = listOf(ModifierDef.Padding.all(DpVal(8f))),
+                        content = listOf(ComposableNode.TextNode(text = "Outlined Card"))
+                    )
+                }
+            ),
+            isInteractive = viewModel.isInteractiveMode,
+            onSelect = viewModel::insertComponent
+        )
+
+        // 3. Buttons & Actions
+        PaletteCategory(
+            title = "BUTTONS & ACTIONS",
+            items = listOf(
+                PaletteItem("Button", "Filled primary action", Icons.Default.SmartButton) {
+                    ComposableNode.ButtonNode(content = listOf(ComposableNode.TextNode(text = "Button")))
+                },
+                PaletteItem("Elevated Button", "Button with shadow elevation", Icons.Default.AdsClick) {
+                    ComposableNode.ElevatedButtonNode(content = listOf(ComposableNode.TextNode(text = "Elevated")))
+                },
+                PaletteItem("Filled Tonal Button", "Medium emphasis tonal button", Icons.Default.Highlight) {
+                    ComposableNode.FilledTonalButtonNode(content = listOf(ComposableNode.TextNode(text = "Tonal Button")))
+                },
+                PaletteItem("Outlined Button", "Bordered action button", Icons.Default.CropLandscape) {
+                    ComposableNode.OutlinedButtonNode(content = listOf(ComposableNode.TextNode(text = "Outlined")))
+                },
+                PaletteItem("Text Button", "Low emphasis text button", Icons.Default.TextFormat) {
+                    ComposableNode.TextButtonNode(content = listOf(ComposableNode.TextNode(text = "Text Button")))
+                },
+                PaletteItem("Icon Button", "Compact icon trigger", Icons.Default.TouchApp) {
+                    ComposableNode.IconButtonNode(content = listOf(ComposableNode.TextNode(text = "★")))
+                },
+                PaletteItem("FAB", "Floating action button", Icons.Default.AddCircle) {
+                    ComposableNode.FloatingActionButtonNode(
+                        shape = ShapeDef.Token(ShapeToken.Large),
+                        content = listOf(ComposableNode.TextNode(text = "+"))
+                    )
+                }
+            ),
+            isInteractive = viewModel.isInteractiveMode,
+            onSelect = viewModel::insertComponent
+        )
+
+        // 4. Text & Inputs
+        PaletteCategory(
+            title = "TEXT & INPUTS",
+            items = listOf(
+                PaletteItem("Text", "Typography display label", Icons.Default.TextFields) {
+                    ComposableNode.TextNode(text = "Label Text", typography = TypographyToken.BodyMedium)
+                },
+                PaletteItem("TextField", "Filled input text field", Icons.Default.EditNote) {
+                    ComposableNode.TextFieldNode(label = "Input Label")
+                },
+                PaletteItem("Outlined TextField", "Bordered input text field", Icons.Default.EditNote) {
+                    ComposableNode.OutlinedTextFieldNode(label = "Input Label")
+                }
+            ),
+            isInteractive = viewModel.isInteractiveMode,
+            onSelect = viewModel::insertComponent
+        )
+
+        // 5. Selection & Feedback
+        PaletteCategory(
+            title = "SELECTION & FEEDBACK",
+            items = listOf(
+                PaletteItem("Checkbox", "Binary multi-select control", Icons.Default.CheckBox) {
+                    ComposableNode.CheckboxNode(checked = true)
+                },
+                PaletteItem("Switch", "Toggle state switch", Icons.Default.ToggleOn) {
+                    ComposableNode.SwitchNode(checked = true)
+                },
+                PaletteItem("RadioButton", "Single selection option", Icons.Default.RadioButtonChecked) {
+                    ComposableNode.RadioButtonNode(selected = true)
+                },
+                PaletteItem("Slider", "Continuous range slider", Icons.Default.LinearScale) {
+                    ComposableNode.SliderNode(value = 0.5f)
+                },
+                PaletteItem("Circular Progress", "Radial loading spinner", Icons.Default.Autorenew) {
+                    ComposableNode.CircularProgressIndicatorNode()
+                },
+                PaletteItem("Linear Progress", "Horizontal loading bar", Icons.Default.HorizontalRule) {
+                    ComposableNode.LinearProgressIndicatorNode(progress = 0.6f)
+                }
+            ),
+            isInteractive = viewModel.isInteractiveMode,
+            onSelect = viewModel::insertComponent
+        )
+
+        // 6. Dividers
+        PaletteCategory(
+            title = "DIVIDERS",
+            items = listOf(
+                PaletteItem("Horizontal Divider", "Horizontal separating line", Icons.Default.HorizontalDistribute) {
+                    ComposableNode.HorizontalDividerNode()
+                },
+                PaletteItem("Vertical Divider", "Vertical separating line", Icons.Default.VerticalDistribute) {
+                    ComposableNode.VerticalDividerNode(modifiers = listOf(ModifierDef.Height(DpVal(24f))))
+                }
+            ),
+            isInteractive = viewModel.isInteractiveMode,
+            onSelect = viewModel::insertComponent
+        )
     }
 }
 
 @Composable
-private fun PaletteSection(
+private fun PaletteCategory(
     title: String,
     items: List<PaletteItem>,
+    isInteractive: Boolean,
     onSelect: (ComposableNode) -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(
-            text = title.uppercase(),
+            text = title,
             color = Color(0xFF6C7086),
             fontSize = 10.sp,
             fontWeight = FontWeight.Bold,
             letterSpacing = 1.sp,
-            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+            modifier = Modifier.padding(horizontal = 4.dp)
         )
 
-        items.forEach { item ->
-            PaletteItemCard(item = item, onClick = { onSelect(item.factory()) })
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            items.forEach { item ->
+                PaletteComponentCard(item = item, isInteractive = isInteractive) {
+                    onSelect(item.factory())
+                }
+            }
         }
     }
 }
 
 @Composable
-private fun PaletteItemCard(
+private fun PaletteComponentCard(
     item: PaletteItem,
+    isInteractive: Boolean,
     onClick: () -> Unit
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(6.dp))
-            .background(Color(0xFF1E1E2E))
-            .clickable(onClick = onClick)
-            .padding(horizontal = 10.dp, vertical = 8.dp),
+            .background(if (isInteractive) Color(0xFF181825) else Color(0xFF1E1E2E))
+            .border(width = 1.dp, color = Color(0xFF313244), shape = RoundedCornerShape(6.dp))
+            .clickable(enabled = !isInteractive, onClick = onClick)
+            .padding(8.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Box(
-            modifier = Modifier
-                .clip(RoundedCornerShape(4.dp))
-                .background(Color(0xFF313244))
-                .padding(6.dp)
-        ) {
-            Icon(
-                imageVector = item.icon,
-                contentDescription = item.name,
-                tint = Color(0xFFCBA6F7),
-                modifier = Modifier.size(16.dp)
-            )
-        }
+        Icon(
+            imageVector = item.icon,
+            contentDescription = item.name,
+            tint = if (isInteractive) Color(0xFF585B70) else Color(0xFFCBA6F7),
+            modifier = Modifier.size(16.dp)
+        )
 
-        Column(modifier = Modifier.weight(1f)) {
+        Column {
             Text(
                 text = item.name,
-                color = Color(0xFFCDD6F4),
+                color = if (isInteractive) Color(0xFF6C7086) else Color(0xFFCDD6F4),
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Medium
             )
             Text(
                 text = item.description,
-                color = Color(0xFF6C7086),
-                fontSize = 10.sp
+                color = Color(0xFF585B70),
+                fontSize = 9.sp
             )
         }
     }
 }
-
-// ============================================================================
-// Palette Component Definitions with Vector Icons
-// ============================================================================
-
-private val layoutItems = listOf(
-    PaletteItem("Column", "Vertical layout container", Icons.Default.ViewColumn) {
-        ComposableNode.ColumnNode(
-            modifiers = listOf(ModifierDef.Padding.all(DpVal(8f)))
-        )
-    },
-    PaletteItem("Row", "Horizontal layout container", Icons.Default.ViewStream) {
-        ComposableNode.RowNode(
-            modifiers = listOf(ModifierDef.Padding.all(DpVal(8f)))
-        )
-    },
-    PaletteItem("Box", "Freeform stacking layout", Icons.Default.Layers) {
-        ComposableNode.BoxNode()
-    },
-    PaletteItem("Spacer", "Flexible layout gap", Icons.Default.SpaceBar) {
-        ComposableNode.SpacerNode(
-            modifiers = listOf(ModifierDef.Height(DpVal(16f)))
-        )
-    }
-)
-
-private val surfaceItems = listOf(
-    PaletteItem("Surface", "Material elevation canvas", Icons.Default.WebAsset) {
-        ComposableNode.SurfaceNode(
-            shape = ShapeDef.Token(ShapeToken.Medium),
-            tonalElevation = DpVal(1f)
-        )
-    },
-    PaletteItem("Card", "Filled container card", Icons.Default.CropPortrait) {
-        ComposableNode.CardNode(
-            content = listOf(ComposableNode.TextNode(text = "Card Content"))
-        )
-    },
-    PaletteItem("Elevated Card", "Card with shadow elevation", Icons.AutoMirrored.Filled.FeaturedPlayList) {
-        ComposableNode.ElevatedCardNode(
-            content = listOf(ComposableNode.TextNode(text = "Elevated Card Content"))
-        )
-    },
-    PaletteItem("Outlined Card", "Card with subtle border", Icons.Default.CheckBoxOutlineBlank) {
-        ComposableNode.OutlinedCardNode(
-            content = listOf(ComposableNode.TextNode(text = "Outlined Card Content"))
-        )
-    }
-)
-
-private val buttonItems = listOf(
-    PaletteItem("Button", "Filled primary action", Icons.Default.SmartButton) {
-        ComposableNode.ButtonNode(
-            content = listOf(ComposableNode.TextNode(text = "Button"))
-        )
-    },
-    PaletteItem("Elevated Button", "Button with shadow elevation", Icons.Default.AdsClick) {
-        ComposableNode.ElevatedButtonNode(
-            content = listOf(ComposableNode.TextNode(text = "Elevated Button"))
-        )
-    },
-    PaletteItem("Filled Tonal Button", "Medium emphasis tonal button", Icons.Default.Highlight) {
-        ComposableNode.FilledTonalButtonNode(
-            content = listOf(ComposableNode.TextNode(text = "Tonal Button"))
-        )
-    },
-    PaletteItem("Outlined Button", "Bordered action button", Icons.Default.CropLandscape) {
-        ComposableNode.OutlinedButtonNode(
-            content = listOf(ComposableNode.TextNode(text = "Outlined Button"))
-        )
-    },
-    PaletteItem("Text Button", "Low emphasis text action", Icons.Default.TextFormat) {
-        ComposableNode.TextButtonNode(
-            content = listOf(ComposableNode.TextNode(text = "Text Button"))
-        )
-    },
-    PaletteItem("Icon Button", "Standard icon action", Icons.Default.TouchApp) {
-        ComposableNode.IconButtonNode(
-            content = listOf(ComposableNode.TextNode(text = "★"))
-        )
-    },
-    PaletteItem("FAB", "Floating action button", Icons.Default.AddCircle) {
-        ComposableNode.FloatingActionButtonNode(
-            shape = ShapeDef.Token(ShapeToken.Large),
-            content = listOf(ComposableNode.TextNode(text = "+"))
-        )
-    }
-)
-
-private val textItems = listOf(
-    PaletteItem("Text", "Label or heading text", Icons.Default.TextFields) {
-        ComposableNode.TextNode(
-            text = "Text Label",
-            typography = TypographyToken.BodyMedium
-        )
-    },
-    PaletteItem("Outlined Text Field", "User input box with border", Icons.Default.EditNote) {
-        ComposableNode.OutlinedTextFieldNode(
-            value = "",
-            label = "Enter Text",
-            placeholder = "Type here..."
-        )
-    },
-    PaletteItem("Text Field", "Filled user input box", Icons.Default.EditNote) {
-        ComposableNode.TextFieldNode(
-            value = "",
-            label = "Enter Text",
-            placeholder = "Type here..."
-        )
-    }
-)
-
-private val selectionItems = listOf(
-    PaletteItem("Checkbox", "Binary selection toggle", Icons.Default.CheckBox) {
-        ComposableNode.CheckboxNode(checked = true)
-    },
-    PaletteItem("Switch", "On/Off slider toggle", Icons.Default.ToggleOn) {
-        ComposableNode.SwitchNode(checked = true)
-    },
-    PaletteItem("Radio Button", "Single selection option", Icons.Default.RadioButtonChecked) {
-        ComposableNode.RadioButtonNode(selected = true)
-    },
-    PaletteItem("Slider", "Continuous range input", Icons.Default.LinearScale) {
-        ComposableNode.SliderNode(value = 0.5f)
-    },
-    PaletteItem("Circular Progress", "Radial loading spinner", Icons.Default.Autorenew) {
-        ComposableNode.CircularProgressIndicatorNode(progress = null)
-    },
-    PaletteItem("Linear Progress", "Horizontal progress bar", Icons.Default.HorizontalRule) {
-        ComposableNode.LinearProgressIndicatorNode(progress = 0.6f)
-    }
-)
-
-private val utilityItems = listOf(
-    PaletteItem("Horizontal Divider", "Subtle horizontal separator", Icons.Default.HorizontalDistribute) {
-        ComposableNode.HorizontalDividerNode(thickness = DpVal(1f))
-    },
-    PaletteItem("Vertical Divider", "Subtle vertical separator", Icons.Default.VerticalDistribute) {
-        ComposableNode.VerticalDividerNode(thickness = DpVal(1f))
-    }
-)

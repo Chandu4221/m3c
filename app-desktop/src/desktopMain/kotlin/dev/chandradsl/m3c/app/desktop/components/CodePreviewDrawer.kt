@@ -51,7 +51,7 @@ fun CodePreviewDrawer(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .height(240.dp)
+            .height(viewModel.codeDrawerHeight)
             .background(Color(0xFF1E1E2E))
             .border(width = 1.dp, color = Color(0xFF313244))
     ) {
