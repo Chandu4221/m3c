@@ -37,7 +37,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
+import dev.chandradsl.m3c.runtime.renderer.decorator.LocalCanvasContainerBoundsReporter
+import dev.chandradsl.m3c.runtime.renderer.decorator.LocalHoveredCanvasParentId
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -250,8 +253,14 @@ fun CanvasViewport(
                                 tint = if (isDropHovered) StudioColors.Success else StudioColors.Primary,
                                 modifier = Modifier.size(StudioSizes.IconMedium)
                             )
+                            val targetName = viewModel.hoveredCanvasParentName
+                            val bannerText = when {
+                                !isDropHovered -> "Drag into viewport to insert"
+                                targetName != null -> "Release to insert ${viewModel.activeDragItem?.name} into $targetName"
+                                else -> "Release to drop ${viewModel.activeDragItem?.name} into screen"
+                            }
                             Text(
-                                text = if (isDropHovered) "Release to drop ${viewModel.activeDragItem?.name} into screen" else "Drag into viewport to insert",
+                                text = bannerText,
                                 style = StudioTypography.UIBody.copy(
                                     color = if (isDropHovered) StudioColors.Success else StudioColors.TextPrimary,
                                     fontWeight = FontWeight.SemiBold
@@ -296,17 +305,26 @@ fun CanvasViewport(
                             modifier = Modifier.fillMaxSize(),
                             color = MaterialTheme.colorScheme.background
                         ) {
-                            NodeRenderer(
-                                node = state.rootNode,
-                                state = if (viewModel.isInteractiveMode) state.copy(selectedNodeId = null) else state,
-                                onIntent = { intent ->
-                                    if (viewModel.isInteractiveMode && intent is WorkspaceIntent.SelectNode) {
-                                        return@NodeRenderer
+                            CompositionLocalProvider(
+                                LocalHoveredCanvasParentId provides viewModel.hoveredCanvasParentId,
+                                LocalCanvasContainerBoundsReporter provides { id, tag, rect ->
+                                    if (viewModel.isContainerTag(tag)) {
+                                        viewModel.registerCanvasContainerBounds(id, tag, rect)
                                     }
-                                    viewModel.dispatch(intent)
-                                },
-                                isInteractiveMode = viewModel.isInteractiveMode
-                            )
+                                }
+                            ) {
+                                NodeRenderer(
+                                    node = state.rootNode,
+                                    state = if (viewModel.isInteractiveMode) state.copy(selectedNodeId = null) else state,
+                                    onIntent = { intent ->
+                                        if (viewModel.isInteractiveMode && intent is WorkspaceIntent.SelectNode) {
+                                            return@NodeRenderer
+                                        }
+                                        viewModel.dispatch(intent)
+                                    },
+                                    isInteractiveMode = viewModel.isInteractiveMode
+                                )
+                            }
                         }
                     }
                 }

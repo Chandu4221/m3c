@@ -159,17 +159,88 @@ class StudioViewModel {
     var isCanvasDropHovered: Boolean by mutableStateOf(false)
     var canvasBoundsInWindow: Rect by mutableStateOf(Rect.Zero)
 
+    // Canvas Nearest Parent Snapping & Highlighting
+    var hoveredCanvasParentId: NodeId? by mutableStateOf(null)
+    var hoveredCanvasParentName: String? by mutableStateOf(null)
+
+    private val canvasContainerBounds = mutableMapOf<NodeId, Pair<Rect, String>>()
+
+    fun registerCanvasContainerBounds(nodeId: NodeId, name: String, bounds: Rect) {
+        canvasContainerBounds[nodeId] = Pair(bounds, name)
+        if (activeDragItem != null && isCanvasDropHovered) {
+            updateCanvasHoveredParent()
+        }
+    }
+
+    fun unregisterCanvasContainerBounds(nodeId: NodeId) {
+        canvasContainerBounds.remove(nodeId)
+        if (hoveredCanvasParentId == nodeId) {
+            updateCanvasHoveredParent()
+        }
+    }
+
+    fun isContainerTag(tag: String): Boolean = when (tag.lowercase()) {
+        "column", "row", "box", "surface", "card", "elevatedcard", "outlinedcard",
+        "button", "elevatedbutton", "filledtonalbutton", "outlinedbutton",
+        "textbutton", "iconbutton", "fab", "floatingactionbutton", "scaffold", "navigationbar" -> true
+        else -> false
+    }
+
+    private fun updateCanvasHoveredParent() {
+        if (activeDragItem == null || !isCanvasDropHovered) {
+            hoveredCanvasParentId = null
+            hoveredCanvasParentName = null
+            return
+        }
+
+        // 1. Find all registered containers enclosing the drag pointer
+        val containingContainers = canvasContainerBounds.filter { (_, entry) ->
+            entry.first.contains(dragPointerOffset)
+        }
+
+        if (containingContainers.isNotEmpty()) {
+            // Select the innermost container (smallest area)
+            val best = containingContainers.minByOrNull { it.value.first.width * it.value.first.height }
+            if (best != null) {
+                hoveredCanvasParentId = best.key
+                hoveredCanvasParentName = best.value.second
+                return
+            }
+        }
+
+        // 2. If pointer is inside the canvas frame but outside any sub-container,
+        // snap to the nearest container by Euclidean distance to center
+        if (canvasContainerBounds.isNotEmpty()) {
+            val nearest = canvasContainerBounds.minByOrNull { (_, entry) ->
+                val center = entry.first.center
+                val dx = center.x - dragPointerOffset.x
+                val dy = center.y - dragPointerOffset.y
+                dx * dx + dy * dy
+            }
+            if (nearest != null) {
+                hoveredCanvasParentId = nearest.key
+                hoveredCanvasParentName = nearest.value.second
+                return
+            }
+        }
+
+        hoveredCanvasParentId = workspaceState.rootNode.id
+        hoveredCanvasParentName = "Screen"
+    }
+
     fun startPaletteDrag(item: DraggedPaletteItem, initialOffset: Offset) {
         if (isInteractiveMode) return
         activeDragItem = item
         dragPointerOffset = initialOffset
         isCanvasDropHovered = canvasBoundsInWindow.contains(initialOffset)
+        updateCanvasHoveredParent()
     }
 
     fun updatePaletteDrag(delta: Offset) {
         val newOffset = dragPointerOffset + delta
         dragPointerOffset = newOffset
         isCanvasDropHovered = canvasBoundsInWindow.contains(newOffset)
+        updateCanvasHoveredParent()
     }
 
     fun updateCanvasBounds(bounds: Rect) {
@@ -178,17 +249,32 @@ class StudioViewModel {
 
     fun endPaletteDrag() {
         val item = activeDragItem
+        val targetParentId = hoveredCanvasParentId ?: run {
+            val selected = selectedNode
+            if (selected != null && isContainerNode(selected)) {
+                selected.id
+            } else if (selected != null) {
+                findParentRecursive(workspaceState.rootNode, selected.id)?.id ?: workspaceState.rootNode.id
+            } else {
+                workspaceState.rootNode.id
+            }
+        }
         if (item != null && isCanvasDropHovered) {
             val newNode = item.factory()
-            insertComponent(newNode)
+            dispatch(WorkspaceIntent.InsertChild(parentId = targetParentId, node = newNode))
+            dispatch(WorkspaceIntent.SelectNode(newNode.id))
         }
         activeDragItem = null
         isCanvasDropHovered = false
+        hoveredCanvasParentId = null
+        hoveredCanvasParentName = null
     }
 
     fun cancelPaletteDrag() {
         activeDragItem = null
         isCanvasDropHovered = false
+        hoveredCanvasParentId = null
+        hoveredCanvasParentName = null
     }
 
     // 6b. Tree Hierarchy Drag & Drop

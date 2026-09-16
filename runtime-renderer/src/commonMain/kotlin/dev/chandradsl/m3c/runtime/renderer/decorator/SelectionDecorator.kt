@@ -10,13 +10,22 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.chandradsl.m3c.core.domain.model.NodeId
+
+val LocalCanvasContainerBoundsReporter = compositionLocalOf<((NodeId, String, Rect) -> Unit)?> { null }
+val LocalHoveredCanvasParentId = compositionLocalOf<NodeId?> { null }
 
 @Composable
 fun SelectionDecorator(
@@ -39,18 +48,30 @@ fun SelectionDecorator(
     }
 
     val interactionSource = remember { MutableInteractionSource() }
-    val borderColor = if (isSelected) {
-        MaterialTheme.colorScheme.primary
-    } else {
-        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
+    val reporter = LocalCanvasContainerBoundsReporter.current
+    val hoveredCanvasParentId = LocalHoveredCanvasParentId.current
+    val isHoveredDropTarget = hoveredCanvasParentId == nodeId
+
+    val borderColor = when {
+        isHoveredDropTarget -> Color(0xFF499C54) // Bright emerald / success green
+        isSelected -> MaterialTheme.colorScheme.primary
+        else -> MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
+    }
+    val borderWidth = when {
+        isHoveredDropTarget -> 2.5.dp
+        isSelected -> 2.dp
+        else -> 1.dp
     }
 
     val shouldIntercept = drillDownOnlyWhenSelected && !isSelected && !isChildSelected
 
     Box(
         modifier = modifier
+            .onGloballyPositioned { coords ->
+                reporter?.invoke(nodeId, nodeTag, coords.boundsInWindow())
+            }
             .border(
-                width = if (isSelected) 2.dp else 1.dp,
+                width = borderWidth,
                 color = borderColor,
                 shape = RoundedCornerShape(2.dp)
             )
@@ -93,6 +114,25 @@ fun SelectionDecorator(
                     color = MaterialTheme.colorScheme.onPrimary,
                     fontSize = 9.sp,
                     lineHeight = 10.sp
+                )
+            }
+        }
+
+        // Drop Target Indicator Badge in top-end corner when hovered during drag & drop
+        if (isHoveredDropTarget) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .clip(RoundedCornerShape(bottomStart = 6.dp))
+                    .background(Color(0xFF499C54))
+                    .padding(horizontal = 6.dp, vertical = 2.dp)
+            ) {
+                Text(
+                    text = "↳ Insert into $nodeTag",
+                    color = Color.White,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    lineHeight = 12.sp
                 )
             }
         }

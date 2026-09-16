@@ -78,18 +78,22 @@ import dev.chandradsl.m3c.app.desktop.theme.StudioTypography
 import dev.chandradsl.m3c.core.domain.model.ComposableNode
 import dev.chandradsl.m3c.core.domain.model.NodeId
 import dev.chandradsl.m3c.core.domain.store.WorkspaceIntent
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.ViewAgenda
 import org.jetbrains.jewel.foundation.ExperimentalJewelApi
+import org.jetbrains.jewel.foundation.lazy.tree.BasicLazyTree
 import org.jetbrains.jewel.foundation.lazy.tree.Tree
 import org.jetbrains.jewel.foundation.lazy.tree.TreeGeneratorScope
 import org.jetbrains.jewel.foundation.lazy.tree.buildTree
 import org.jetbrains.jewel.foundation.lazy.tree.rememberTreeState
+import org.jetbrains.jewel.foundation.theme.JewelTheme
 import org.jetbrains.jewel.ui.component.Badge
 import org.jetbrains.jewel.ui.component.GroupHeader
 import org.jetbrains.jewel.ui.component.IconButton
-import org.jetbrains.jewel.ui.component.LazyTree
 import org.jetbrains.jewel.ui.component.OutlinedSlimButton
 import org.jetbrains.jewel.ui.component.Text
 import org.jetbrains.jewel.ui.component.Tooltip
+import org.jetbrains.jewel.ui.theme.treeStyle
 
 data class AstTreeNodeData(
     val node: ComposableNode,
@@ -276,19 +280,42 @@ fun HierarchyTree(
             }
         }
 
-        // Jewel LazyTree Component
-        LazyTree(
+        // Jewel BasicLazyTree Component with custom chevrons to prevent missing icon artifacts
+        val style = JewelTheme.treeStyle
+        val colors = style.colors
+        val metrics = style.metrics
+
+        BasicLazyTree(
             tree = tree,
-            treeState = treeState,
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-                .padding(top = 8.dp),
+            elementBackgroundFocused = colors.backgroundActive,
+            elementBackgroundSelectedFocused = colors.backgroundSelectedActive,
+            elementBackgroundSelected = colors.backgroundSelected,
+            indentSize = metrics.indentSize,
+            elementBackgroundCornerSize = metrics.simpleListItemMetrics.selectionBackgroundCornerSize,
+            elementPadding = metrics.simpleListItemMetrics.outerPadding,
+            elementContentPadding = metrics.simpleListItemMetrics.innerPadding,
+            elementMinHeight = metrics.elementMinHeight,
+            chevronContentGap = metrics.chevronContentGap,
             onElementClick = { element ->
                 if (!viewModel.isInteractiveMode) {
                     viewModel.dispatch(WorkspaceIntent.SelectNode(element.data.node.id))
                 }
             },
+            onElementDoubleClick = {},
+            onSelectionChange = {},
+            chevronContent = { elementState ->
+                Icon(
+                    imageVector = if (elementState.isExpanded) Icons.Default.KeyboardArrowDown else Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = if (elementState.isExpanded) "Collapse" else "Expand",
+                    tint = if (elementState.isSelected) StudioColors.TextPrimary else StudioColors.TextSecondary,
+                    modifier = Modifier.size(16.dp)
+                )
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+                .padding(top = 8.dp),
+            treeState = treeState,
             nodeContent = { element ->
                 val node = element.data.node
                 val slotLabel = element.data.slotLabel
@@ -302,7 +329,8 @@ fun HierarchyTree(
                 val isBeingDragged = activeDrag?.nodeId == node.id
                 val isDropTarget = viewModel.treeDropTargetId == node.id
                 val dropPos = if (isDropTarget) viewModel.treeDropPosition else null
-                val isInsideTarget = isDropTarget && dropPos == TreeDropPosition.INSIDE
+                val isInsideTarget = (isDropTarget && dropPos == TreeDropPosition.INSIDE) ||
+                    (viewModel.hoveredCanvasParentId == node.id && viewModel.activeDragItem != null)
 
                 // Real-time hover tracking when another tree node is actively dragged
                 LaunchedEffect(viewModel.dragPointerOffset, activeDrag) {
@@ -632,7 +660,7 @@ private fun getNodeIcon(node: ComposableNode): ImageVector = when (node) {
     is ComposableNode.HorizontalDividerNode -> Icons.Default.HorizontalDistribute
     is ComposableNode.VerticalDividerNode -> Icons.Default.VerticalDistribute
     is ComposableNode.ScaffoldNode -> Icons.Default.Tab
-    is ComposableNode.TopAppBarNode -> Icons.Default.Menu
+    is ComposableNode.TopAppBarNode -> Icons.Default.ViewAgenda
     is ComposableNode.NavigationBarNode -> Icons.Default.Navigation
     is ComposableNode.NavigationBarItemNode -> Icons.Default.TouchApp
 }
