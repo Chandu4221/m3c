@@ -35,6 +35,8 @@ object ComposeCodeGenerator {
     private val IconButtonClass = ClassName("androidx.compose.material3", "IconButton")
     private val FabClass = ClassName("androidx.compose.material3", "FloatingActionButton")
     private val TextClass = ClassName("androidx.compose.material3", "Text")
+    private val IconClass = ClassName("androidx.compose.material3", "Icon")
+    private val IconsDefaultClass = ClassName("androidx.compose.material.icons", "Icons", "Default")
     private val TextFieldClass = ClassName("androidx.compose.material3", "TextField")
     private val OutlinedTextFieldClass = ClassName("androidx.compose.material3", "OutlinedTextField")
     private val CheckboxClass = ClassName("androidx.compose.material3", "Checkbox")
@@ -274,6 +276,20 @@ object ComposeCodeGenerator {
                 node.fontSize?.let { args.add(CodeBlock.of("fontSize = %L", it.toString())) }
 
                 b.add("%T(%L)\n", TextClass, args.joinToCodeBlock())
+            }
+
+            is ComposableNode.IconNode -> {
+                val args = mutableListOf<CodeBlock>()
+                args.add(CodeBlock.of("imageVector = %T.%L", IconsDefaultClass, node.iconName))
+                if (node.contentDescription != null) {
+                    args.add(CodeBlock.of("contentDescription = %S", node.contentDescription))
+                } else {
+                    args.add(CodeBlock.of("contentDescription = null"))
+                }
+                modifierCode?.let { args.add(CodeBlock.of("modifier = %L", it)) }
+                node.tint?.let { args.add(CodeBlock.of("tint = %L", ValueCodeGenerator.generateColor(it))) }
+
+                b.add("%T(%L)\n", IconClass, args.joinToCodeBlock())
             }
 
             is ComposableNode.TextFieldNode -> {

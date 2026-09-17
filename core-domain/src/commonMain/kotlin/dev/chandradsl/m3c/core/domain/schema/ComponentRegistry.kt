@@ -179,7 +179,7 @@ object ComponentRegistry {
             category = ComponentCategory.ButtonsAndActions,
             iconName = "touch_app",
             acceptsChildren = true,
-            factory = { ComposableNode.IconButtonNode(content = listOf(ComposableNode.TextNode(text = "★"))) }
+            factory = { ComposableNode.IconButtonNode(content = listOf(ComposableNode.IconNode(iconName = "Menu"))) }
         ))
 
         register(StandardComponentDefinition(
@@ -192,7 +192,7 @@ object ComponentRegistry {
             factory = {
                 ComposableNode.FloatingActionButtonNode(
                     shape = ShapeDef.Token(ShapeToken.Large),
-                    content = listOf(ComposableNode.TextNode(text = "+"))
+                    content = listOf(ComposableNode.IconNode(iconName = "Add"))
                 )
             }
         ))
@@ -211,6 +211,16 @@ object ComponentRegistry {
         ))
 
         register(StandardComponentDefinition(
+            type = ComponentType.Icon,
+            displayName = "Icon",
+            description = "Material 3 vector icon",
+            category = ComponentCategory.TextAndInputs,
+            iconName = "star",
+            acceptsChildren = false,
+            factory = { ComposableNode.IconNode(iconName = "Favorite") }
+        ))
+
+        register(StandardComponentDefinition(
             type = ComponentType.TextField,
             displayName = "TextField",
             description = "Filled input text field",
@@ -222,13 +232,13 @@ object ComponentRegistry {
                     id = StandardSlots.LEADING_ICON,
                     displayName = "Leading Icon",
                     cardinality = SlotCardinality.Single,
-                    acceptedTypes = setOf(ComponentType.IconButton, ComponentType.Text)
+                    acceptedTypes = setOf(ComponentType.IconButton, ComponentType.Text, ComponentType.Icon)
                 ),
                 SlotDefinition(
                     id = StandardSlots.TRAILING_ICON,
                     displayName = "Trailing Icon",
                     cardinality = SlotCardinality.Single,
-                    acceptedTypes = setOf(ComponentType.IconButton, ComponentType.Text)
+                    acceptedTypes = setOf(ComponentType.IconButton, ComponentType.Text, ComponentType.Icon)
                 )
             ),
             factory = { ComposableNode.TextFieldNode(label = "Input Label") }
@@ -246,13 +256,13 @@ object ComponentRegistry {
                     id = StandardSlots.LEADING_ICON,
                     displayName = "Leading Icon",
                     cardinality = SlotCardinality.Single,
-                    acceptedTypes = setOf(ComponentType.IconButton, ComponentType.Text)
+                    acceptedTypes = setOf(ComponentType.IconButton, ComponentType.Text, ComponentType.Icon)
                 ),
                 SlotDefinition(
                     id = StandardSlots.TRAILING_ICON,
                     displayName = "Trailing Icon",
                     cardinality = SlotCardinality.Single,
-                    acceptedTypes = setOf(ComponentType.IconButton, ComponentType.Text)
+                    acceptedTypes = setOf(ComponentType.IconButton, ComponentType.Text, ComponentType.Icon)
                 )
             ),
             factory = { ComposableNode.OutlinedTextFieldNode(label = "Input Label") }
@@ -431,17 +441,17 @@ object ComponentRegistry {
                     items = listOf(
                         ComposableNode.NavigationBarItemNode(
                             selected = true,
-                            icon = ComposableNode.TextNode(text = "★"),
+                            icon = ComposableNode.IconNode(iconName = "Home"),
                             label = ComposableNode.TextNode(text = "Home")
                         ),
                         ComposableNode.NavigationBarItemNode(
                             selected = false,
-                            icon = ComposableNode.TextNode(text = "⌕"),
+                            icon = ComposableNode.IconNode(iconName = "Search"),
                             label = ComposableNode.TextNode(text = "Search")
                         ),
                         ComposableNode.NavigationBarItemNode(
                             selected = false,
-                            icon = ComposableNode.TextNode(text = "●"),
+                            icon = ComposableNode.IconNode(iconName = "Person"),
                             label = ComposableNode.TextNode(text = "Profile")
                         )
                     )
@@ -461,7 +471,7 @@ object ComponentRegistry {
                     id = StandardSlots.ICON,
                     displayName = "Icon",
                     cardinality = SlotCardinality.Single,
-                    acceptedTypes = setOf(ComponentType.IconButton, ComponentType.Text)
+                    acceptedTypes = setOf(ComponentType.IconButton, ComponentType.Text, ComponentType.Icon)
                 ),
                 SlotDefinition(
                     id = StandardSlots.LABEL,
@@ -472,7 +482,7 @@ object ComponentRegistry {
             ),
             factory = {
                 ComposableNode.NavigationBarItemNode(
-                    icon = ComposableNode.TextNode(text = "★"),
+                    icon = ComposableNode.IconNode(iconName = "Home"),
                     label = ComposableNode.TextNode(text = "Tab")
                 )
             }
@@ -504,14 +514,14 @@ object ComponentRegistry {
                 ComposableNode.BottomAppBarNode(
                     actions = listOf(
                         ComposableNode.IconButtonNode(
-                            content = listOf(ComposableNode.TextNode(text = "☰"))
+                            content = listOf(ComposableNode.IconNode(iconName = "Menu"))
                         ),
                         ComposableNode.IconButtonNode(
-                            content = listOf(ComposableNode.TextNode(text = "🔍"))
+                            content = listOf(ComposableNode.IconNode(iconName = "Search"))
                         )
                     ),
                     floatingActionButton = ComposableNode.FloatingActionButtonNode(
-                        content = listOf(ComposableNode.TextNode(text = "+"))
+                        content = listOf(ComposableNode.IconNode(iconName = "Add"))
                     )
                 )
             }
@@ -534,21 +544,23 @@ object ComponentRegistry {
             ),
             factory = {
                 ComposableNode.NavigationRailNode(
-                    header = ComposableNode.TextNode(text = "M3"),
+                    header = ComposableNode.IconButtonNode(
+                        content = listOf(ComposableNode.IconNode(iconName = "Menu"))
+                    ),
                     items = listOf(
                         ComposableNode.NavigationRailItemNode(
                             selected = true,
-                            icon = ComposableNode.TextNode(text = "★"),
+                            icon = ComposableNode.IconNode(iconName = "Home"),
                             label = ComposableNode.TextNode(text = "Home")
                         ),
                         ComposableNode.NavigationRailItemNode(
                             selected = false,
-                            icon = ComposableNode.TextNode(text = "⌕"),
+                            icon = ComposableNode.IconNode(iconName = "Search"),
                             label = ComposableNode.TextNode(text = "Search")
                         ),
                         ComposableNode.NavigationRailItemNode(
                             selected = false,
-                            icon = ComposableNode.TextNode(text = "●"),
+                            icon = ComposableNode.IconNode(iconName = "Person"),
                             label = ComposableNode.TextNode(text = "Profile")
                         )
                     )
@@ -568,7 +580,7 @@ object ComponentRegistry {
                     id = StandardSlots.ICON,
                     displayName = "Icon",
                     cardinality = SlotCardinality.Single,
-                    acceptedTypes = setOf(ComponentType.IconButton, ComponentType.Text)
+                    acceptedTypes = setOf(ComponentType.IconButton, ComponentType.Text, ComponentType.Icon)
                 ),
                 SlotDefinition(
                     id = StandardSlots.LABEL,
@@ -579,7 +591,7 @@ object ComponentRegistry {
             ),
             factory = {
                 ComposableNode.NavigationRailItemNode(
-                    icon = ComposableNode.TextNode(text = "★"),
+                    icon = ComposableNode.IconNode(iconName = "Home"),
                     label = ComposableNode.TextNode(text = "Rail")
                 )
             }
@@ -600,7 +612,7 @@ object ComponentRegistry {
                     id = StandardSlots.LEADING_ICON,
                     displayName = "Leading Icon",
                     cardinality = SlotCardinality.Single,
-                    acceptedTypes = setOf(ComponentType.Text, ComponentType.IconButton)
+                    acceptedTypes = setOf(ComponentType.Text, ComponentType.IconButton, ComponentType.Icon)
                 )
             ),
             properties = listOf(
@@ -622,7 +634,7 @@ object ComponentRegistry {
                     id = StandardSlots.LEADING_ICON,
                     displayName = "Leading Icon",
                     cardinality = SlotCardinality.Single,
-                    acceptedTypes = setOf(ComponentType.Text, ComponentType.IconButton)
+                    acceptedTypes = setOf(ComponentType.Text, ComponentType.IconButton, ComponentType.Icon)
                 )
             ),
             properties = listOf(
@@ -645,13 +657,13 @@ object ComponentRegistry {
                     id = StandardSlots.LEADING_ICON,
                     displayName = "Leading Icon",
                     cardinality = SlotCardinality.Single,
-                    acceptedTypes = setOf(ComponentType.Text, ComponentType.IconButton)
+                    acceptedTypes = setOf(ComponentType.Text, ComponentType.IconButton, ComponentType.Icon)
                 ),
                 SlotDefinition(
                     id = StandardSlots.TRAILING_ICON,
                     displayName = "Trailing Icon",
                     cardinality = SlotCardinality.Single,
-                    acceptedTypes = setOf(ComponentType.Text, ComponentType.IconButton)
+                    acceptedTypes = setOf(ComponentType.Text, ComponentType.IconButton, ComponentType.Icon)
                 )
             ),
             properties = listOf(
@@ -674,7 +686,7 @@ object ComponentRegistry {
                     id = StandardSlots.ICON,
                     displayName = "Icon",
                     cardinality = SlotCardinality.Single,
-                    acceptedTypes = setOf(ComponentType.Text, ComponentType.IconButton)
+                    acceptedTypes = setOf(ComponentType.Text, ComponentType.IconButton, ComponentType.Icon)
                 )
             ),
             properties = listOf(
@@ -756,7 +768,7 @@ object ComponentRegistry {
                     id = StandardSlots.ICON,
                     displayName = "Icon",
                     cardinality = SlotCardinality.Single,
-                    acceptedTypes = setOf(ComponentType.Text, ComponentType.IconButton)
+                    acceptedTypes = setOf(ComponentType.Text, ComponentType.IconButton, ComponentType.Icon)
                 ),
                 SlotDefinition(
                     id = StandardSlots.TITLE,
@@ -834,6 +846,7 @@ val ComposableNode.componentType: ComponentType
         is ComposableNode.IconButtonNode -> ComponentType.IconButton
         is ComposableNode.FloatingActionButtonNode -> ComponentType.FloatingActionButton
         is ComposableNode.TextNode -> ComponentType.Text
+        is ComposableNode.IconNode -> ComponentType.Icon
         is ComposableNode.TextFieldNode -> ComponentType.TextField
         is ComposableNode.OutlinedTextFieldNode -> ComponentType.OutlinedTextField
         is ComposableNode.CheckboxNode -> ComponentType.Checkbox

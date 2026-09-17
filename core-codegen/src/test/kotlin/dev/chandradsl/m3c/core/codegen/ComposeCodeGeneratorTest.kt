@@ -139,4 +139,16 @@ class ComposeCodeGeneratorTest {
         assertTrue(code.contains("RangeSlider("))
         assertTrue(code.contains("AlertDialog("))
     }
+
+    @Test
+    fun testGenerateIcon() {
+        val root = ComposableNode.IconNode(
+            iconName = "Favorite",
+            contentDescription = "Favorite Item"
+        )
+        val code = ComposeCodeGenerator.generateCodeString(rootNode = root)
+        assertTrue(code.contains("Icon("))
+        assertTrue(code.contains("Icons.Default.Favorite"))
+        assertTrue(code.contains("contentDescription = \"Favorite Item\""))
+    }
 }

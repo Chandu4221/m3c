@@ -190,6 +190,16 @@ sealed interface ComposableNode {
     ) : ComposableNode
 
     @Serializable
+    @SerialName("icon")
+    data class IconNode(
+        override val id: NodeId = NodeId.generate("icn"),
+        override val modifiers: List<ModifierDef> = emptyList(),
+        val iconName: String = "Favorite",
+        val tint: ColorSource? = null,
+        val contentDescription: String? = null
+    ) : ComposableNode
+
+    @Serializable
     @SerialName("text_field")
     data class TextFieldNode(
         override val id: NodeId = NodeId.generate("tf"),

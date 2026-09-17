@@ -636,6 +636,7 @@ fun collectPathToNode(root: ComposableNode, targetId: NodeId?): Set<String> {
 
 private fun getNodeLabel(node: ComposableNode): String = when (node) {
     is ComposableNode.TextNode -> "Text: \"${node.text.take(16)}\""
+    is ComposableNode.IconNode -> "Icon: ${node.iconName}"
     is ComposableNode.TextFieldNode -> "TextField: ${node.label ?: ""}"
     is ComposableNode.OutlinedTextFieldNode -> "OutlinedTextField: ${node.label ?: ""}"
     else -> ComponentRegistry.findByNode(node)?.displayName ?: "Component"

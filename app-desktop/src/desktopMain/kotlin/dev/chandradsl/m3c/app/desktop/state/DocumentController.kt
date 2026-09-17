@@ -274,6 +274,7 @@ class DocumentController(
 
     private fun cloneWithNewIds(node: ComposableNode): ComposableNode = when (node) {
         is ComposableNode.TextNode -> node.copy(id = NodeId.generate("txt"))
+        is ComposableNode.IconNode -> node.copy(id = NodeId.generate("icn"))
         is ComposableNode.TextFieldNode -> node.copy(id = NodeId.generate("input"))
         is ComposableNode.OutlinedTextFieldNode -> node.copy(id = NodeId.generate("input"))
         is ComposableNode.ButtonNode -> node.copy(id = NodeId.generate("btn"), content = node.content.map { cloneWithNewIds(it) })

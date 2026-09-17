@@ -41,6 +41,7 @@ fun NodeRenderer(
 
         // 4. Text & Inputs
         is ComposableNode.TextNode -> RenderText(node, state, onIntent, modifier)
+        is ComposableNode.IconNode -> RenderIcon(node, state, onIntent, modifier)
         is ComposableNode.TextFieldNode -> RenderTextField(node, state, onIntent, modifier)
         is ComposableNode.OutlinedTextFieldNode -> RenderOutlinedTextField(node, state, onIntent, modifier)
 

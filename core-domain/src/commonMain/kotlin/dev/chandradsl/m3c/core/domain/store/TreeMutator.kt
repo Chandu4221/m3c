@@ -176,6 +176,7 @@ object TreeMutator {
             else -> if (icon == null) copy(icon = child) else copy(text = child)
         }
         is ComposableNode.TextNode -> this
+        is ComposableNode.IconNode -> this
         is ComposableNode.TextFieldNode -> this
         is ComposableNode.OutlinedTextFieldNode -> this
         is ComposableNode.CheckboxNode -> this
@@ -289,6 +290,7 @@ object TreeMutator {
         is ComposableNode.IconButtonNode -> copy(modifiers = newModifiers)
         is ComposableNode.FloatingActionButtonNode -> copy(modifiers = newModifiers)
         is ComposableNode.TextNode -> copy(modifiers = newModifiers)
+        is ComposableNode.IconNode -> copy(modifiers = newModifiers)
         is ComposableNode.TextFieldNode -> copy(modifiers = newModifiers)
         is ComposableNode.OutlinedTextFieldNode -> copy(modifiers = newModifiers)
         is ComposableNode.CheckboxNode -> copy(modifiers = newModifiers)
@@ -387,6 +389,7 @@ object TreeMutator {
             dismissButton = dismissButton?.let(transform)
         )
         is ComposableNode.TextNode -> this
+        is ComposableNode.IconNode -> this
         is ComposableNode.CheckboxNode -> this
         is ComposableNode.SwitchNode -> this
         is ComposableNode.RadioButtonNode -> this
@@ -473,6 +476,7 @@ object TreeMutator {
             dismissButton = if (dismissButton?.id == targetId) null else dismissButton?.let(transform)
         )
         is ComposableNode.TextNode -> this
+        is ComposableNode.IconNode -> this
         is ComposableNode.CheckboxNode -> this
         is ComposableNode.SwitchNode -> this
         is ComposableNode.RadioButtonNode -> this

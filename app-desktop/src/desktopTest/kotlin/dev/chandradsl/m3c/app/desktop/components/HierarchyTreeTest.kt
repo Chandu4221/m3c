@@ -115,4 +115,49 @@ class HierarchyTreeTest {
         val pass2 = tree.roots.flatMap { it.flatten(treeState) }
         println("Pass 2 flattened (${pass2.size}): ${pass2.map { it.id }}")
     }
+
+    @Test
+    fun testInsertAndCloneIconComponent() {
+        val viewModel = StudioViewModel()
+        val iconDef = dev.chandradsl.m3c.core.domain.schema.ComponentRegistry.findByType(
+            dev.chandradsl.m3c.core.domain.schema.ComponentType.Icon
+        )
+        kotlin.test.assertNotNull(iconDef)
+        val iconNode = iconDef.createDefault() as dev.chandradsl.m3c.core.domain.model.ComposableNode.IconNode
+        assertEquals("Favorite", iconNode.iconName)
+
+        viewModel.insertComponent(iconNode)
+
+        kotlinx.coroutines.runBlocking {
+            kotlinx.coroutines.withTimeout(3000) {
+                while (true) {
+                    val root = viewModel.workspaceState.rootNode as dev.chandradsl.m3c.core.domain.model.ComposableNode.ScaffoldNode
+                    val col = root.content as dev.chandradsl.m3c.core.domain.model.ComposableNode.ColumnNode
+                    if (col.children.any { it is dev.chandradsl.m3c.core.domain.model.ComposableNode.IconNode }) {
+                        break
+                    }
+                    kotlinx.coroutines.delay(20)
+                }
+            }
+        }
+
+        // Test duplicate via documentController
+        val root = viewModel.workspaceState.rootNode as dev.chandradsl.m3c.core.domain.model.ComposableNode.ScaffoldNode
+        val col = root.content as dev.chandradsl.m3c.core.domain.model.ComposableNode.ColumnNode
+        val insertedIcon = col.children.filterIsInstance<dev.chandradsl.m3c.core.domain.model.ComposableNode.IconNode>().first()
+        viewModel.dispatch(dev.chandradsl.m3c.core.domain.store.WorkspaceIntent.SelectNode(insertedIcon.id))
+        viewModel.documentController.duplicateSelectedNode()
+
+        kotlinx.coroutines.runBlocking {
+            kotlinx.coroutines.withTimeout(3000) {
+                while (true) {
+                    val currentRoot = viewModel.workspaceState.rootNode as dev.chandradsl.m3c.core.domain.model.ComposableNode.ScaffoldNode
+                    val currentCol = currentRoot.content as dev.chandradsl.m3c.core.domain.model.ComposableNode.ColumnNode
+                    val iconCount = currentCol.children.count { it is dev.chandradsl.m3c.core.domain.model.ComposableNode.IconNode }
+                    if (iconCount >= 2) break
+                    kotlinx.coroutines.delay(20)
+                }
+            }
+        }
+    }
 }

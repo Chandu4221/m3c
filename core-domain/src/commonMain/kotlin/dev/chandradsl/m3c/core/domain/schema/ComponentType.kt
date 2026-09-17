@@ -27,6 +27,7 @@ enum class ComponentType(val id: String) {
 
     // 4. Text & Inputs
     Text("text"),
+    Icon("icon"),
     TextField("text_field"),
     OutlinedTextField("outlined_text_field"),
 
