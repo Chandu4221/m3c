@@ -47,6 +47,7 @@ import org.jetbrains.jewel.ui.component.Text
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.PointerIcon
@@ -314,13 +315,17 @@ private fun PaletteComponentCard(
                     text = item.name,
                     style = StudioTypography.UIBody.copy(
                         color = if (isInteractive) StudioColors.TextMuted else StudioColors.TextPrimary
-                    )
+                    ),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
                 Text(
                     text = item.description,
                     style = StudioTypography.Caption.copy(
                         color = if (isInteractive) StudioColors.TextMuted else StudioColors.TextSecondary
-                    )
+                    ),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
         }

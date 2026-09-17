@@ -1,7 +1,8 @@
 package dev.chandradsl.m3c.app.desktop.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
@@ -15,13 +16,16 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.changedToUp
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import dev.chandradsl.m3c.app.desktop.theme.StudioColors
 import java.awt.Cursor
 
 enum class SplitterOrientation {
@@ -33,7 +37,8 @@ enum class SplitterOrientation {
 fun DraggableSplitter(
     orientation: SplitterOrientation,
     onDelta: (Float) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onDoubleClick: () -> Unit = {}
 ) {
     val density = LocalDensity.current
     val interactionSource = remember { MutableInteractionSource() }
@@ -50,39 +55,93 @@ fun DraggableSplitter(
     }
 
     val activeColor = when {
-        isDragging -> Color(0xFFCBA6F7) // Active dragging purple
-        isHovered -> Color(0xFF89B4FA)  // Hover accent blue
-        else -> Color(0xFF313244)        // Subtle idle border
+        isDragging -> StudioColors.Primary
+        isHovered -> StudioColors.Primary.copy(alpha = 0.85f)
+        else -> StudioColors.BorderSubtle
     }
 
-    val sizeModifier = if (orientation == SplitterOrientation.Vertical) {
+    // Outer hit zone: 8dp target for easy grabbing matching IntelliJ tool windows
+    val hitBoxModifier = if (orientation == SplitterOrientation.Vertical) {
         Modifier
-            .width(5.dp)
+            .width(8.dp)
             .fillMaxHeight()
     } else {
         Modifier
             .fillMaxWidth()
-            .height(5.dp)
+            .height(8.dp)
     }
+
+    // Center divider line width: 1dp idle, 2dp when hovered or actively dragging
+    val lineWidth = if (isHovered || isDragging) 2.dp else 1.dp
 
     Box(
         modifier = modifier
-            .then(sizeModifier)
-            .background(activeColor)
+            .then(hitBoxModifier)
             .hoverable(interactionSource = interactionSource)
             .pointerHoverIcon(cursor)
-            .pointerInput(orientation) {
-                detectDragGestures(
-                    onDragStart = { isDragging = true },
-                    onDragEnd = { isDragging = false },
-                    onDragCancel = { isDragging = false },
-                    onDrag = { change, dragAmount ->
-                        change.consume()
-                        val deltaPx = if (orientation == SplitterOrientation.Vertical) dragAmount.x else dragAmount.y
-                        val deltaDp = with(density) { deltaPx.toDp().value }
-                        onDelta(deltaDp)
+            .pointerInput(orientation, onDoubleClick, onDelta) {
+                var lastClickTime = 0L
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false)
+                    val touchSlop = viewConfiguration.touchSlop
+                    var totalMovement = Offset.Zero
+                    var isDrag = false
+
+                    while (true) {
+                        val event = awaitPointerEvent()
+                        val change = event.changes.firstOrNull { it.id == down.id } ?: break
+
+                        if (change.changedToUp()) {
+                            if (isDrag) {
+                                isDragging = false
+                            } else {
+                                val now = System.currentTimeMillis()
+                                if (now - lastClickTime < 350L) {
+                                    onDoubleClick()
+                                    lastClickTime = 0L
+                                } else {
+                                    lastClickTime = now
+                                }
+                            }
+                            break
+                        }
+
+                        val dragAmount = change.position - change.previousPosition
+                        totalMovement += dragAmount
+
+                        if (!isDrag) {
+                            if (totalMovement.getDistance() > touchSlop) {
+                                isDrag = true
+                                isDragging = true
+                                change.consume()
+                            }
+                        } else {
+                            change.consume()
+                            val deltaPx = if (orientation == SplitterOrientation.Vertical) dragAmount.x else dragAmount.y
+                            val deltaDp = with(density) { deltaPx.toDp().value }
+                            onDelta(deltaDp)
+                        }
                     }
-                )
+                    if (isDragging) {
+                        isDragging = false
+                    }
+                }
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        // Visual hairline separator
+        Box(
+            modifier = if (orientation == SplitterOrientation.Vertical) {
+                Modifier
+                    .width(lineWidth)
+                    .fillMaxHeight()
+                    .background(activeColor)
+            } else {
+                Modifier
+                    .fillMaxWidth()
+                    .height(lineWidth)
+                    .background(activeColor)
             }
-    )
+        )
+    }
 }

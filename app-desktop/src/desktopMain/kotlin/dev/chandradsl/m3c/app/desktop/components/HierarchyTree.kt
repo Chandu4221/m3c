@@ -2,6 +2,8 @@ package dev.chandradsl.m3c.app.desktop.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
@@ -191,10 +193,10 @@ fun HierarchyTree(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(6.dp))
                     .background(StudioColors.CardSurface)
                     .border(width = 1.dp, color = StudioColors.BorderSubtle, shape = RoundedCornerShape(6.dp))
-                    .padding(4.dp),
+                    .padding(4.dp)
+                    .horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -397,7 +399,9 @@ fun HierarchyTree(
                             )
                             Text(
                                 text = "↑ Insert Before",
-                                style = StudioTypography.Badge.copy(color = StudioColors.Primary)
+                                style = StudioTypography.Badge.copy(color = StudioColors.Primary),
+                                maxLines = 1,
+                                softWrap = false
                             )
                         }
                     }
@@ -485,7 +489,12 @@ fun HierarchyTree(
                         // Slot badge (Jewel Badge)
                         if (slotLabel != null) {
                             Badge {
-                                Text(slotLabel)
+                                Text(
+                                    text = slotLabel,
+                                    maxLines = 1,
+                                    softWrap = false,
+                                    overflow = TextOverflow.Ellipsis
+                                )
                             }
                         }
 
@@ -496,6 +505,7 @@ fun HierarchyTree(
                                 fontWeight = if (isInsideTarget) FontWeight.SemiBold else FontWeight.Normal
                             ),
                             maxLines = 1,
+                            softWrap = false,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f, fill = false)
                         )
@@ -504,14 +514,18 @@ fun HierarchyTree(
                         if (isInsideTarget) {
                             Text(
                                 text = "↳ Drop Inside",
-                                style = StudioTypography.Badge.copy(color = StudioColors.Success, fontWeight = FontWeight.Bold)
+                                style = StudioTypography.Badge.copy(color = StudioColors.Success, fontWeight = FontWeight.Bold),
+                                maxLines = 1,
+                                softWrap = false
                             )
                         } else {
                             Text(
                                 text = "#${node.id.value.takeLast(4)}",
                                 style = StudioTypography.Caption.copy(
                                     color = StudioColors.TextMuted.copy(alpha = 0.5f)
-                                )
+                                ),
+                                maxLines = 1,
+                                softWrap = false
                             )
                         }
                     }
@@ -543,7 +557,9 @@ fun HierarchyTree(
                             )
                             Text(
                                 text = "↓ Insert After",
-                                style = StudioTypography.Badge.copy(color = StudioColors.Primary)
+                                style = StudioTypography.Badge.copy(color = StudioColors.Primary),
+                                maxLines = 1,
+                                softWrap = false
                             )
                         }
                     }

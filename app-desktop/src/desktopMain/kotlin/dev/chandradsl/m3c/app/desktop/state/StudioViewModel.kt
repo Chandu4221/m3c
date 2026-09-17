@@ -199,6 +199,10 @@ class StudioViewModel {
     fun resizeRightPanel(deltaDp: Float) = canvasController.resizeRightPanel(deltaDp)
     fun resizeCodeDrawer(deltaDp: Float) = canvasController.resizeCodeDrawer(deltaDp)
 
+    fun resetLeftPanelWidth() = canvasController.resetLeftPanelWidth()
+    fun resetRightPanelWidth() = canvasController.resetRightPanelWidth()
+    fun resetCodeDrawerHeight() = canvasController.resetCodeDrawerHeight()
+
     var currentDevicePreset: DevicePreset
         get() = canvasController.currentDevicePreset
         set(value) { canvasController.currentDevicePreset = value }

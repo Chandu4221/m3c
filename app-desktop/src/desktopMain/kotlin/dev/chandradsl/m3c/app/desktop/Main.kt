@@ -31,6 +31,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
@@ -145,7 +146,8 @@ fun main() = application {
                             // Left-to-Center Vertical Splitter
                             DraggableSplitter(
                                 orientation = SplitterOrientation.Vertical,
-                                onDelta = viewModel::resizeLeftPanel
+                                onDelta = viewModel::resizeLeftPanel,
+                                onDoubleClick = viewModel::resetLeftPanelWidth
                             )
 
                             // Center: Zoomable/Pannable Device Canvas
@@ -157,7 +159,8 @@ fun main() = application {
                             // Center-to-Right Vertical Splitter
                             DraggableSplitter(
                                 orientation = SplitterOrientation.Vertical,
-                                onDelta = { delta -> viewModel.resizeRightPanel(-delta) }
+                                onDelta = { delta -> viewModel.resizeRightPanel(-delta) },
+                                onDoubleClick = viewModel::resetRightPanelWidth
                             )
 
                             // Right: Two-Way Property & Modifier Inspector (Resizable)
@@ -175,7 +178,8 @@ fun main() = application {
                             Column(modifier = Modifier.fillMaxWidth()) {
                                 DraggableSplitter(
                                     orientation = SplitterOrientation.Horizontal,
-                                    onDelta = { delta -> viewModel.resizeCodeDrawer(-delta) }
+                                    onDelta = { delta -> viewModel.resizeCodeDrawer(-delta) },
+                                    onDoubleClick = viewModel::resetCodeDrawerHeight
                                 )
                                 CodePreviewDrawer(viewModel = viewModel)
                             }
@@ -407,6 +411,9 @@ private fun LeftTabButton(
                 color = tintColor,
                 fontWeight = if (isActive) FontWeight.SemiBold else FontWeight.Normal
             ),
+            maxLines = 1,
+            softWrap = false,
+            overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(start = 6.dp)
         )
     }

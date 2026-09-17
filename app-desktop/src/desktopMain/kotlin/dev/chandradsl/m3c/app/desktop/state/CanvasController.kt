@@ -12,26 +12,50 @@ class CanvasController {
     var isCodeDrawerOpen: Boolean by mutableStateOf(false)
     var leftDrawerTab: LeftDrawerTab by mutableStateOf(LeftDrawerTab.Palette)
 
-    var leftPanelWidth: Dp by mutableStateOf(260.dp)
-    var rightPanelWidth: Dp by mutableStateOf(300.dp)
-    var codeDrawerHeight: Dp by mutableStateOf(260.dp)
+    val defaultLeftPanelWidth: Dp = 280.dp
+    val minLeftPanelWidth: Dp = 240.dp
+    val maxLeftPanelWidth: Dp = 550.dp
+
+    val defaultRightPanelWidth: Dp = 320.dp
+    val minRightPanelWidth: Dp = 280.dp
+    val maxRightPanelWidth: Dp = 600.dp
+
+    val defaultCodeDrawerHeight: Dp = 260.dp
+    val minCodeDrawerHeight: Dp = 140.dp
+    val maxCodeDrawerHeight: Dp = 600.dp
+
+    var leftPanelWidth: Dp by mutableStateOf(defaultLeftPanelWidth)
+    var rightPanelWidth: Dp by mutableStateOf(defaultRightPanelWidth)
+    var codeDrawerHeight: Dp by mutableStateOf(defaultCodeDrawerHeight)
 
     var currentDevicePreset: DevicePreset by mutableStateOf(DevicePreset.PhonePortrait)
     var canvasZoom: Float by mutableStateOf(1.0f)
 
     fun resizeLeftPanel(deltaDp: Float) {
-        val newWidth = (leftPanelWidth.value + deltaDp).coerceIn(180f, 500f)
+        val newWidth = (leftPanelWidth.value + deltaDp).coerceIn(minLeftPanelWidth.value, maxLeftPanelWidth.value)
         leftPanelWidth = newWidth.dp
     }
 
     fun resizeRightPanel(deltaDp: Float) {
-        val newWidth = (rightPanelWidth.value + deltaDp).coerceIn(240f, 550f)
+        val newWidth = (rightPanelWidth.value + deltaDp).coerceIn(minRightPanelWidth.value, maxRightPanelWidth.value)
         rightPanelWidth = newWidth.dp
     }
 
     fun resizeCodeDrawer(deltaDp: Float) {
-        val newHeight = (codeDrawerHeight.value + deltaDp).coerceIn(120f, 600f)
+        val newHeight = (codeDrawerHeight.value + deltaDp).coerceIn(minCodeDrawerHeight.value, maxCodeDrawerHeight.value)
         codeDrawerHeight = newHeight.dp
+    }
+
+    fun resetLeftPanelWidth() {
+        leftPanelWidth = defaultLeftPanelWidth
+    }
+
+    fun resetRightPanelWidth() {
+        rightPanelWidth = defaultRightPanelWidth
+    }
+
+    fun resetCodeDrawerHeight() {
+        codeDrawerHeight = defaultCodeDrawerHeight
     }
 
     fun zoomIn() {
