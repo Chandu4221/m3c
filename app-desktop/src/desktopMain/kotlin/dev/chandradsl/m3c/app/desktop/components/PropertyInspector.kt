@@ -17,6 +17,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DesignServices
 import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material3.Button
@@ -482,11 +483,26 @@ fun PropertyInspector(
                                 ))
                             }
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = StudioColors.Primary),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = StudioColors.Primary,
+                            contentColor = StudioColors.TextInverse
+                        ),
                         shape = RoundedCornerShape(4.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("+ Add Navigation Item", style = StudioTypography.Caption)
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "Add Navigation Item",
+                            tint = StudioColors.TextInverse,
+                            modifier = Modifier.size(StudioSizes.IconSmall).padding(end = 4.dp)
+                        )
+                        Text(
+                            text = "Add Navigation Item",
+                            style = StudioTypography.Caption.copy(
+                                color = StudioColors.TextInverse,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        )
                     }
                 }
             }
@@ -503,11 +519,26 @@ fun PropertyInspector(
                                 ))
                             }
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = StudioColors.Primary),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = StudioColors.Primary,
+                            contentColor = StudioColors.TextInverse
+                        ),
                         shape = RoundedCornerShape(4.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("+ Add Action Button", style = StudioTypography.Caption)
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "Add Action Button",
+                            tint = StudioColors.TextInverse,
+                            modifier = Modifier.size(StudioSizes.IconSmall).padding(end = 4.dp)
+                        )
+                        Text(
+                            text = "Add Action Button",
+                            style = StudioTypography.Caption.copy(
+                                color = StudioColors.TextInverse,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        )
                     }
                 }
                 InspectorField(label = "Floating Action Button") {
