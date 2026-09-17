@@ -50,6 +50,7 @@ import dev.chandradsl.m3c.core.domain.model.DpVal
 import dev.chandradsl.m3c.core.domain.model.ShapeDef
 import dev.chandradsl.m3c.core.domain.model.ShapeToken
 import dev.chandradsl.m3c.core.domain.model.TypographyToken
+import dev.chandradsl.m3c.core.domain.schema.ComponentRegistry
 import dev.chandradsl.m3c.core.domain.store.WorkspaceIntent
 
 @Composable
@@ -150,6 +151,7 @@ fun PropertyInspector(
         }
 
         // 3. Selected Node Header
+        val componentDef = ComponentRegistry.findByNode(selectedNode)
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -157,13 +159,31 @@ fun PropertyInspector(
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
-                    text = selectedNode::class.simpleName?.replace("Node", "") ?: "Component",
+                    text = componentDef?.displayName ?: (selectedNode::class.simpleName?.replace("Node", "") ?: "Component"),
                     style = StudioTypography.ComponentTitle
                 )
                 Text(
                     text = "ID: ${selectedNode.id.value}",
                     style = StudioTypography.Caption
                 )
+            }
+
+            componentDef?.let { def ->
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(StudioColors.ActiveSurface)
+                        .border(1.dp, StudioColors.BorderSubtle, RoundedCornerShape(4.dp))
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                ) {
+                    Text(
+                        text = def.category.displayName,
+                        style = StudioTypography.Caption.copy(
+                            color = StudioColors.Primary,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    )
+                }
             }
         }
 

@@ -72,6 +72,7 @@ import androidx.compose.material.icons.filled.TextFormat
 import androidx.compose.material.icons.filled.ToggleOn
 import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material.icons.filled.VerticalDistribute
+import androidx.compose.material.icons.filled.ViewAgenda
 import androidx.compose.material.icons.filled.ViewColumn
 import androidx.compose.material.icons.filled.ViewStream
 import androidx.compose.material.icons.filled.WebAsset
@@ -79,11 +80,38 @@ import dev.chandradsl.m3c.app.desktop.theme.StudioColors
 import dev.chandradsl.m3c.app.desktop.theme.StudioSizes
 import dev.chandradsl.m3c.app.desktop.theme.StudioTypography
 import dev.chandradsl.m3c.core.domain.model.ComposableNode
-import dev.chandradsl.m3c.core.domain.model.DpVal
-import dev.chandradsl.m3c.core.domain.model.ModifierDef
-import dev.chandradsl.m3c.core.domain.model.ShapeDef
-import dev.chandradsl.m3c.core.domain.model.ShapeToken
-import dev.chandradsl.m3c.core.domain.model.TypographyToken
+import dev.chandradsl.m3c.core.domain.schema.ComponentCategory
+import dev.chandradsl.m3c.core.domain.schema.ComponentRegistry
+
+fun resolveComponentIcon(iconName: String): ImageVector = when (iconName) {
+    "view_column" -> Icons.Default.ViewColumn
+    "view_stream" -> Icons.Default.ViewStream
+    "layers" -> Icons.Default.Layers
+    "space_bar" -> Icons.Default.SpaceBar
+    "web_asset" -> Icons.Default.WebAsset
+    "crop_portrait" -> Icons.Default.CropPortrait
+    "featured_play_list" -> Icons.AutoMirrored.Filled.FeaturedPlayList
+    "check_box_outline_blank" -> Icons.Default.CheckBoxOutlineBlank
+    "smart_button" -> Icons.Default.SmartButton
+    "ads_click" -> Icons.Default.AdsClick
+    "highlight" -> Icons.Default.Highlight
+    "crop_landscape" -> Icons.Default.CropLandscape
+    "text_format" -> Icons.Default.TextFormat
+    "touch_app" -> Icons.Default.TouchApp
+    "add_circle" -> Icons.Default.AddCircle
+    "text_fields" -> Icons.Default.TextFields
+    "edit_note" -> Icons.Default.EditNote
+    "check_box" -> Icons.Default.CheckBox
+    "toggle_on" -> Icons.Default.ToggleOn
+    "radio_button_checked" -> Icons.Default.RadioButtonChecked
+    "linear_scale" -> Icons.Default.LinearScale
+    "autorenew" -> Icons.Default.Autorenew
+    "horizontal_rule" -> Icons.Default.HorizontalRule
+    "horizontal_distribute" -> Icons.Default.HorizontalDistribute
+    "vertical_distribute" -> Icons.Default.VerticalDistribute
+    "view_agenda" -> Icons.Default.ViewAgenda
+    else -> Icons.Default.WebAsset
+}
 
 data class PaletteItem(
     val name: String,
@@ -109,143 +137,24 @@ fun ComponentPalette(
             .verticalScroll(scrollState),
         verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
-        // 1. Layout Containers
-        PaletteCategory(
-            title = "LAYOUT CONTAINERS",
-            items = listOf(
-                PaletteItem("Column", "Vertical layout container", Icons.Default.ViewColumn) {
-                    ComposableNode.ColumnNode(modifiers = listOf(ModifierDef.Padding.all(DpVal(8f))))
-                },
-                PaletteItem("Row", "Horizontal layout container", Icons.Default.ViewStream) {
-                    ComposableNode.RowNode(modifiers = listOf(ModifierDef.Padding.all(DpVal(8f))))
-                },
-                PaletteItem("Box", "Freeform stacking layout", Icons.Default.Layers) {
-                    ComposableNode.BoxNode()
-                },
-                PaletteItem("Spacer", "Flexible layout gap", Icons.Default.SpaceBar) {
-                    ComposableNode.SpacerNode(modifiers = listOf(ModifierDef.Height(DpVal(16f))))
-                }
-            ),
-            viewModel = viewModel
-        )
-
-        // 2. Surfaces & Cards
-        PaletteCategory(
-            title = "SURFACES & CARDS",
-            items = listOf(
-                PaletteItem("Surface", "Material elevation canvas", Icons.Default.WebAsset) {
-                    ComposableNode.SurfaceNode()
-                },
-                PaletteItem("Card", "Filled container card", Icons.Default.CropPortrait) {
-                    ComposableNode.CardNode(
-                        modifiers = listOf(ModifierDef.Padding.all(DpVal(8f))),
-                        content = listOf(ComposableNode.TextNode(text = "Card Content"))
-                    )
-                },
-                PaletteItem("Elevated Card", "Card with shadow elevation", Icons.AutoMirrored.Filled.FeaturedPlayList) {
-                    ComposableNode.ElevatedCardNode(
-                        modifiers = listOf(ModifierDef.Padding.all(DpVal(8f))),
-                        content = listOf(ComposableNode.TextNode(text = "Elevated Card"))
-                    )
-                },
-                PaletteItem("Outlined Card", "Card with subtle border", Icons.Default.CheckBoxOutlineBlank) {
-                    ComposableNode.OutlinedCardNode(
-                        modifiers = listOf(ModifierDef.Padding.all(DpVal(8f))),
-                        content = listOf(ComposableNode.TextNode(text = "Outlined Card"))
-                    )
-                }
-            ),
-            viewModel = viewModel
-        )
-
-        // 3. Buttons & Actions
-        PaletteCategory(
-            title = "BUTTONS & ACTIONS",
-            items = listOf(
-                PaletteItem("Button", "Filled primary action", Icons.Default.SmartButton) {
-                    ComposableNode.ButtonNode(content = listOf(ComposableNode.TextNode(text = "Button")))
-                },
-                PaletteItem("Elevated Button", "Button with shadow elevation", Icons.Default.AdsClick) {
-                    ComposableNode.ElevatedButtonNode(content = listOf(ComposableNode.TextNode(text = "Elevated")))
-                },
-                PaletteItem("Filled Tonal Button", "Medium emphasis tonal button", Icons.Default.Highlight) {
-                    ComposableNode.FilledTonalButtonNode(content = listOf(ComposableNode.TextNode(text = "Tonal Button")))
-                },
-                PaletteItem("Outlined Button", "Bordered action button", Icons.Default.CropLandscape) {
-                    ComposableNode.OutlinedButtonNode(content = listOf(ComposableNode.TextNode(text = "Outlined")))
-                },
-                PaletteItem("Text Button", "Low emphasis text button", Icons.Default.TextFormat) {
-                    ComposableNode.TextButtonNode(content = listOf(ComposableNode.TextNode(text = "Text Button")))
-                },
-                PaletteItem("Icon Button", "Compact icon trigger", Icons.Default.TouchApp) {
-                    ComposableNode.IconButtonNode(content = listOf(ComposableNode.TextNode(text = "★")))
-                },
-                PaletteItem("FAB", "Floating action button", Icons.Default.AddCircle) {
-                    ComposableNode.FloatingActionButtonNode(
-                        shape = ShapeDef.Token(ShapeToken.Large),
-                        content = listOf(ComposableNode.TextNode(text = "+"))
-                    )
-                }
-            ),
-            viewModel = viewModel
-        )
-
-        // 4. Text & Inputs
-        PaletteCategory(
-            title = "TEXT & INPUTS",
-            items = listOf(
-                PaletteItem("Text", "Typography display label", Icons.Default.TextFields) {
-                    ComposableNode.TextNode(text = "Label Text", typography = TypographyToken.BodyMedium)
-                },
-                PaletteItem("TextField", "Filled input text field", Icons.Default.EditNote) {
-                    ComposableNode.TextFieldNode(label = "Input Label")
-                },
-                PaletteItem("Outlined TextField", "Bordered input text field", Icons.Default.EditNote) {
-                    ComposableNode.OutlinedTextFieldNode(label = "Input Label")
-                }
-            ),
-            viewModel = viewModel
-        )
-
-        // 5. Selection & Feedback
-        PaletteCategory(
-            title = "SELECTION & FEEDBACK",
-            items = listOf(
-                PaletteItem("Checkbox", "Binary multi-select control", Icons.Default.CheckBox) {
-                    ComposableNode.CheckboxNode(checked = true)
-                },
-                PaletteItem("Switch", "Toggle state switch", Icons.Default.ToggleOn) {
-                    ComposableNode.SwitchNode(checked = true)
-                },
-                PaletteItem("RadioButton", "Single selection option", Icons.Default.RadioButtonChecked) {
-                    ComposableNode.RadioButtonNode(selected = true)
-                },
-                PaletteItem("Slider", "Continuous range slider", Icons.Default.LinearScale) {
-                    ComposableNode.SliderNode(value = 0.5f)
-                },
-                PaletteItem("Circular Progress", "Radial loading spinner", Icons.Default.Autorenew) {
-                    ComposableNode.CircularProgressIndicatorNode()
-                },
-                PaletteItem("Linear Progress", "Horizontal loading bar", Icons.Default.HorizontalRule) {
-                    ComposableNode.LinearProgressIndicatorNode(progress = 0.6f)
-                }
-            ),
-            viewModel = viewModel
-        )
-
-        // 6. Dividers
-        PaletteCategory(
-            title = "DIVIDERS",
-            items = listOf(
-                PaletteItem("Horizontal Divider", "Horizontal separating line", Icons.Default.HorizontalDistribute) {
-                    ComposableNode.HorizontalDividerNode()
-                },
-                PaletteItem("Vertical Divider", "Vertical separating line", Icons.Default.VerticalDistribute) {
-                    ComposableNode.VerticalDividerNode(modifiers = listOf(ModifierDef.Height(DpVal(24f))))
-                }
-            ),
-            viewModel = viewModel
-        )
+        // Registry-Driven Categories & Components (Single Source of Truth)
+        ComponentCategory.entries.forEach { category ->
+            val definitions = ComponentRegistry.byCategory(category)
+            if (definitions.isNotEmpty()) {
+                PaletteCategory(
+                    title = category.displayName,
+                    items = definitions.map { def ->
+                        PaletteItem(
+                            name = def.displayName,
+                            description = def.description,
+                            icon = resolveComponentIcon(def.iconName),
+                            factory = { def.createDefault() }
+                        )
+                    },
+                    viewModel = viewModel
+                )
+            }
+        }
     }
 }
 
