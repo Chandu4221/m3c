@@ -366,3 +366,39 @@ sealed interface ComposableNode {
         val enabled: Boolean = true
     ) : ComposableNode
 }
+
+/**
+ * Returns all direct child nodes contained within this ComposableNode across all child lists and slots.
+ */
+val ComposableNode.allDirectChildren: List<ComposableNode>
+    get() = when (this) {
+        is ComposableNode.ColumnNode -> children
+        is ComposableNode.RowNode -> children
+        is ComposableNode.BoxNode -> children
+        is ComposableNode.SurfaceNode -> children
+        is ComposableNode.NavigationBarNode -> items
+        is ComposableNode.CardNode -> content
+        is ComposableNode.ElevatedCardNode -> content
+        is ComposableNode.OutlinedCardNode -> content
+        is ComposableNode.ButtonNode -> content
+        is ComposableNode.ElevatedButtonNode -> content
+        is ComposableNode.FilledTonalButtonNode -> content
+        is ComposableNode.OutlinedButtonNode -> content
+        is ComposableNode.TextButtonNode -> content
+        is ComposableNode.IconButtonNode -> content
+        is ComposableNode.FloatingActionButtonNode -> content
+        is ComposableNode.ScaffoldNode -> listOfNotNull(topBar, bottomBar, floatingActionButton, content)
+        is ComposableNode.TopAppBarNode -> listOf(title) + listOfNotNull(navigationIcon) + actions
+        is ComposableNode.TextFieldNode -> listOfNotNull(leadingIcon, trailingIcon)
+        is ComposableNode.OutlinedTextFieldNode -> listOfNotNull(leadingIcon, trailingIcon)
+        is ComposableNode.NavigationBarItemNode -> listOf(icon) + listOfNotNull(label)
+        else -> emptyList()
+    }
+
+/**
+ * Returns true if this node or any transitive descendant matches [targetId].
+ */
+fun ComposableNode.hasDescendant(targetId: NodeId?): Boolean {
+    if (targetId == null) return false
+    return allDirectChildren.any { it.id == targetId || it.hasDescendant(targetId) }
+}

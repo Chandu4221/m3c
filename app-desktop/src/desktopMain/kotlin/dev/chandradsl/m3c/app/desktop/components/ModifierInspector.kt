@@ -59,6 +59,9 @@ import dev.chandradsl.m3c.app.desktop.state.StudioViewModel
 import dev.chandradsl.m3c.app.desktop.theme.StudioColors
 import dev.chandradsl.m3c.app.desktop.theme.StudioSizes
 import dev.chandradsl.m3c.app.desktop.theme.StudioTypography
+import dev.chandradsl.m3c.core.domain.model.AlignmentDef
+import dev.chandradsl.m3c.core.domain.model.AlignmentHorizontalDef
+import dev.chandradsl.m3c.core.domain.model.AlignmentVerticalDef
 import dev.chandradsl.m3c.core.domain.model.ColorSource
 import dev.chandradsl.m3c.core.domain.model.ColorToken
 import dev.chandradsl.m3c.core.domain.model.ComposableNode
@@ -66,6 +69,7 @@ import dev.chandradsl.m3c.core.domain.model.DpVal
 import dev.chandradsl.m3c.core.domain.model.ModifierDef
 import dev.chandradsl.m3c.core.domain.model.ShapeDef
 import dev.chandradsl.m3c.core.domain.model.ShapeToken
+import dev.chandradsl.m3c.core.domain.scope.ContainerScope
 
 @Composable
 fun ModifierInspector(
@@ -73,6 +77,10 @@ fun ModifierInspector(
     node: ComposableNode,
     modifier: Modifier = Modifier
 ) {
+    val parentScope = remember(node.id, viewModel.workspaceState.rootNode) {
+        viewModel.getParentScope(node.id)
+    }
+
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(10.dp)
@@ -245,6 +253,88 @@ fun ModifierInspector(
                 AddModifierChip(label = "Shadow 4dp", modifier = Modifier.weight(1f)) {
                     viewModel.addModifier(node.id, ModifierDef.Shadow(elevation = DpVal(4f)))
                 }
+            }
+        }
+
+        // Scoped Modifiers (Context-Aware based on Parent Container Scope)
+        when (parentScope) {
+            ContainerScope.Row -> {
+                Text(
+                    text = "+ ROW SCOPE MODIFIERS",
+                    style = StudioTypography.SectionHeader,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        AddModifierChip(label = "Weight 1f", modifier = Modifier.weight(1f)) {
+                            viewModel.addModifier(node.id, ModifierDef.RowScopeModifier.Weight(1f))
+                        }
+                        AddModifierChip(label = "Align Center", modifier = Modifier.weight(1f)) {
+                            viewModel.addModifier(node.id, ModifierDef.RowScopeModifier.Align(AlignmentVerticalDef.CenterVertically))
+                        }
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        AddModifierChip(label = "Align Top", modifier = Modifier.weight(1f)) {
+                            viewModel.addModifier(node.id, ModifierDef.RowScopeModifier.Align(AlignmentVerticalDef.Top))
+                        }
+                        AddModifierChip(label = "Align Bottom", modifier = Modifier.weight(1f)) {
+                            viewModel.addModifier(node.id, ModifierDef.RowScopeModifier.Align(AlignmentVerticalDef.Bottom))
+                        }
+                    }
+                }
+            }
+            ContainerScope.Column -> {
+                Text(
+                    text = "+ COLUMN SCOPE MODIFIERS",
+                    style = StudioTypography.SectionHeader,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        AddModifierChip(label = "Weight 1f", modifier = Modifier.weight(1f)) {
+                            viewModel.addModifier(node.id, ModifierDef.ColumnScopeModifier.Weight(1f))
+                        }
+                        AddModifierChip(label = "Align Center", modifier = Modifier.weight(1f)) {
+                            viewModel.addModifier(node.id, ModifierDef.ColumnScopeModifier.Align(AlignmentHorizontalDef.CenterHorizontally))
+                        }
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        AddModifierChip(label = "Align Start", modifier = Modifier.weight(1f)) {
+                            viewModel.addModifier(node.id, ModifierDef.ColumnScopeModifier.Align(AlignmentHorizontalDef.Start))
+                        }
+                        AddModifierChip(label = "Align End", modifier = Modifier.weight(1f)) {
+                            viewModel.addModifier(node.id, ModifierDef.ColumnScopeModifier.Align(AlignmentHorizontalDef.End))
+                        }
+                    }
+                }
+            }
+            ContainerScope.Box -> {
+                Text(
+                    text = "+ BOX SCOPE MODIFIERS",
+                    style = StudioTypography.SectionHeader,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        AddModifierChip(label = "Align Center", modifier = Modifier.weight(1f)) {
+                            viewModel.addModifier(node.id, ModifierDef.BoxScopeModifier.Align(AlignmentDef.Center))
+                        }
+                        AddModifierChip(label = "Align TopStart", modifier = Modifier.weight(1f)) {
+                            viewModel.addModifier(node.id, ModifierDef.BoxScopeModifier.Align(AlignmentDef.TopStart))
+                        }
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        AddModifierChip(label = "Align BottomEnd", modifier = Modifier.weight(1f)) {
+                            viewModel.addModifier(node.id, ModifierDef.BoxScopeModifier.Align(AlignmentDef.BottomEnd))
+                        }
+                        AddModifierChip(label = "Align CenterStart", modifier = Modifier.weight(1f)) {
+                            viewModel.addModifier(node.id, ModifierDef.BoxScopeModifier.Align(AlignmentDef.CenterStart))
+                        }
+                    }
+                }
+            }
+            ContainerScope.None -> {
+                // No container scope active (e.g. root node or unadorned slot)
             }
         }
     }

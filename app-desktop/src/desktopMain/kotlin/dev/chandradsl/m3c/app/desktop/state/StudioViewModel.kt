@@ -18,6 +18,8 @@ import dev.chandradsl.m3c.core.domain.model.NodeId
 import dev.chandradsl.m3c.core.domain.model.ShapeDef
 import dev.chandradsl.m3c.core.domain.model.ShapeToken
 import dev.chandradsl.m3c.core.domain.model.TypographyToken
+import dev.chandradsl.m3c.core.domain.scope.ContainerScope
+import dev.chandradsl.m3c.core.domain.scope.childScope
 import dev.chandradsl.m3c.core.domain.store.TreeMutator
 import dev.chandradsl.m3c.core.domain.store.WorkspaceIntent
 import dev.chandradsl.m3c.core.domain.store.WorkspaceState
@@ -673,33 +675,13 @@ class StudioViewModel {
         else -> parent
     }
 
+    fun getParentScope(nodeId: NodeId): ContainerScope {
+        val parent = TreeMutator.findParent(store.state.rootNode, nodeId)
+        return parent?.childScope ?: ContainerScope.None
+    }
+
     private fun findParentRecursive(current: ComposableNode, targetId: NodeId): ComposableNode? {
-        if (getChildrenOf(current).any { it.id == targetId }) return current
-
-        if (current is ComposableNode.ScaffoldNode) {
-            if (current.topBar?.id == targetId || current.bottomBar?.id == targetId ||
-                current.floatingActionButton?.id == targetId || current.content?.id == targetId) {
-                return current
-            }
-            current.topBar?.let { findParentRecursive(it, targetId)?.let { return it } }
-            current.bottomBar?.let { findParentRecursive(it, targetId)?.let { return it } }
-            current.floatingActionButton?.let { findParentRecursive(it, targetId)?.let { return it } }
-            current.content?.let { findParentRecursive(it, targetId)?.let { return it } }
-        }
-
-        if (current is ComposableNode.TopAppBarNode) {
-            if (current.title.id == targetId || current.navigationIcon?.id == targetId || current.actions.any { it.id == targetId }) {
-                return current
-            }
-            findParentRecursive(current.title, targetId)?.let { return it }
-            current.navigationIcon?.let { findParentRecursive(it, targetId)?.let { return it } }
-            current.actions.forEach { findParentRecursive(it, targetId)?.let { return it } }
-        }
-
-        for (child in getChildrenOf(current)) {
-            findParentRecursive(child, targetId)?.let { return it }
-        }
-        return null
+        return TreeMutator.findParent(current, targetId)
     }
 
     private fun cloneWithNewIds(node: ComposableNode): ComposableNode = when (node) {

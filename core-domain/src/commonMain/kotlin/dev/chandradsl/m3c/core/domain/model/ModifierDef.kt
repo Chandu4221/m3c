@@ -1,10 +1,12 @@
 package dev.chandradsl.m3c.core.domain.model
 
+import dev.chandradsl.m3c.core.domain.scope.ContainerScope
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
 sealed interface ModifierDef {
+    val requiredScope: ContainerScope get() = ContainerScope.None
 
     // ========================================================================
     // 1. Sizing & Dimensions
@@ -119,6 +121,8 @@ sealed interface ModifierDef {
 
     @Serializable
     sealed interface RowScopeModifier : ModifierDef {
+        override val requiredScope: ContainerScope get() = ContainerScope.Row
+
         @Serializable
         @SerialName("row_weight")
         data class Weight(val weight: Float, val fill: Boolean = true) : RowScopeModifier
@@ -130,6 +134,8 @@ sealed interface ModifierDef {
 
     @Serializable
     sealed interface ColumnScopeModifier : ModifierDef {
+        override val requiredScope: ContainerScope get() = ContainerScope.Column
+
         @Serializable
         @SerialName("column_weight")
         data class Weight(val weight: Float, val fill: Boolean = true) : ColumnScopeModifier
@@ -141,6 +147,8 @@ sealed interface ModifierDef {
 
     @Serializable
     sealed interface BoxScopeModifier : ModifierDef {
+        override val requiredScope: ContainerScope get() = ContainerScope.Box
+
         @Serializable
         @SerialName("box_align")
         data class Align(val alignment: AlignmentDef) : BoxScopeModifier

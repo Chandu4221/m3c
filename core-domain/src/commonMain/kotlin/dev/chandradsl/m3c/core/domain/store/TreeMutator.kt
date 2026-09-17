@@ -3,28 +3,80 @@ package dev.chandradsl.m3c.core.domain.store
 import dev.chandradsl.m3c.core.domain.model.ComposableNode
 import dev.chandradsl.m3c.core.domain.model.ModifierDef
 import dev.chandradsl.m3c.core.domain.model.NodeId
+import dev.chandradsl.m3c.core.domain.model.allDirectChildren
+import dev.chandradsl.m3c.core.domain.scope.ContainerScope
+import dev.chandradsl.m3c.core.domain.scope.childScope
 
 object TreeMutator {
 
+    /**
+     * Finds the immediate parent ComposableNode of [targetId] in the tree, or null if [targetId] is root or not found.
+     */
+    fun findParent(root: ComposableNode, targetId: NodeId): ComposableNode? {
+        if (root.id == targetId) return null
+        for (child in root.allDirectChildren) {
+            if (child.id == targetId) return root
+            val parent = findParent(child, targetId)
+            if (parent != null) return parent
+        }
+        return null
+    }
+
+    /**
+     * Finds the ComposableNode matching [targetId] anywhere in the tree, or null if not found.
+     */
+    fun findNode(root: ComposableNode, targetId: NodeId): ComposableNode? {
+        if (root.id == targetId) return root
+        for (child in root.allDirectChildren) {
+            val found = findNode(child, targetId)
+            if (found != null) return found
+        }
+        return null
+    }
+
+    /**
+     * Filters [modifiers] to ensure all scoped modifiers are valid within [parentScope].
+     * Universal modifiers are always preserved.
+     */
+    fun sanitizeModifiers(modifiers: List<ModifierDef>, parentScope: ContainerScope): List<ModifierDef> {
+        return modifiers.filter { def ->
+            def.requiredScope == ContainerScope.None || def.requiredScope == parentScope
+        }
+    }
+
+    /**
+     * Sanitizes a node's modifiers against the required scope of its container.
+     */
+    fun sanitizeNodeModifiersForScope(node: ComposableNode, parentScope: ContainerScope): ComposableNode {
+        val sanitized = sanitizeModifiers(node.modifiers, parentScope)
+        return if (sanitized != node.modifiers) node.withModifiers(sanitized) else node
+    }
+
     fun insertChild(root: ComposableNode, parentId: NodeId, child: ComposableNode, index: Int = -1): ComposableNode {
         if (root.id == parentId) {
-            return root.withAddedChild(child, index)
+            val sanitizedChild = sanitizeNodeModifiersForScope(child, root.childScope)
+            return root.withAddedChild(sanitizedChild, index)
         }
         return root.mapChildren { insertChild(it, parentId, child, index) }
     }
 
     fun setSlot(root: ComposableNode, parentId: NodeId, slotName: String, slotNode: ComposableNode?): ComposableNode {
         if (root.id == parentId) {
-            return root.withSlot(slotName, slotNode)
+            val sanitizedSlotNode = slotNode?.let { sanitizeNodeModifiersForScope(it, ContainerScope.None) }
+            return root.withSlot(slotName, sanitizedSlotNode)
         }
         return root.mapChildren { setSlot(it, parentId, slotName, slotNode) }
     }
 
     fun updateNode(root: ComposableNode, updatedNode: ComposableNode): ComposableNode {
-        if (root.id == updatedNode.id) {
-            return updatedNode
+        val parent = findParent(root, updatedNode.id)
+        val parentScope = parent?.childScope ?: ContainerScope.None
+        val sanitizedNode = sanitizeNodeModifiersForScope(updatedNode, parentScope)
+
+        if (root.id == sanitizedNode.id) {
+            return sanitizedNode
         }
-        return root.mapChildren { updateNode(it, updatedNode) }
+        return root.mapChildren { updateNode(it, sanitizedNode) }
     }
 
     fun removeNode(root: ComposableNode, targetId: NodeId): ComposableNode? {
@@ -33,10 +85,17 @@ object TreeMutator {
     }
 
     fun updateModifiers(root: ComposableNode, targetId: NodeId, newModifiers: List<ModifierDef>): ComposableNode {
+        val parent = findParent(root, targetId)
+        val parentScope = parent?.childScope ?: ContainerScope.None
+        val sanitizedModifiers = sanitizeModifiers(newModifiers, parentScope)
+        return applyModifiers(root, targetId, sanitizedModifiers)
+    }
+
+    private fun applyModifiers(root: ComposableNode, targetId: NodeId, sanitizedModifiers: List<ModifierDef>): ComposableNode {
         if (root.id == targetId) {
-            return root.withModifiers(newModifiers)
+            return root.withModifiers(sanitizedModifiers)
         }
-        return root.mapChildren { updateModifiers(it, targetId, newModifiers) }
+        return root.mapChildren { applyModifiers(it, targetId, sanitizedModifiers) }
     }
 
     // ========================================================================
