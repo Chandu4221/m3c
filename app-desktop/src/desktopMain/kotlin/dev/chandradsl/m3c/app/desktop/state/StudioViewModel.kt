@@ -17,6 +17,8 @@ import dev.chandradsl.m3c.core.domain.model.ShapeDef
 import dev.chandradsl.m3c.core.domain.model.ShapeToken
 import dev.chandradsl.m3c.core.domain.model.TypographyToken
 import dev.chandradsl.m3c.core.domain.model.hasDescendant
+import dev.chandradsl.m3c.core.domain.schema.ComponentRegistry
+import dev.chandradsl.m3c.core.domain.schema.ComponentType
 import dev.chandradsl.m3c.core.domain.scope.ContainerScope
 import dev.chandradsl.m3c.core.domain.store.TreeMutator
 import dev.chandradsl.m3c.core.domain.store.WorkspaceIntent
@@ -289,12 +291,16 @@ class StudioViewModel {
     fun unregisterCanvasContainerBounds(nodeId: NodeId) =
         dragController.unregisterCanvasContainerBounds(nodeId, workspaceState.rootNode.id)
 
-    fun isContainerTag(tag: String): Boolean = when (tag.lowercase()) {
-        "column", "row", "box", "surface", "card", "elevatedcard", "outlinedcard",
-        "button", "elevatedbutton", "filledtonalbutton", "outlinedbutton",
-        "textbutton", "iconbutton", "fab", "floatingactionbutton", "scaffold", "navigationbar",
-        "bottomappbar", "navigationrail", "badgedbox", "topappbar", "alertdialog" -> true
-        else -> false
+    fun isContainerTag(tag: String): Boolean {
+        val normalized = tag.lowercase()
+        if (normalized == "fab" || normalized == "floatingactionbutton") {
+            return ComponentRegistry.findByType(ComponentType.FloatingActionButton)?.acceptsChildren ?: true
+        }
+        val def = ComponentRegistry.all.firstOrNull {
+            it.type.name.equals(tag, ignoreCase = true) ||
+            it.displayName.replace(" ", "").equals(tag, ignoreCase = true)
+        }
+        return def?.acceptsChildren ?: false
     }
 
     fun startPaletteDrag(item: DraggedPaletteItem, initialOffset: Offset) {

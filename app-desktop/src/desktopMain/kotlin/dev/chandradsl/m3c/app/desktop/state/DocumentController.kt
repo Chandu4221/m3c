@@ -9,19 +9,23 @@ import dev.chandradsl.m3c.core.domain.model.NodeId
 import dev.chandradsl.m3c.core.domain.model.allDirectChildren
 import dev.chandradsl.m3c.core.domain.scope.ContainerScope
 import dev.chandradsl.m3c.core.domain.scope.childScope
+import dev.chandradsl.m3c.core.domain.schema.ComponentRegistry
 import dev.chandradsl.m3c.core.domain.store.TreeMutator
 import dev.chandradsl.m3c.core.domain.store.WorkspaceIntent
 import dev.chandradsl.m3c.core.domain.store.WorkspaceState
 import dev.chandradsl.m3c.core.domain.store.WorkspaceStore
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 class DocumentController(
     initialRoot: ComposableNode,
-    private val scope: CoroutineScope
+    private val scope: CoroutineScope,
+    computationDispatcher: CoroutineDispatcher = Dispatchers.Default
 ) {
 
-    private val store = WorkspaceStore(initialRoot)
+    internal val store = WorkspaceStore(initialRoot, computationDispatcher)
 
     var workspaceState: WorkspaceState by mutableStateOf(store.state)
         private set
@@ -144,39 +148,19 @@ class DocumentController(
         dispatch(WorkspaceIntent.SelectNode(newContainer.id))
     }
 
-    fun isContainerNode(node: ComposableNode): Boolean = when (node) {
-        is ComposableNode.ColumnNode,
-        is ComposableNode.RowNode,
-        is ComposableNode.BoxNode,
-        is ComposableNode.SurfaceNode,
-        is ComposableNode.CardNode,
-        is ComposableNode.ElevatedCardNode,
-        is ComposableNode.OutlinedCardNode,
-        is ComposableNode.ButtonNode,
-        is ComposableNode.ElevatedButtonNode,
-        is ComposableNode.FilledTonalButtonNode,
-        is ComposableNode.OutlinedButtonNode,
-        is ComposableNode.TextButtonNode,
-        is ComposableNode.IconButtonNode,
-        is ComposableNode.FloatingActionButtonNode,
-        is ComposableNode.ScaffoldNode,
-        is ComposableNode.NavigationBarNode,
-        is ComposableNode.BottomAppBarNode,
-        is ComposableNode.NavigationRailNode,
-        is ComposableNode.BadgedBoxNode,
-        is ComposableNode.TopAppBarNode,
-        is ComposableNode.AlertDialogNode -> true
-        else -> false
-    }
+    fun isContainerNode(node: ComposableNode): Boolean =
+        ComponentRegistry.findByNode(node)?.acceptsChildren ?: false
 
     fun moveNodeRelative(sourceId: NodeId, targetNodeId: NodeId, placeAfter: Boolean) {
         val root = workspaceState.rootNode
         val sourceNode = TreeMutator.findNode(root, sourceId) ?: return
         val targetParent = TreeMutator.findParent(root, targetNodeId) ?: return
         val siblings = targetParent.allDirectChildren
+        val sourceIdx = siblings.indexOfFirst { it.id == sourceId }
         val targetIdx = siblings.indexOfFirst { it.id == targetNodeId }
         if (targetIdx < 0) return
-        val insertIdx = if (placeAfter) targetIdx + 1 else targetIdx
+        val rawInsertIdx = if (placeAfter) targetIdx + 1 else targetIdx
+        val insertIdx = if (sourceIdx in 0 until rawInsertIdx) rawInsertIdx - 1 else rawInsertIdx
 
         dispatch(WorkspaceIntent.RemoveNode(sourceId))
         dispatch(WorkspaceIntent.InsertChild(parentId = targetParent.id, node = sourceNode, index = insertIdx))

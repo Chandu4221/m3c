@@ -703,7 +703,7 @@ object ComponentRegistry {
             description = "Container linking a badge to content",
             category = ComponentCategory.ChipsAndBadges,
             iconName = "notifications",
-            acceptsChildren = false,
+            acceptsChildren = true,
             slots = listOf(
                 SlotDefinition(
                     id = StandardSlots.BADGE,
@@ -750,7 +750,7 @@ object ComponentRegistry {
             description = "Material 3 modal alert dialog",
             category = ComponentCategory.Dialogs,
             iconName = "feedback",
-            acceptsChildren = false,
+            acceptsChildren = true,
             slots = listOf(
                 SlotDefinition(
                     id = StandardSlots.ICON,
