@@ -18,6 +18,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -137,48 +138,57 @@ fun SelectionDecorator(
             )
         }
 
-        // Selection Tag pill in the top-start corner when selected (smooth animated entrance/exit)
-        AnimatedVisibility(
-            visible = isSelected,
-            enter = fadeIn(tween(140)) + scaleIn(initialScale = 0.85f),
-            exit = fadeOut(tween(100)) + scaleOut(targetScale = 0.85f),
-            modifier = Modifier.align(Alignment.TopStart)
-        ) {
-            Box(
+        // Non-intrusive Overlay: sized strictly to match content bounds so badges never expand parent or cause layout shift
+        Box(modifier = Modifier.matchParentSize()) {
+            // Selection Tag pill in the top-start corner when selected (smooth animated entrance/exit)
+            AnimatedVisibility(
+                visible = isSelected,
+                enter = fadeIn(tween(140)) + scaleIn(initialScale = 0.85f),
+                exit = fadeOut(tween(100)) + scaleOut(targetScale = 0.85f),
                 modifier = Modifier
-                    .clip(RoundedCornerShape(bottomEnd = 4.dp))
-                    .background(MaterialTheme.colorScheme.primary)
-                    .padding(horizontal = 4.dp, vertical = 2.dp)
+                    .align(Alignment.TopStart)
+                    .wrapContentSize(align = Alignment.TopStart, unbounded = true)
             ) {
-                Text(
-                    text = nodeTag,
-                    color = MaterialTheme.colorScheme.onPrimary,
-                    fontSize = 9.sp,
-                    lineHeight = 10.sp
-                )
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(bottomEnd = 4.dp))
+                        .background(MaterialTheme.colorScheme.primary)
+                        .padding(horizontal = 4.dp, vertical = 2.dp)
+                ) {
+                    Text(
+                        text = nodeTag,
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        fontSize = 9.sp,
+                        lineHeight = 10.sp,
+                        maxLines = 1
+                    )
+                }
             }
-        }
 
-        // Drop Target Indicator Badge in top-end corner when hovered during drag & drop
-        AnimatedVisibility(
-            visible = isHoveredDropTarget,
-            enter = fadeIn(tween(140)) + slideInVertically(tween(140)) { -it / 2 } + scaleIn(initialScale = 0.85f),
-            exit = fadeOut(tween(100)) + slideOutVertically(tween(100)) { -it / 2 } + scaleOut(targetScale = 0.85f),
-            modifier = Modifier.align(Alignment.TopEnd)
-        ) {
-            Box(
+            // Drop Target Indicator Badge in top-end corner when hovered during drag & drop
+            AnimatedVisibility(
+                visible = isHoveredDropTarget,
+                enter = fadeIn(tween(140)) + slideInVertically(tween(140)) { -it / 2 } + scaleIn(initialScale = 0.85f),
+                exit = fadeOut(tween(100)) + slideOutVertically(tween(100)) { -it / 2 } + scaleOut(targetScale = 0.85f),
                 modifier = Modifier
-                    .clip(RoundedCornerShape(bottomStart = 6.dp))
-                    .background(Color(0xFF499C54))
-                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                    .align(Alignment.TopEnd)
+                    .wrapContentSize(align = Alignment.TopEnd, unbounded = true)
             ) {
-                Text(
-                    text = "↳ Insert into $nodeTag",
-                    color = Color.White,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
-                    lineHeight = 12.sp
-                )
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(bottomStart = 6.dp))
+                        .background(Color(0xFF499C54))
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                ) {
+                    Text(
+                        text = "↳ Insert into $nodeTag",
+                        color = Color.White,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        lineHeight = 12.sp,
+                        maxLines = 1
+                    )
+                }
             }
         }
     }
