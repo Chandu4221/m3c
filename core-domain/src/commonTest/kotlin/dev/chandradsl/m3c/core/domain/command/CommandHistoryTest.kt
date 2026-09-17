@@ -6,6 +6,9 @@ import dev.chandradsl.m3c.core.domain.model.ModifierDef
 import dev.chandradsl.m3c.core.domain.schema.StandardSlots
 import dev.chandradsl.m3c.core.domain.store.WorkspaceIntent
 import dev.chandradsl.m3c.core.domain.store.WorkspaceStore
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -16,7 +19,7 @@ import kotlin.test.assertTrue
 class CommandHistoryTest {
 
     @Test
-    fun testInsertAndUndoRedo() {
+    fun testInsertAndUndoRedo() = runTest {
         val root = ComposableNode.ColumnNode()
         val history = CommandHistory()
 
@@ -42,7 +45,7 @@ class CommandHistoryTest {
     }
 
     @Test
-    fun testDeleteAndRestoreAtExactIndex() {
+    fun testDeleteAndRestoreAtExactIndex() = runTest {
         val child1 = ComposableNode.TextNode(text = "One")
         val child2 = ComposableNode.TextNode(text = "Two")
         val child3 = ComposableNode.TextNode(text = "Three")
@@ -61,7 +64,7 @@ class CommandHistoryTest {
     }
 
     @Test
-    fun testUpdateNodeMerging() {
+    fun testUpdateNodeMerging() = runTest {
         val textNode = ComposableNode.TextNode(text = "Init")
         val root = ComposableNode.ColumnNode(children = listOf(textNode))
 
@@ -82,7 +85,7 @@ class CommandHistoryTest {
     }
 
     @Test
-    fun testSetSlotCommand() {
+    fun testSetSlotCommand() = runTest {
         val scaffold = ComposableNode.ScaffoldNode()
         val topBar = ComposableNode.TopAppBarNode(title = ComposableNode.TextNode(text = "Screen"))
 
@@ -100,13 +103,17 @@ class CommandHistoryTest {
         assertNotNull(redone.topBar)
     }
 
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     @Test
-    fun testWorkspaceStoreWithCommands() {
+    fun testWorkspaceStoreWithCommands() = runTest(kotlinx.coroutines.test.UnconfinedTestDispatcher()) {
+        val testDispatcher = kotlinx.coroutines.test.UnconfinedTestDispatcher(testScheduler)
         val root = ComposableNode.ColumnNode()
-        val store = WorkspaceStore(root)
+        val store = WorkspaceStore(root, testDispatcher)
+        val job = store.start(this)
 
         val btn = ComposableNode.ButtonNode()
         store.dispatch(WorkspaceIntent.InsertChild(parentId = root.id, node = btn))
+
         assertTrue(store.state.canUndo)
         assertFalse(store.state.canRedo)
         assertEquals(1, (store.state.rootNode as ComposableNode.ColumnNode).children.size)
@@ -130,5 +137,6 @@ class CommandHistoryTest {
         // Redo button insert
         store.dispatch(WorkspaceIntent.Redo)
         assertEquals(1, (store.state.rootNode as ComposableNode.ColumnNode).children.size)
+        job.cancel()
     }
 }

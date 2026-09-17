@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -38,6 +39,7 @@ import androidx.compose.ui.unit.sp
 import dev.chandradsl.m3c.core.domain.model.NodeId
 
 val LocalCanvasContainerBoundsReporter = compositionLocalOf<((NodeId, String, Rect) -> Unit)?> { null }
+val LocalCanvasContainerBoundsUnregister = compositionLocalOf<((NodeId) -> Unit)?> { null }
 val LocalHoveredCanvasParentId = compositionLocalOf<NodeId?> { null }
 
 @Composable
@@ -91,10 +93,18 @@ fun SelectionDecorator(
 
     val shouldIntercept = drillDownOnlyWhenSelected && !isSelected && !isChildSelected
 
+    val unregister = LocalCanvasContainerBoundsUnregister.current
+
+    DisposableEffect(nodeId) {
+        onDispose { unregister?.invoke(nodeId) }
+    }
+
     Box(
         modifier = modifier
             .onGloballyPositioned { coords ->
-                reporter?.invoke(nodeId, nodeTag, coords.boundsInWindow())
+                if (!isInteractiveMode) {
+                    reporter?.invoke(nodeId, nodeTag, coords.boundsInWindow())
+                }
             }
             .background(Color(0xFF499C54).copy(alpha = animatedDropTintAlpha))
             .border(

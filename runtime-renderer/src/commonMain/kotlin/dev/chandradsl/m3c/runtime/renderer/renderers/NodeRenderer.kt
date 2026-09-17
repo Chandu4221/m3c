@@ -5,14 +5,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import dev.chandradsl.m3c.core.domain.model.ComposableNode
 import dev.chandradsl.m3c.core.domain.model.NodeId
-import dev.chandradsl.m3c.core.domain.model.allDirectChildren
+import dev.chandradsl.m3c.core.domain.model.hasDescendant
 import dev.chandradsl.m3c.core.domain.store.WorkspaceIntent
 import dev.chandradsl.m3c.core.domain.store.WorkspaceState
-
-fun ComposableNode.hasDescendant(targetId: NodeId?): Boolean {
-    if (targetId == null) return false
-    return allDirectChildren.any { it.id == targetId || it.hasDescendant(targetId) }
-}
 
 @Composable
 fun NodeRenderer(

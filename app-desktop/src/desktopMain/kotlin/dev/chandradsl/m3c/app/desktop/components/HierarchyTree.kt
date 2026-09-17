@@ -94,12 +94,15 @@ import dev.chandradsl.m3c.core.domain.schema.childrenWithSlots
 import dev.chandradsl.m3c.core.domain.store.WorkspaceIntent
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.ViewAgenda
+import androidx.compose.foundation.lazy.LazyListState
+import dev.chandradsl.m3c.core.domain.model.allDirectChildren
 import org.jetbrains.jewel.foundation.ExperimentalJewelApi
+import org.jetbrains.jewel.foundation.lazy.SelectableLazyListState
 import org.jetbrains.jewel.foundation.lazy.tree.BasicLazyTree
 import org.jetbrains.jewel.foundation.lazy.tree.Tree
 import org.jetbrains.jewel.foundation.lazy.tree.TreeGeneratorScope
+import org.jetbrains.jewel.foundation.lazy.tree.TreeState
 import org.jetbrains.jewel.foundation.lazy.tree.buildTree
-import org.jetbrains.jewel.foundation.lazy.tree.rememberTreeState
 import org.jetbrains.jewel.foundation.theme.JewelTheme
 import org.jetbrains.jewel.ui.component.Badge
 import org.jetbrains.jewel.ui.component.GroupHeader
@@ -123,21 +126,29 @@ fun HierarchyTree(
     val state = viewModel.workspaceState
     val selectedNodeId = state.selectedNodeId
     val tree = remember(state.rootNode) { buildJewelTree(state.rootNode) }
-    val treeState = rememberTreeState()
-
-    // Initialize all container nodes as open
-    var initialized by remember { mutableStateOf(false) }
-    LaunchedEffect(state.rootNode.id) {
-        if (!initialized) {
-            treeState.openNodes(collectAllContainerIds(state.rootNode).toList())
-            initialized = true
+    val initialContainers = remember(state.rootNode) { collectAllContainerIds(state.rootNode) }
+    val treeState = remember {
+        TreeState(SelectableLazyListState(LazyListState())).apply {
+            openNodes(initialContainers.toList())
         }
     }
 
-    // Sync external selection with Jewel LazyTree selection
-    LaunchedEffect(selectedNodeId) {
+    // Auto-open containers whenever nodes are added or the document updates
+    LaunchedEffect(state.rootNode) {
+        val containers = collectAllContainerIds(state.rootNode)
+        treeState.openNodes(containers.toList())
+    }
+
+    // Sync external selection with Jewel LazyTree selection and ensure selected node's path is open
+    LaunchedEffect(selectedNodeId, state.rootNode) {
         val selKey = selectedNodeId?.value
         treeState.selectedKeys = if (selKey != null) setOf(selKey) else emptySet()
+        if (selectedNodeId != null) {
+            val pathToNode = collectPathToNode(state.rootNode, selectedNodeId)
+            if (pathToNode.isNotEmpty()) {
+                treeState.openNodes(pathToNode.toList())
+            }
+        }
     }
 
     Column(
@@ -604,6 +615,23 @@ fun collectAllContainerIds(node: ComposableNode): Set<String> {
     }
     walk(node)
     return ids
+}
+
+fun collectPathToNode(root: ComposableNode, targetId: NodeId?): Set<String> {
+    if (targetId == null) return emptySet()
+    val path = mutableSetOf<String>()
+    fun walk(curr: ComposableNode): Boolean {
+        if (curr.id == targetId) return true
+        for (child in curr.allDirectChildren) {
+            if (walk(child)) {
+                path.add(curr.id.value)
+                return true
+            }
+        }
+        return false
+    }
+    walk(root)
+    return path
 }
 
 private fun getNodeLabel(node: ComposableNode): String = when (node) {

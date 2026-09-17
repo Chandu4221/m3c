@@ -38,6 +38,12 @@ kotlin {
                 implementation(libs.material.icons.extended)
             }
         }
+        val desktopTest by getting {
+            dependencies {
+                implementation(libs.kotlin.test)
+                implementation(libs.junit)
+            }
+        }
     }
 }
 

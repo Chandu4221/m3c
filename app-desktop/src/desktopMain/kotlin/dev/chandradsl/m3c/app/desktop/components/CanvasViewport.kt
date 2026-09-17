@@ -68,6 +68,7 @@ import dev.chandradsl.m3c.app.desktop.theme.StudioColors
 import dev.chandradsl.m3c.app.desktop.theme.StudioSizes
 import dev.chandradsl.m3c.app.desktop.theme.StudioTypography
 import dev.chandradsl.m3c.core.domain.store.WorkspaceIntent
+import dev.chandradsl.m3c.runtime.renderer.decorator.LocalCanvasContainerBoundsUnregister
 import dev.chandradsl.m3c.runtime.renderer.renderers.NodeRenderer
 
 @Composable
@@ -343,6 +344,9 @@ fun CanvasViewport(
                                     if (viewModel.isContainerTag(tag)) {
                                         viewModel.registerCanvasContainerBounds(id, tag, rect)
                                     }
+                                },
+                                LocalCanvasContainerBoundsUnregister provides { id ->
+                                    viewModel.unregisterCanvasContainerBounds(id)
                                 }
                             ) {
                                 NodeRenderer(

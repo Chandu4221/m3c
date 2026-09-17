@@ -13,13 +13,27 @@ import dev.chandradsl.m3c.core.domain.store.TreeMutator
 import dev.chandradsl.m3c.core.domain.store.WorkspaceIntent
 import dev.chandradsl.m3c.core.domain.store.WorkspaceState
 import dev.chandradsl.m3c.core.domain.store.WorkspaceStore
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 
-class DocumentController(initialRoot: ComposableNode) {
+class DocumentController(
+    initialRoot: ComposableNode,
+    private val scope: CoroutineScope
+) {
 
     private val store = WorkspaceStore(initialRoot)
 
     var workspaceState: WorkspaceState by mutableStateOf(store.state)
         private set
+
+    init {
+        store.start(scope)
+        scope.launch {
+            store.stateFlow.collect {
+                workspaceState = it
+            }
+        }
+    }
 
     var targetedSlot: Pair<NodeId, String>? by mutableStateOf(null)
         private set
@@ -31,12 +45,7 @@ class DocumentController(initialRoot: ComposableNode) {
         }
 
     fun dispatch(intent: WorkspaceIntent, onRootMutated: (() -> Unit)? = null) {
-        val oldRoot = store.state.rootNode
         store.dispatch(intent)
-        workspaceState = store.state
-        if (store.state.rootNode != oldRoot) {
-            onRootMutated?.invoke()
-        }
     }
 
     fun setTargetSlot(parentId: NodeId, slotName: String) {

@@ -155,7 +155,7 @@ class StudioViewModel {
     }
 
     // 3. Focused Sub-Controllers
-    val documentController = DocumentController(initialRoot)
+    val documentController = DocumentController(initialRoot, viewModelScope)
     val canvasController = CanvasController()
     val dragController = DragController()
 
@@ -309,6 +309,7 @@ class StudioViewModel {
         dragController.updateCanvasBounds(bounds)
 
     fun endPaletteDrag() {
+        val wasHovered = isCanvasDropHovered
         val targetParentId = hoveredCanvasParentId ?: run {
             val selected = selectedNode
             if (selected != null && documentController.isContainerNode(selected)) {
@@ -320,7 +321,7 @@ class StudioViewModel {
             }
         }
         val item = dragController.endPaletteDrag()
-        if (item != null && isCanvasDropHovered) {
+        if (item != null && wasHovered) {
             val newNode = item.factory()
             dispatch(WorkspaceIntent.InsertChild(parentId = targetParentId, node = newNode))
             dispatch(WorkspaceIntent.SelectNode(newNode.id))

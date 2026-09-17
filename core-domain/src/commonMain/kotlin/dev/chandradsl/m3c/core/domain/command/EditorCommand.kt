@@ -6,6 +6,8 @@ import dev.chandradsl.m3c.core.domain.model.NodeId
 import dev.chandradsl.m3c.core.domain.model.allDirectChildren
 import dev.chandradsl.m3c.core.domain.schema.childrenWithSlots
 import dev.chandradsl.m3c.core.domain.store.TreeMutator
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * Represents a reversible semantic editing command performed on the UI AST document.
@@ -262,6 +264,7 @@ data class CompositeCommand(
 class CommandHistory(
     private val maxHistorySize: Int = 100
 ) {
+    private val mutex = Mutex()
     private val undoStack = ArrayDeque<EditorCommand>()
     private val redoStack = ArrayDeque<EditorCommand>()
 
@@ -275,7 +278,7 @@ class CommandHistory(
      * Executes [command] against [currentRoot], recording it in the undo stack.
      * Clears the redo stack upon new user actions.
      */
-    fun execute(command: EditorCommand, currentRoot: ComposableNode): ComposableNode {
+    suspend fun execute(command: EditorCommand, currentRoot: ComposableNode): ComposableNode = mutex.withLock {
         val newRoot = command.execute(currentRoot)
         if (newRoot != currentRoot) {
             // Try coalescing with previous command
@@ -292,33 +295,33 @@ class CommandHistory(
             }
             redoStack.clear()
         }
-        return newRoot
+        newRoot
     }
 
     /**
      * Undoes the last command by executing its inverse.
      */
-    fun undo(currentRoot: ComposableNode): ComposableNode {
-        if (undoStack.isEmpty()) return currentRoot
+    suspend fun undo(currentRoot: ComposableNode): ComposableNode = mutex.withLock {
+        if (undoStack.isEmpty()) return@withLock currentRoot
         val command = undoStack.removeLast()
         val inverseCommand = command.inverse(currentRoot)
         val undoneRoot = inverseCommand.execute(currentRoot)
         redoStack.addLast(command)
-        return undoneRoot
+        undoneRoot
     }
 
     /**
      * Redoes the previously undone command.
      */
-    fun redo(currentRoot: ComposableNode): ComposableNode {
-        if (redoStack.isEmpty()) return currentRoot
+    suspend fun redo(currentRoot: ComposableNode): ComposableNode = mutex.withLock {
+        if (redoStack.isEmpty()) return@withLock currentRoot
         val command = redoStack.removeLast()
         val redoneRoot = command.execute(currentRoot)
         undoStack.addLast(command)
-        return redoneRoot
+        redoneRoot
     }
 
-    fun clear() {
+    suspend fun clear() = mutex.withLock {
         undoStack.clear()
         redoStack.clear()
     }

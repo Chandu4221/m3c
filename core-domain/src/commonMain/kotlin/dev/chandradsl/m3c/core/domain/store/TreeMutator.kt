@@ -175,7 +175,26 @@ object TreeMutator {
             }
             else -> if (icon == null) copy(icon = child) else copy(text = child)
         }
-        else -> this
+        is ComposableNode.TextNode -> this
+        is ComposableNode.TextFieldNode -> this
+        is ComposableNode.OutlinedTextFieldNode -> this
+        is ComposableNode.CheckboxNode -> this
+        is ComposableNode.SwitchNode -> this
+        is ComposableNode.RadioButtonNode -> this
+        is ComposableNode.SliderNode -> this
+        is ComposableNode.CircularProgressIndicatorNode -> this
+        is ComposableNode.LinearProgressIndicatorNode -> this
+        is ComposableNode.SpacerNode -> this
+        is ComposableNode.HorizontalDividerNode -> this
+        is ComposableNode.VerticalDividerNode -> this
+        is ComposableNode.NavigationBarItemNode -> this
+        is ComposableNode.AssistChipNode -> this
+        is ComposableNode.FilterChipNode -> this
+        is ComposableNode.InputChipNode -> this
+        is ComposableNode.SuggestionChipNode -> this
+        is ComposableNode.BadgeNode -> this
+        is ComposableNode.NavigationRailItemNode -> this
+        is ComposableNode.RangeSliderNode -> this
     }
 
     private fun ComposableNode.withSlot(slotName: String, slotNode: ComposableNode?): ComposableNode = when (this) {
@@ -367,7 +386,18 @@ object TreeMutator {
             confirmButton = confirmButton?.let(transform),
             dismissButton = dismissButton?.let(transform)
         )
-        else -> this
+        is ComposableNode.TextNode -> this
+        is ComposableNode.CheckboxNode -> this
+        is ComposableNode.SwitchNode -> this
+        is ComposableNode.RadioButtonNode -> this
+        is ComposableNode.SliderNode -> this
+        is ComposableNode.CircularProgressIndicatorNode -> this
+        is ComposableNode.LinearProgressIndicatorNode -> this
+        is ComposableNode.SpacerNode -> this
+        is ComposableNode.HorizontalDividerNode -> this
+        is ComposableNode.VerticalDividerNode -> this
+        is ComposableNode.BadgeNode -> this
+        is ComposableNode.RangeSliderNode -> this
     }
 
     private fun ComposableNode.filterAndMapChildren(targetId: NodeId, transform: (ComposableNode) -> ComposableNode?): ComposableNode = when (this) {
@@ -442,7 +472,18 @@ object TreeMutator {
             confirmButton = if (confirmButton?.id == targetId) null else confirmButton?.let(transform),
             dismissButton = if (dismissButton?.id == targetId) null else dismissButton?.let(transform)
         )
-        else -> this
+        is ComposableNode.TextNode -> this
+        is ComposableNode.CheckboxNode -> this
+        is ComposableNode.SwitchNode -> this
+        is ComposableNode.RadioButtonNode -> this
+        is ComposableNode.SliderNode -> this
+        is ComposableNode.CircularProgressIndicatorNode -> this
+        is ComposableNode.LinearProgressIndicatorNode -> this
+        is ComposableNode.SpacerNode -> this
+        is ComposableNode.HorizontalDividerNode -> this
+        is ComposableNode.VerticalDividerNode -> this
+        is ComposableNode.BadgeNode -> this
+        is ComposableNode.RangeSliderNode -> this
     }
 
     private fun insertAt(list: List<ComposableNode>, item: ComposableNode, index: Int): List<ComposableNode> {

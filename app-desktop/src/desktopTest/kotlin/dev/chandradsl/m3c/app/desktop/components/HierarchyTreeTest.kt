@@ -1,0 +1,118 @@
+package dev.chandradsl.m3c.app.desktop.components
+
+import dev.chandradsl.m3c.app.desktop.state.StudioViewModel
+import org.jetbrains.jewel.foundation.lazy.tree.TreeState
+import org.jetbrains.jewel.foundation.lazy.SelectableLazyListState
+import androidx.compose.foundation.lazy.LazyListState
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
+
+class HierarchyTreeTest {
+
+    @Test
+    fun testTreeStructureAndFlattening() {
+        val viewModel = StudioViewModel()
+        val root = viewModel.workspaceState.rootNode
+
+        val tree = buildJewelTree(root)
+        val containers = collectAllContainerIds(root)
+        println("Container IDs: $containers")
+
+        val treeState = TreeState(SelectableLazyListState(LazyListState()))
+        println("Initial openNodes: ${treeState.openNodes}")
+
+        // Test before openNodes
+        val initialRoots = tree.roots
+        assertEquals(1, initialRoots.size)
+        println("Root id: ${initialRoots[0].id}")
+
+        // Now open nodes
+        treeState.openNodes(containers.toList())
+        println("Open nodes after calling openNodes: ${treeState.openNodes}")
+
+        // Walk depth first
+        val nodes = tree.walkDepthFirst().toList()
+        println("Walked nodes (${nodes.size}):")
+        nodes.forEach {
+            println(" - [${it.depth}] id=${it.id} data=${it.data.node::class.simpleName} slot=${it.data.slotLabel}")
+        }
+        assertTrue(nodes.size >= 4, "Expected at least 4 nodes in walk")
+    }
+
+    @Test
+    fun testInsertComponentFromPalette() {
+        val viewModel = StudioViewModel()
+        val paletteItems = dev.chandradsl.m3c.core.domain.schema.ComponentRegistry.all
+        println("Registered components count: ${paletteItems.size}")
+
+        // Find Button
+        val buttonDef = paletteItems.find { it.displayName == "Button" }!!
+        val newButton = buttonDef.createDefault()
+
+        println("Initial root children count: ${(viewModel.workspaceState.rootNode as dev.chandradsl.m3c.core.domain.model.ComposableNode.ScaffoldNode).content?.let { (it as dev.chandradsl.m3c.core.domain.model.ComposableNode.ColumnNode).children.size }}")
+
+        viewModel.insertComponent(newButton)
+
+        kotlinx.coroutines.runBlocking {
+            kotlinx.coroutines.withTimeout(3000) {
+                while (((viewModel.workspaceState.rootNode as dev.chandradsl.m3c.core.domain.model.ComposableNode.ScaffoldNode).content as dev.chandradsl.m3c.core.domain.model.ComposableNode.ColumnNode).children.size < 2) {
+                    kotlinx.coroutines.delay(20)
+                }
+            }
+        }
+
+        val updatedContent = (viewModel.workspaceState.rootNode as dev.chandradsl.m3c.core.domain.model.ComposableNode.ScaffoldNode).content as dev.chandradsl.m3c.core.domain.model.ComposableNode.ColumnNode
+        println("Updated content column children count: ${updatedContent.children.size}")
+        println("Children: ${updatedContent.children.map { it.id.value to it::class.simpleName }}")
+        assertEquals(2, updatedContent.children.size)
+        assertEquals(newButton.id, viewModel.workspaceState.selectedNodeId)
+
+        val tree = buildJewelTree(viewModel.workspaceState.rootNode)
+        val walked = tree.walkDepthFirst().toList()
+        println("Walked after insert (${walked.size}):")
+        walked.forEach {
+            println(" - [${it.depth}] id=${it.id} data=${it.data.node::class.simpleName}")
+        }
+        assertTrue(walked.any { it.id == newButton.id.value })
+    }
+
+    @Test
+    fun testJewelFlattenTreeLogic() {
+        val viewModel = StudioViewModel()
+        val root = viewModel.workspaceState.rootNode
+        val tree = buildJewelTree(root)
+
+        val treeState = TreeState(SelectableLazyListState(LazyListState()))
+
+        // Exactly as in BasicLazyTree.kt:
+        fun org.jetbrains.jewel.foundation.lazy.tree.Tree.Element<*>.flatten(state: TreeState): MutableList<org.jetbrains.jewel.foundation.lazy.tree.Tree.Element<*>> {
+            val orderedChildren = mutableListOf<org.jetbrains.jewel.foundation.lazy.tree.Tree.Element<*>>()
+            when (this) {
+                is org.jetbrains.jewel.foundation.lazy.tree.Tree.Element.Node<*> -> {
+                    orderedChildren.add(this)
+                    if (id !in state.openNodes) {
+                        return orderedChildren
+                    }
+                    open(true)
+                    children?.forEach { child -> orderedChildren.addAll(child.flatten(state)) }
+                }
+                is org.jetbrains.jewel.foundation.lazy.tree.Tree.Element.Leaf<*> -> {
+                    orderedChildren.add(this)
+                }
+            }
+            return orderedChildren
+        }
+
+        // Pass 1: openNodes is empty
+        val pass1 = tree.roots.flatMap { it.flatten(treeState) }
+        println("Pass 1 flattened (${pass1.size}): ${pass1.map { it.id }}")
+
+        // Pass 2: after openNodes is called
+        val containers = collectAllContainerIds(root)
+        treeState.openNodes(containers.toList())
+        println("treeState.openNodes: ${treeState.openNodes}")
+        val pass2 = tree.roots.flatMap { it.flatten(treeState) }
+        println("Pass 2 flattened (${pass2.size}): ${pass2.map { it.id }}")
+    }
+}

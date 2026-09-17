@@ -7,6 +7,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import dev.chandradsl.m3c.core.domain.model.ComposableNode
+import dev.chandradsl.m3c.core.domain.model.hasDescendant
 import dev.chandradsl.m3c.core.domain.store.WorkspaceIntent
 import dev.chandradsl.m3c.core.domain.store.WorkspaceState
 import dev.chandradsl.m3c.runtime.renderer.decorator.SelectionDecorator

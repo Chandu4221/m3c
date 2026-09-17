@@ -150,16 +150,19 @@ fun ComponentPalette(
         ComponentCategory.entries.forEach { category ->
             val definitions = ComponentRegistry.byCategory(category)
             if (definitions.isNotEmpty()) {
-                PaletteCategory(
-                    title = category.displayName,
-                    items = definitions.map { def ->
+                val items = remember(category) {
+                    definitions.map { def ->
                         PaletteItem(
                             name = def.displayName,
                             description = def.description,
                             icon = resolveComponentIcon(def.iconName),
                             factory = { def.createDefault() }
                         )
-                    },
+                    }
+                }
+                PaletteCategory(
+                    title = category.displayName,
+                    items = items,
                     viewModel = viewModel
                 )
             }
@@ -243,7 +246,7 @@ private fun PaletteComponentCard(
             .pointerHoverIcon(if (!isInteractive) PointerIcon(Cursor(Cursor.HAND_CURSOR)) else PointerIcon.Default)
             .then(
                 if (!isInteractive) {
-                    Modifier.pointerInput(item) {
+                    Modifier.pointerInput(item.name) {
                         awaitEachGesture {
                             val down = awaitFirstDown(requireUnconsumed = false)
                             var isDragStarted = false

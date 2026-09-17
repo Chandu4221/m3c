@@ -15,7 +15,7 @@ import dev.chandradsl.m3c.core.domain.scope.ContainerScope
  */
 object ComponentRegistry {
 
-    private val definitions = mutableListOf<ComponentDefinition>()
+    private val definitions = LinkedHashMap<ComponentType, ComponentDefinition>()
 
     init {
         // ====================================================================
@@ -794,24 +794,23 @@ object ComponentRegistry {
     }
 
     fun register(definition: ComponentDefinition) {
-        definitions.removeAll { it.type == definition.type }
-        definitions.add(definition)
+        definitions[definition.type] = definition
     }
 
     val all: List<ComponentDefinition>
-        get() = definitions.toList()
+        get() = definitions.values.toList()
 
     val allCategories: List<ComponentCategory>
         get() = ComponentCategory.entries
 
     fun findByType(type: ComponentType): ComponentDefinition? =
-        definitions.find { it.type == type }
+        definitions[type]
 
     fun findByNode(node: ComposableNode): ComponentDefinition? =
-        definitions.find { it.type == node.componentType }
+        definitions[node.componentType]
 
     fun byCategory(category: ComponentCategory): List<ComponentDefinition> =
-        definitions.filter { it.category == category }
+        definitions.values.filter { it.category == category }
 }
 
 /**

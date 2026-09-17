@@ -11,6 +11,10 @@ import dev.chandradsl.m3c.core.domain.model.NodeId
 import dev.chandradsl.m3c.core.domain.model.ShapeDef
 import dev.chandradsl.m3c.core.domain.model.ShapeToken
 import dev.chandradsl.m3c.core.domain.model.TypographyToken
+import dev.chandradsl.m3c.core.domain.schema.childrenWithSlots
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlin.test.Test
@@ -20,16 +24,18 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class WorkspaceStoreTest {
 
     private val json = Json { prettyPrint = true }
 
     @Test
-    fun testInsertChildAndUndoRedo() {
+    fun testInsertChildAndUndoRedo() = runTest(UnconfinedTestDispatcher()) {
         val rootId = NodeId("root_col")
         val txtId = NodeId("txt_1")
         val root = ComposableNode.ColumnNode(id = rootId)
-        val store = WorkspaceStore(root)
+        val store = WorkspaceStore(root, UnconfinedTestDispatcher(testScheduler))
+        val job = store.start(this)
 
         val textNode = ComposableNode.TextNode(
             id = txtId,
@@ -54,16 +60,18 @@ class WorkspaceStoreTest {
         store.dispatch(WorkspaceIntent.Redo)
         val redoneRoot = store.state.rootNode as ComposableNode.ColumnNode
         assertEquals(1, redoneRoot.children.size)
+        job.cancel()
     }
 
     @Test
-    fun testNamedSlotsOnScaffold() {
+    fun testNamedSlotsOnScaffold() = runTest(UnconfinedTestDispatcher()) {
         val scaffoldId = NodeId("scaffold_root")
         val topBarId = NodeId("top_app_bar")
         val fabId = NodeId("fab_add")
 
         val scaffold = ComposableNode.ScaffoldNode(id = scaffoldId)
-        val store = WorkspaceStore(scaffold)
+        val store = WorkspaceStore(scaffold, UnconfinedTestDispatcher(testScheduler))
+        val job = store.start(this)
 
         val topBar = ComposableNode.TopAppBarNode(
             id = topBarId,
@@ -99,14 +107,16 @@ class WorkspaceStoreTest {
         store.dispatch(WorkspaceIntent.Undo)
         currentScaffold = store.state.rootNode as ComposableNode.ScaffoldNode
         assertNotNull(currentScaffold.topBar)
+        job.cancel()
     }
 
     @Test
-    fun testUpdateNodeProperty() {
+    fun testUpdateNodeProperty() = runTest(UnconfinedTestDispatcher()) {
         val txtId = NodeId("txt_1")
         val originalText = ComposableNode.TextNode(id = txtId, text = "Original Text")
         val root = ComposableNode.BoxNode(id = NodeId("box_root"), children = listOf(originalText))
-        val store = WorkspaceStore(root)
+        val store = WorkspaceStore(root, UnconfinedTestDispatcher(testScheduler))
+        val job = store.start(this)
 
         // Inspector edits the text
         val updatedText = originalText.copy(text = "Modified by Inspector")
@@ -121,6 +131,7 @@ class WorkspaceStoreTest {
         val revertedBox = store.state.rootNode as ComposableNode.BoxNode
         val revertedNode = revertedBox.children.first() as ComposableNode.TextNode
         assertEquals("Original Text", revertedNode.text)
+        job.cancel()
     }
 
     @Test
@@ -203,9 +214,10 @@ class WorkspaceStoreTest {
     }
 
     @Test
-    fun testWorkspaceStoreStateFlowEmitsUpdates() = kotlinx.coroutines.test.runTest {
+    fun testWorkspaceStoreStateFlowEmitsUpdates() = runTest(UnconfinedTestDispatcher()) {
         val root = ComposableNode.ColumnNode(id = NodeId("root"))
-        val store = WorkspaceStore(root)
+        val store = WorkspaceStore(root, UnconfinedTestDispatcher(testScheduler))
+        val job = store.start(this)
 
         assertEquals(root.id, store.stateFlow.value.rootNode.id)
 
@@ -217,5 +229,121 @@ class WorkspaceStoreTest {
         assertEquals(1, updatedColumn.children.size)
         assertEquals(child.id, updatedColumn.children.first().id)
         assertTrue(emittedState.canUndo)
+        job.cancel()
+    }
+
+    @Test
+    fun testRemoveContainerClearsDescendantSelection() = runTest(UnconfinedTestDispatcher()) {
+        val textNode = ComposableNode.TextNode(id = NodeId("descendant_text"), text = "Hello")
+        val columnNode = ComposableNode.ColumnNode(id = NodeId("inner_col"), children = listOf(textNode))
+        val root = ComposableNode.BoxNode(id = NodeId("root_box"), children = listOf(columnNode))
+
+        val store = WorkspaceStore(root, UnconfinedTestDispatcher(testScheduler))
+        val job = store.start(this)
+
+        // Select the descendant TextNode
+        store.dispatch(WorkspaceIntent.SelectNode(textNode.id))
+        assertEquals(textNode.id, store.state.selectedNodeId)
+
+        // Remove the ancestor container (inner_col)
+        store.dispatch(WorkspaceIntent.RemoveNode(columnNode.id))
+
+        // Assert selectedNodeId is cleared
+        assertNull(store.state.selectedNodeId)
+        job.cancel()
+    }
+
+    @Test
+    fun testInitialRootChildInsertion() = runTest(UnconfinedTestDispatcher()) {
+        val initialRoot: ComposableNode = ComposableNode.ScaffoldNode(
+            id = NodeId("scaffold_root"),
+            topBar = ComposableNode.TopAppBarNode(
+                id = NodeId("top_bar"),
+                title = ComposableNode.TextNode(
+                    id = NodeId("title_txt"),
+                    text = "My M3 Screen"
+                )
+            ),
+            floatingActionButton = ComposableNode.FloatingActionButtonNode(
+                id = NodeId("main_fab"),
+                content = listOf(ComposableNode.TextNode(text = "+"))
+            ),
+            content = ComposableNode.ColumnNode(
+                id = NodeId("main_content_col"),
+                children = listOf(
+                    ComposableNode.TextNode(
+                        id = NodeId("welcome_txt"),
+                        text = "Welcome to Material 3 Studio!"
+                    )
+                )
+            )
+        )
+
+        val store = WorkspaceStore(initialRoot, UnconfinedTestDispatcher(testScheduler))
+        val job = store.start(this)
+        val button = ComposableNode.ButtonNode(id = NodeId("btn_new"))
+
+        // Try inserting into scaffold_root
+        store.dispatch(WorkspaceIntent.InsertChild(parentId = NodeId("scaffold_root"), node = button))
+        val scaffoldAfterInsert = store.state.rootNode as ComposableNode.ScaffoldNode
+        val col = scaffoldAfterInsert.content as ComposableNode.ColumnNode
+        assertEquals(2, col.children.size)
+        assertEquals(button.id, col.children.last().id)
+
+        // Try inserting into main_content_col directly
+        val card = ComposableNode.CardNode(id = NodeId("card_new"))
+        store.dispatch(WorkspaceIntent.InsertChild(parentId = NodeId("main_content_col"), node = card))
+        val scaffoldAfterCard = store.state.rootNode as ComposableNode.ScaffoldNode
+        val col2 = scaffoldAfterCard.content as ComposableNode.ColumnNode
+        assertEquals(3, col2.children.size)
+        assertEquals(card.id, col2.children.last().id)
+        job.cancel()
+    }
+
+    @Test
+    fun testChildrenWithSlotsAndContainers() {
+        val initialRoot: ComposableNode = ComposableNode.ScaffoldNode(
+            id = NodeId("scaffold_root"),
+            topBar = ComposableNode.TopAppBarNode(
+                id = NodeId("top_bar"),
+                title = ComposableNode.TextNode(
+                    id = NodeId("title_txt"),
+                    text = "My M3 Screen"
+                )
+            ),
+            floatingActionButton = ComposableNode.FloatingActionButtonNode(
+                id = NodeId("main_fab"),
+                content = listOf(ComposableNode.TextNode(text = "+"))
+            ),
+            content = ComposableNode.ColumnNode(
+                id = NodeId("main_content_col"),
+                children = listOf(
+                    ComposableNode.TextNode(
+                        id = NodeId("welcome_txt"),
+                        text = "Welcome to Material 3 Studio!"
+                    )
+                )
+            )
+        )
+
+        fun collectContainers(node: ComposableNode): Set<String> {
+            val ids = mutableSetOf<String>()
+            fun walk(n: ComposableNode) {
+                val children = n.childrenWithSlots()
+                if (children.isNotEmpty()) {
+                    ids.add(n.id.value)
+                    children.forEach { walk(it.first) }
+                }
+            }
+            walk(node)
+            return ids
+        }
+
+        val containers = collectContainers(initialRoot)
+        println("Containers in initialRoot: $containers")
+        assertTrue(containers.contains("scaffold_root"))
+        assertTrue(containers.contains("top_bar"))
+        assertTrue(containers.contains("main_fab"))
+        assertTrue(containers.contains("main_content_col"))
     }
 }
