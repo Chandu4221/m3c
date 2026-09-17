@@ -1,11 +1,17 @@
 package dev.chandradsl.m3c.core.domain.store
 
+import dev.chandradsl.m3c.core.domain.command.CommandHistory
+import dev.chandradsl.m3c.core.domain.command.DeleteNodeCommand
+import dev.chandradsl.m3c.core.domain.command.EditorCommand
+import dev.chandradsl.m3c.core.domain.command.InsertNodeCommand
+import dev.chandradsl.m3c.core.domain.command.SetSlotCommand
+import dev.chandradsl.m3c.core.domain.command.UpdateModifiersCommand
+import dev.chandradsl.m3c.core.domain.command.UpdateNodeCommand
 import dev.chandradsl.m3c.core.domain.model.ComposableNode
 
 class WorkspaceStore(initialRoot: ComposableNode) {
 
-    private val undoStack = ArrayDeque<ComposableNode>()
-    private val redoStack = ArrayDeque<ComposableNode>()
+    private val commandHistory = CommandHistory()
 
     var state: WorkspaceState = WorkspaceState(rootNode = initialRoot)
         private set
@@ -13,24 +19,22 @@ class WorkspaceStore(initialRoot: ComposableNode) {
     fun dispatch(intent: WorkspaceIntent) {
         when (intent) {
             is WorkspaceIntent.InsertChild -> {
-                recordMutation { TreeMutator.insertChild(it, intent.parentId, intent.node, intent.index) }
+                executeCommand(InsertNodeCommand(intent.parentId, intent.node, intent.index))
             }
             is WorkspaceIntent.SetSlot -> {
-                recordMutation { TreeMutator.setSlot(it, intent.parentId, intent.slotName, intent.node) }
+                executeCommand(SetSlotCommand.create(state.rootNode, intent.parentId, intent.slotName, intent.node))
             }
             is WorkspaceIntent.UpdateNode -> {
-                recordMutation { TreeMutator.updateNode(it, intent.node) }
+                executeCommand(UpdateNodeCommand.create(state.rootNode, intent.node))
             }
             is WorkspaceIntent.RemoveNode -> {
-                recordMutation { currentRoot ->
-                    TreeMutator.removeNode(currentRoot, intent.targetId) ?: currentRoot
-                }
+                executeCommand(DeleteNodeCommand.create(state.rootNode, intent.targetId))
                 if (state.selectedNodeId == intent.targetId) {
                     state = state.copy(selectedNodeId = null)
                 }
             }
             is WorkspaceIntent.UpdateModifiers -> {
-                recordMutation { TreeMutator.updateModifiers(it, intent.targetId, intent.modifiers) }
+                executeCommand(UpdateModifiersCommand.create(state.rootNode, intent.targetId, intent.modifiers))
             }
             is WorkspaceIntent.SelectNode -> {
                 state = state.copy(selectedNodeId = intent.targetId)
@@ -40,38 +44,30 @@ class WorkspaceStore(initialRoot: ComposableNode) {
         }
     }
 
-    private fun recordMutation(transform: (ComposableNode) -> ComposableNode) {
-        val newRoot = transform(state.rootNode)
-        if (newRoot != state.rootNode) {
-            undoStack.addLast(state.rootNode)
-            redoStack.clear()
-            state = state.copy(
-                rootNode = newRoot,
-                canUndo = undoStack.isNotEmpty(),
-                canRedo = false
-            )
-        }
+    fun executeCommand(command: EditorCommand) {
+        val newRoot = commandHistory.execute(command, state.rootNode)
+        state = state.copy(
+            rootNode = newRoot,
+            canUndo = commandHistory.canUndo,
+            canRedo = commandHistory.canRedo
+        )
     }
 
     private fun performUndo() {
-        if (undoStack.isEmpty()) return
-        val previousRoot = undoStack.removeLast()
-        redoStack.addLast(state.rootNode)
+        val previousRoot = commandHistory.undo(state.rootNode)
         state = state.copy(
             rootNode = previousRoot,
-            canUndo = undoStack.isNotEmpty(),
-            canRedo = true
+            canUndo = commandHistory.canUndo,
+            canRedo = commandHistory.canRedo
         )
     }
 
     private fun performRedo() {
-        if (redoStack.isEmpty()) return
-        val nextRoot = redoStack.removeLast()
-        undoStack.addLast(state.rootNode)
+        val nextRoot = commandHistory.redo(state.rootNode)
         state = state.copy(
             rootNode = nextRoot,
-            canUndo = true,
-            canRedo = redoStack.isNotEmpty()
+            canUndo = commandHistory.canUndo,
+            canRedo = commandHistory.canRedo
         )
     }
 }
