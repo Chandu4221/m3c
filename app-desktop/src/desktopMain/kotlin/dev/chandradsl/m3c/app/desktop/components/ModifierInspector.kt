@@ -22,9 +22,12 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -110,29 +113,28 @@ fun ModifierInspector(
             }
         }
 
-        // Active Modifiers List with Real-Time Window Hit Testing
+        // Active Modifiers List with Real-Time Window Hit Testing & Smooth Spatial Reordering
         val activeDrag = viewModel.activeModifierDrag
         val isDraggingThisNode = activeDrag != null && activeDrag.nodeId == node.id
         val cardBoundsMap = remember { mutableStateMapOf<Int, Rect>() }
+        val density = LocalDensity.current
+        val spacingPx = with(density) { 6.dp.toPx() }
 
-        // Live hover hit-testing & nearest-card snapping when dragging a modifier
-        LaunchedEffect(viewModel.dragPointerOffset, isDraggingThisNode) {
-            if (isDraggingThisNode && cardBoundsMap.isNotEmpty()) {
-                val pointerY = viewModel.dragPointerOffset.y
-                val firstBounds = cardBoundsMap[0]
-                val lastBounds = cardBoundsMap[node.modifiers.size - 1]
+        fun updateDropTargetFromPointer(pointerY: Float) {
+            if (!isDraggingThisNode || cardBoundsMap.isEmpty()) return
+            val firstBounds = cardBoundsMap[0]
+            val lastBounds = cardBoundsMap[node.modifiers.size - 1]
 
-                val target = when {
-                    firstBounds != null && pointerY <= firstBounds.center.y -> 0
-                    lastBounds != null && pointerY >= lastBounds.center.y -> node.modifiers.size - 1
-                    else -> {
-                        cardBoundsMap.minByOrNull { (_, bounds) ->
-                            kotlin.math.abs(bounds.center.y - pointerY)
-                        }?.key ?: activeDrag.fromIndex
-                    }
+            val target = when {
+                firstBounds != null && pointerY <= firstBounds.center.y -> 0
+                lastBounds != null && pointerY >= lastBounds.center.y -> node.modifiers.size - 1
+                else -> {
+                    cardBoundsMap.minByOrNull { (_, bounds) ->
+                        kotlin.math.abs(bounds.center.y - pointerY)
+                    }?.key ?: activeDrag.fromIndex
                 }
-                viewModel.updateModifierDropTarget(target)
             }
+            viewModel.updateModifierDropTarget(target)
         }
 
         if (node.modifiers.isEmpty()) {
@@ -142,11 +144,26 @@ fun ModifierInspector(
                 modifier = Modifier.padding(vertical = 4.dp)
             )
         } else {
+            val fromIndex = if (isDraggingThisNode) activeDrag.fromIndex else null
+            val toIndex = if (isDraggingThisNode) viewModel.modifierDropTargetIndex else null
+
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 node.modifiers.forEachIndexed { index, mod ->
                     key("$index-${mod::class.simpleName}") {
                         val isSource = isDraggingThisNode && activeDrag.fromIndex == index
                         val isTarget = isDraggingThisNode && viewModel.modifierDropTargetIndex == index && !isSource
+
+                        val cardBounds = cardBoundsMap[index]
+                        val cardHeightPx = cardBounds?.height ?: with(density) { 52.dp.toPx() }
+                        val slotDisplacement = cardHeightPx + spacingPx
+
+                        val displacementY = when {
+                            fromIndex == null || toIndex == null || fromIndex == toIndex -> 0f
+                            index == fromIndex -> 0f
+                            fromIndex < toIndex && index in (fromIndex + 1)..toIndex -> -slotDisplacement
+                            fromIndex > toIndex && index in toIndex until fromIndex -> +slotDisplacement
+                            else -> 0f
+                        }
 
                         ModifierSortableCard(
                             index = index,
@@ -154,6 +171,7 @@ fun ModifierInspector(
                             modifierDef = mod,
                             isSourceDragging = isSource,
                             isDropTarget = isTarget,
+                            displacementY = displacementY,
                             onBoundsChanged = { rect -> cardBoundsMap[index] = rect },
                             onDragStart = { startOffset ->
                                 viewModel.startModifierDrag(
@@ -163,9 +181,11 @@ fun ModifierInspector(
                                     name = mod::class.simpleName ?: "Modifier",
                                     summary = formatModifierDetails(mod)
                                 )
+                                updateDropTargetFromPointer(startOffset.y)
                             },
                             onDragDelta = { delta ->
                                 viewModel.updateModifierDrag(delta)
+                                updateDropTargetFromPointer(viewModel.dragPointerOffset.y)
                             },
                             onDragEnd = {
                                 viewModel.endModifierDrag()
@@ -236,6 +256,7 @@ private fun ModifierSortableCard(
     modifierDef: ModifierDef,
     isSourceDragging: Boolean,
     isDropTarget: Boolean,
+    displacementY: Float,
     onBoundsChanged: (Rect) -> Unit,
     onDragStart: (Offset) -> Unit,
     onDragDelta: (Offset) -> Unit,
@@ -245,6 +266,14 @@ private fun ModifierSortableCard(
     onMoveDown: () -> Unit,
     onDelete: () -> Unit
 ) {
+    val animatedDisplacementY by animateFloatAsState(
+        targetValue = displacementY,
+        animationSpec = spring(
+            stiffness = Spring.StiffnessMediumLow,
+            dampingRatio = Spring.DampingRatioLowBouncy
+        )
+    )
+
     val targetBorderColor = when {
         isDropTarget -> StudioColors.Success
         isSourceDragging -> StudioColors.BorderSubtle.copy(alpha = 0.5f)
@@ -258,8 +287,7 @@ private fun ModifierSortableCard(
         else -> StudioColors.CardSurface
     }
     val cardBackground by animateColorAsState(targetBackground, tween(150))
-    val cardBorderWidth by animateDpAsState(if (isDropTarget) 2.dp else 1.dp, tween(150))
-    val cardAlpha by animateFloatAsState(if (isSourceDragging) 0.35f else 1.0f, tween(150))
+    val cardAlpha by animateFloatAsState(if (isSourceDragging) 0.3f else 1.0f, tween(150))
 
     val badgeBg by animateColorAsState(if (isDropTarget) StudioColors.Success else StudioColors.ActiveSurface, tween(150))
     val badgeTextColor by animateColorAsState(if (isDropTarget) StudioColors.TextInverse else StudioColors.TextPrimary, tween(150))
@@ -270,16 +298,19 @@ private fun ModifierSortableCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .graphicsLayer(alpha = cardAlpha)
+                .graphicsLayer {
+                    translationY = animatedDisplacementY
+                    alpha = cardAlpha
+                }
                 .onGloballyPositioned { coordinates ->
                     onBoundsChanged(coordinates.boundsInWindow())
                     cardPositionInWindow = coordinates.positionInWindow()
                 }
-                .shadow(elevation = if (isDropTarget) 4.dp else 0.dp, shape = RoundedCornerShape(6.dp))
+                .shadow(elevation = if (isDropTarget) 2.dp else 0.dp, shape = RoundedCornerShape(6.dp))
                 .clip(RoundedCornerShape(6.dp))
                 .background(cardBackground)
                 .border(
-                    width = cardBorderWidth,
+                    width = 1.dp,
                     color = cardBorderColor,
                     shape = RoundedCornerShape(6.dp)
                 )

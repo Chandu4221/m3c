@@ -28,11 +28,19 @@ import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.Icon
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.graphicsLayer
 import org.jetbrains.jewel.ui.component.Badge
 import org.jetbrains.jewel.ui.component.GroupHeader
 import org.jetbrains.jewel.ui.component.Text
@@ -273,7 +281,11 @@ private fun PaletteCategory(
             }
         )
 
-        if (isExpanded) {
+        AnimatedVisibility(
+            visible = isExpanded,
+            enter = expandVertically(tween(160)) + fadeIn(tween(160)),
+            exit = shrinkVertically(tween(130)) + fadeOut(tween(130))
+        ) {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 items.forEach { item ->
                     PaletteComponentCard(item = item, viewModel = viewModel) {
@@ -292,11 +304,14 @@ private fun PaletteComponentCard(
     onClick: () -> Unit
 ) {
     val isInteractive = viewModel.isInteractiveMode
+    val isBeingDragged = viewModel.activeDragItem?.name == item.name
+    val cardAlpha by animateFloatAsState(if (isBeingDragged) 0.35f else 1.0f, tween(150))
     var cardPositionInWindow by remember { mutableStateOf(Offset.Zero) }
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .graphicsLayer(alpha = cardAlpha)
             .clip(RoundedCornerShape(6.dp))
             .background(if (isInteractive) StudioColors.PanelSurface else StudioColors.CardSurface)
             .border(

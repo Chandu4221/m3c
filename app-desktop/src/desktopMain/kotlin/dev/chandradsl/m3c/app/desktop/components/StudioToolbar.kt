@@ -21,9 +21,12 @@ import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -172,12 +175,14 @@ private fun ToolbarIconButton(
     activeColor: Color = StudioColors.Primary,
     onClick: () -> Unit
 ) {
-    val bgColor = if (isActive) StudioColors.ActiveSurface else Color.Transparent
-    val tintColor = when {
+    val targetBg = if (isActive) StudioColors.ActiveSurface else Color.Transparent
+    val targetTint = when {
         !enabled -> StudioColors.TextMuted
         isActive -> activeColor
         else -> StudioColors.TextPrimary
     }
+    val bgColor by animateColorAsState(targetBg, tween(150))
+    val tintColor by animateColorAsState(targetTint, tween(150))
 
     Row(
         modifier = Modifier
@@ -208,8 +213,10 @@ private fun ModeTabButton(
     isActive: Boolean,
     onClick: () -> Unit
 ) {
-    val bgColor = if (isActive) StudioColors.CardSurface else Color.Transparent
-    val tintColor = if (isActive) StudioColors.Primary else StudioColors.TextSecondary
+    val targetBg = if (isActive) StudioColors.CardSurface else Color.Transparent
+    val targetTint = if (isActive) StudioColors.Primary else StudioColors.TextSecondary
+    val bgColor by animateColorAsState(targetBg, tween(150))
+    val tintColor by animateColorAsState(targetTint, tween(150))
 
     Row(
         modifier = Modifier

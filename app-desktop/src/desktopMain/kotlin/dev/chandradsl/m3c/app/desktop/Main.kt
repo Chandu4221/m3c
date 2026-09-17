@@ -13,8 +13,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -161,13 +166,19 @@ fun main() = application {
                             )
                         }
 
-                        // 3. Bottom: Code Drawer Horizontal Splitter & Code Preview Drawer
-                        if (viewModel.isCodeDrawerOpen) {
-                            DraggableSplitter(
-                                orientation = SplitterOrientation.Horizontal,
-                                onDelta = { delta -> viewModel.resizeCodeDrawer(-delta) }
-                            )
-                            CodePreviewDrawer(viewModel = viewModel)
+                        // 3. Bottom: Code Drawer Horizontal Splitter & Code Preview Drawer with smooth slide/expand
+                        AnimatedVisibility(
+                            visible = viewModel.isCodeDrawerOpen,
+                            enter = expandVertically(tween(180)) + fadeIn(tween(180)),
+                            exit = shrinkVertically(tween(150)) + fadeOut(tween(150))
+                        ) {
+                            Column(modifier = Modifier.fillMaxWidth()) {
+                                DraggableSplitter(
+                                    orientation = SplitterOrientation.Horizontal,
+                                    onDelta = { delta -> viewModel.resizeCodeDrawer(-delta) }
+                                )
+                                CodePreviewDrawer(viewModel = viewModel)
+                            }
                         }
                     }
 

@@ -356,7 +356,7 @@ class StudioViewModel {
     }
 
     fun updateModifierDropTarget(targetIndex: Int) {
-        if (activeModifierDrag != null) {
+        if (activeModifierDrag != null && modifierDropTargetIndex != targetIndex) {
             modifierDropTargetIndex = targetIndex
         }
     }

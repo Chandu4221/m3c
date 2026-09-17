@@ -15,12 +15,16 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -34,6 +38,7 @@ import dev.chandradsl.m3c.app.desktop.state.StudioViewModel
 import dev.chandradsl.m3c.app.desktop.theme.StudioColors
 import dev.chandradsl.m3c.app.desktop.theme.StudioSizes
 import dev.chandradsl.m3c.app.desktop.theme.StudioTypography
+import kotlinx.coroutines.delay
 import java.awt.Toolkit
 import java.awt.datatransfer.StringSelection
 
@@ -42,11 +47,16 @@ fun CodePreviewDrawer(
     viewModel: StudioViewModel,
     modifier: Modifier = Modifier
 ) {
-    if (!viewModel.isCodeDrawerOpen) return
-
     val vScroll = rememberScrollState()
     val hScroll = rememberScrollState()
     var copied by remember { mutableStateOf(false) }
+
+    LaunchedEffect(copied) {
+        if (copied) {
+            delay(2000)
+            copied = false
+        }
+    }
 
     Column(
         modifier = modifier
@@ -75,11 +85,24 @@ fun CodePreviewDrawer(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 // Copy to Clipboard Button
+                val copyBtnBg by animateColorAsState(
+                    targetValue = if (copied) StudioColors.Success else StudioColors.ActiveSurface,
+                    animationSpec = tween(150)
+                )
+                val copyBtnBorder by animateColorAsState(
+                    targetValue = if (copied) StudioColors.Success else StudioColors.BorderSubtle,
+                    animationSpec = tween(150)
+                )
+                val copyBtnFg by animateColorAsState(
+                    targetValue = if (copied) StudioColors.TextInverse else StudioColors.TextPrimary,
+                    animationSpec = tween(150)
+                )
+
                 Row(
                     modifier = Modifier
                         .clip(RoundedCornerShape(4.dp))
-                        .background(if (copied) StudioColors.Success else StudioColors.ActiveSurface)
-                        .border(width = 1.dp, color = StudioColors.BorderSubtle, shape = RoundedCornerShape(4.dp))
+                        .background(copyBtnBg)
+                        .border(width = 1.dp, color = copyBtnBorder, shape = RoundedCornerShape(4.dp))
                         .clickable {
                             val selection = StringSelection(viewModel.generatedCode)
                             Toolkit.getDefaultToolkit().systemClipboard.setContents(selection, null)
@@ -90,15 +113,15 @@ fun CodePreviewDrawer(
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.ContentCopy,
+                        imageVector = if (copied) Icons.Default.Check else Icons.Default.ContentCopy,
                         contentDescription = "Copy",
-                        tint = if (copied) StudioColors.TextInverse else StudioColors.TextPrimary,
+                        tint = copyBtnFg,
                         modifier = Modifier.size(StudioSizes.IconSmall)
                     )
                     Text(
                         text = if (copied) "Copied!" else "Copy Code",
                         style = StudioTypography.Caption.copy(
-                            color = if (copied) StudioColors.TextInverse else StudioColors.TextPrimary,
+                            color = copyBtnFg,
                             fontWeight = FontWeight.SemiBold
                         )
                     )
