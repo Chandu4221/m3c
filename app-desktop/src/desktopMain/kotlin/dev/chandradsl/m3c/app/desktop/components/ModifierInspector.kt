@@ -116,12 +116,13 @@ fun ModifierInspector(
         // Active Modifiers List with Real-Time Window Hit Testing & Smooth Spatial Reordering
         val activeDrag = viewModel.activeModifierDrag
         val isDraggingThisNode = activeDrag != null && activeDrag.nodeId == node.id
-        val cardBoundsMap = remember { mutableStateMapOf<Int, Rect>() }
+        val cardBoundsMap = remember(node.id) { mutableStateMapOf<Int, Rect>() }
         val density = LocalDensity.current
         val spacingPx = with(density) { 6.dp.toPx() }
 
         fun updateDropTargetFromPointer(pointerY: Float) {
-            if (!isDraggingThisNode || cardBoundsMap.isEmpty()) return
+            val drag = viewModel.activeModifierDrag ?: return
+            if (drag.nodeId != node.id || cardBoundsMap.isEmpty()) return
             val firstBounds = cardBoundsMap[0]
             val lastBounds = cardBoundsMap[node.modifiers.size - 1]
 
@@ -131,7 +132,7 @@ fun ModifierInspector(
                 else -> {
                     cardBoundsMap.minByOrNull { (_, bounds) ->
                         kotlin.math.abs(bounds.center.y - pointerY)
-                    }?.key ?: activeDrag.fromIndex
+                    }?.key ?: drag.fromIndex
                 }
             }
             viewModel.updateModifierDropTarget(target)
@@ -298,13 +299,13 @@ private fun ModifierSortableCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .graphicsLayer {
-                    translationY = animatedDisplacementY
-                    alpha = cardAlpha
-                }
                 .onGloballyPositioned { coordinates ->
                     onBoundsChanged(coordinates.boundsInWindow())
                     cardPositionInWindow = coordinates.positionInWindow()
+                }
+                .graphicsLayer {
+                    translationY = animatedDisplacementY
+                    alpha = cardAlpha
                 }
                 .shadow(elevation = if (isDropTarget) 2.dp else 0.dp, shape = RoundedCornerShape(6.dp))
                 .clip(RoundedCornerShape(6.dp))
