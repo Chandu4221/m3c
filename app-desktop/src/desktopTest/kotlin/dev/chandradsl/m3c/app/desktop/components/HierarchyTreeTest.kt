@@ -160,4 +160,49 @@ class HierarchyTreeTest {
             }
         }
     }
+
+    @Test
+    fun testBuildContextMenuItemsForLeafAndContainerNodes() {
+        val viewModel = StudioViewModel()
+        val root = viewModel.workspaceState.rootNode
+        val rootItems = buildTreeContextMenuItems(root, viewModel)
+
+        // Root cannot be duplicated or deleted
+        assertTrue(rootItems.none { it.label == "Duplicate" })
+        assertTrue(rootItems.none { it.label == "Delete" })
+        assertTrue(rootItems.any { it.label == "Select" })
+
+        // Find child node inside content
+        val scaffold = root as dev.chandradsl.m3c.core.domain.model.ComposableNode.ScaffoldNode
+        val column = scaffold.content as dev.chandradsl.m3c.core.domain.model.ComposableNode.ColumnNode
+        val child = column.children.first()
+
+        val childItems = buildTreeContextMenuItems(child, viewModel)
+        assertTrue(childItems.any { it.label == "Select" })
+        assertTrue(childItems.any { it.label == "Duplicate" })
+        assertTrue(childItems.any { it.label == "Wrap in Column" })
+        assertTrue(childItems.any { it.label == "Wrap in Row" })
+        assertTrue(childItems.any { it.label == "Delete" })
+
+        // Container (Column) has Add items
+        val columnItems = buildTreeContextMenuItems(column, viewModel)
+        assertTrue(columnItems.any { it.label == "Add Text" })
+        assertTrue(columnItems.any { it.label == "Add Button" })
+        assertTrue(columnItems.any { it.label == "Add Icon" })
+
+        // Test executing an action from the context menu items
+        val duplicateItem = childItems.first { it.label == "Duplicate" }
+        duplicateItem.onClick()
+
+        kotlinx.coroutines.runBlocking {
+            kotlinx.coroutines.withTimeout(3000) {
+                while (true) {
+                    val currentRoot = viewModel.workspaceState.rootNode as dev.chandradsl.m3c.core.domain.model.ComposableNode.ScaffoldNode
+                    val currentCol = currentRoot.content as dev.chandradsl.m3c.core.domain.model.ComposableNode.ColumnNode
+                    if (currentCol.children.size >= 2) break
+                    kotlinx.coroutines.delay(20)
+                }
+            }
+        }
+    }
 }

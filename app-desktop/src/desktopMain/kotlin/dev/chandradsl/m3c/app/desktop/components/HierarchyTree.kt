@@ -1,11 +1,14 @@
 package dev.chandradsl.m3c.app.desktop.components
 
+import androidx.compose.foundation.ContextMenuArea
+import androidx.compose.foundation.ContextMenuItem
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.ui.input.pointer.isPrimaryPressed
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -429,115 +432,123 @@ fun HierarchyTree(
                     val rowAlpha by animateFloatAsState(if (isBeingDragged) 0.35f else 1.0f, tween(150))
                     val nodeIconTint by animateColorAsState(if (isInsideTarget) StudioColors.Success else StudioColors.Primary, tween(150))
 
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .graphicsLayer(alpha = rowAlpha)
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(rowBackground)
-                            .border(
-                                width = rowBorderWidth,
-                                color = rowBorderColor,
-                                shape = RoundedCornerShape(4.dp)
-                            )
-                            .then(
-                                if (isDraggable) {
-                                    Modifier.pointerInput(node.id) {
-                                        awaitEachGesture {
-                                            val down = awaitFirstDown(requireUnconsumed = false)
-                                            var isDragStarted = false
-                                            var totalMovement = Offset.Zero
-                                            val touchSlop = viewConfiguration.touchSlop
+                    ContextMenuArea(
+                        items = {
+                            viewModel.dispatch(WorkspaceIntent.SelectNode(node.id))
+                            buildTreeContextMenuItems(node, viewModel)
+                        }
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .graphicsLayer(alpha = rowAlpha)
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(rowBackground)
+                                .border(
+                                    width = rowBorderWidth,
+                                    color = rowBorderColor,
+                                    shape = RoundedCornerShape(4.dp)
+                                )
+                                .then(
+                                    if (isDraggable) {
+                                        Modifier.pointerInput(node.id) {
+                                            awaitEachGesture {
+                                                val down = awaitFirstDown(requireUnconsumed = false)
+                                                if (!currentEvent.buttons.isPrimaryPressed) return@awaitEachGesture
+                                                var isDragStarted = false
+                                                var totalMovement = Offset.Zero
+                                                val touchSlop = viewConfiguration.touchSlop
 
-                                            try {
-                                                while (true) {
-                                                    val event = awaitPointerEvent()
-                                                    val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                                                try {
+                                                    while (true) {
+                                                        val event = awaitPointerEvent()
+                                                        val change = event.changes.firstOrNull { it.id == down.id } ?: break
 
-                                                    if (change.changedToUp()) {
-                                                        if (isDragStarted) {
-                                                            viewModel.endTreeDrag()
+                                                        if (change.changedToUp()) {
+                                                            if (isDragStarted) {
+                                                                viewModel.endTreeDrag()
+                                                            }
+                                                            break
                                                         }
-                                                        break
-                                                    }
 
-                                                    val dragAmount = change.position - change.previousPosition
-                                                    totalMovement += dragAmount
+                                                        val dragAmount = change.position - change.previousPosition
+                                                        totalMovement += dragAmount
 
-                                                    if (!isDragStarted) {
-                                                        if (totalMovement.getDistance() > touchSlop) {
-                                                            isDragStarted = true
-                                                            val windowOffset = itemPositionInWindow + change.position
-                                                            viewModel.startTreeDrag(node, windowOffset, getNodeLabel(node))
+                                                        if (!isDragStarted) {
+                                                            if (totalMovement.getDistance() > touchSlop) {
+                                                                isDragStarted = true
+                                                                val windowOffset = itemPositionInWindow + change.position
+                                                                viewModel.startTreeDrag(node, windowOffset, getNodeLabel(node))
+                                                                change.consume()
+                                                            }
+                                                        } else {
                                                             change.consume()
+                                                            viewModel.updateTreeDrag(dragAmount)
                                                         }
-                                                    } else {
-                                                        change.consume()
-                                                        viewModel.updateTreeDrag(dragAmount)
                                                     }
-                                                }
-                                            } finally {
-                                                if (isDragStarted && viewModel.activeTreeDragNode != null) {
-                                                    viewModel.cancelTreeDrag()
+                                                } finally {
+                                                    if (isDragStarted && viewModel.activeTreeDragNode != null) {
+                                                        viewModel.cancelTreeDrag()
+                                                    }
                                                 }
                                             }
                                         }
-                                    }
-                                } else Modifier
-                            )
-                            .padding(vertical = 3.dp, horizontal = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        // Component Icon
-                        Icon(
-                            imageVector = getNodeIcon(node),
-                            contentDescription = null,
-                            tint = nodeIconTint,
-                            modifier = Modifier.size(StudioSizes.IconSmall)
-                        )
-
-                        // Slot badge (Jewel Badge)
-                        if (slotLabel != null) {
-                            Badge {
-                                Text(
-                                    text = slotLabel,
-                                    maxLines = 1,
-                                    softWrap = false,
-                                    overflow = TextOverflow.Ellipsis
+                                    } else Modifier
                                 )
-                            }
-                        }
-
-                        // Component Label
-                        Text(
-                            text = getNodeLabel(node),
-                            style = StudioTypography.UIBody.copy(
-                                fontWeight = if (isInsideTarget) FontWeight.SemiBold else FontWeight.Normal
-                            ),
-                            maxLines = 1,
-                            softWrap = false,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f, fill = false)
-                        )
-
-                        // Inside drop badge or subtle node ID
-                        if (isInsideTarget) {
-                            Text(
-                                text = "↳ Drop Inside",
-                                style = StudioTypography.Badge.copy(color = StudioColors.Success, fontWeight = FontWeight.Bold),
-                                maxLines = 1,
-                                softWrap = false
+                                .padding(vertical = 3.dp, horizontal = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            // Component Icon
+                            Icon(
+                                imageVector = getNodeIcon(node),
+                                contentDescription = null,
+                                tint = nodeIconTint,
+                                modifier = Modifier.size(StudioSizes.IconSmall)
                             )
-                        } else {
+
+                            // Slot badge (Jewel Badge)
+                            if (slotLabel != null) {
+                                Badge {
+                                    Text(
+                                        text = slotLabel,
+                                        maxLines = 1,
+                                        softWrap = false,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
+
+                            // Component Label
                             Text(
-                                text = "#${node.id.value.takeLast(4)}",
-                                style = StudioTypography.Caption.copy(
-                                    color = StudioColors.TextMuted.copy(alpha = 0.5f)
+                                text = getNodeLabel(node),
+                                style = StudioTypography.UIBody.copy(
+                                    fontWeight = if (isInsideTarget) FontWeight.SemiBold else FontWeight.Normal
                                 ),
                                 maxLines = 1,
-                                softWrap = false
+                                softWrap = false,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f, fill = false)
                             )
+
+                            // Inside drop badge or subtle node ID
+                            if (isInsideTarget) {
+                                Text(
+                                    text = "↳ Drop Inside",
+                                    style = StudioTypography.Badge.copy(color = StudioColors.Success, fontWeight = FontWeight.Bold),
+                                    maxLines = 1,
+                                    softWrap = false
+                                )
+                            } else {
+                                Text(
+                                    text = "#${node.id.value.takeLast(4)}",
+                                    style = StudioTypography.Caption.copy(
+                                        color = StudioColors.TextMuted.copy(alpha = 0.5f)
+                                    ),
+                                    maxLines = 1,
+                                    softWrap = false
+                                )
+                            }
                         }
                     }
 
@@ -645,4 +656,65 @@ private fun getNodeLabel(node: ComposableNode): String = when (node) {
 private fun getNodeIcon(node: ComposableNode): ImageVector {
     val def = ComponentRegistry.findByNode(node)
     return if (def != null) resolveComponentIcon(def.iconName) else Icons.Default.WebAsset
+}
+
+internal fun buildTreeContextMenuItems(
+    node: ComposableNode,
+    viewModel: StudioViewModel
+): List<ContextMenuItem> = buildList {
+    val isRoot = node.id == viewModel.workspaceState.rootNode.id
+    val isContainer = ComponentRegistry.findByNode(node)?.acceptsChildren ?: false
+
+    add(ContextMenuItem("Select") {
+        viewModel.dispatch(WorkspaceIntent.SelectNode(node.id))
+    })
+
+    if (!isRoot) {
+        add(ContextMenuItem("Duplicate") {
+            viewModel.documentController.duplicateNode(node.id)
+        })
+        if (viewModel.documentController.canMoveUp(node.id)) {
+            add(ContextMenuItem("Move Up") {
+                viewModel.documentController.moveNodeUp(node.id)
+            })
+        }
+        if (viewModel.documentController.canMoveDown(node.id)) {
+            add(ContextMenuItem("Move Down") {
+                viewModel.documentController.moveNodeDown(node.id)
+            })
+        }
+        add(ContextMenuItem("Wrap in Column") {
+            viewModel.documentController.wrapInColumn(node.id)
+        })
+        add(ContextMenuItem("Wrap in Row") {
+            viewModel.documentController.wrapInRow(node.id)
+        })
+        add(ContextMenuItem("Wrap in Box") {
+            viewModel.documentController.wrapInContainer(node.id, "Box")
+        })
+    }
+
+    if (isContainer) {
+        add(ContextMenuItem("Add Text") {
+            viewModel.dispatch(WorkspaceIntent.InsertChild(parentId = node.id, node = ComposableNode.TextNode(text = "Text")))
+        })
+        add(ContextMenuItem("Add Button") {
+            viewModel.dispatch(WorkspaceIntent.InsertChild(parentId = node.id, node = ComposableNode.ButtonNode(content = listOf(ComposableNode.TextNode(text = "Button")))))
+        })
+        add(ContextMenuItem("Add Icon") {
+            viewModel.dispatch(WorkspaceIntent.InsertChild(parentId = node.id, node = ComposableNode.IconNode(iconName = "Favorite")))
+        })
+        add(ContextMenuItem("Add Row") {
+            viewModel.dispatch(WorkspaceIntent.InsertChild(parentId = node.id, node = ComposableNode.RowNode()))
+        })
+        add(ContextMenuItem("Add Column") {
+            viewModel.dispatch(WorkspaceIntent.InsertChild(parentId = node.id, node = ComposableNode.ColumnNode()))
+        })
+    }
+
+    if (!isRoot) {
+        add(ContextMenuItem("Delete") {
+            viewModel.dispatch(WorkspaceIntent.RemoveNode(node.id))
+        })
+    }
 }
