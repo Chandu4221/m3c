@@ -365,7 +365,7 @@ object ComponentRegistry {
                     id = StandardSlots.BOTTOM_BAR,
                     displayName = "Bottom Bar",
                     cardinality = SlotCardinality.Single,
-                    acceptedTypes = setOf(ComponentType.NavigationBar)
+                    acceptedTypes = setOf(ComponentType.NavigationBar, ComponentType.BottomAppBar)
                 ),
                 SlotDefinition(
                     id = StandardSlots.FLOATING_ACTION_BUTTON,
@@ -380,7 +380,12 @@ object ComponentRegistry {
                     acceptedTypes = emptySet()
                 )
             ),
-            factory = { ComposableNode.ScaffoldNode() }
+            factory = {
+                ComposableNode.ScaffoldNode(
+                    topBar = ComposableNode.TopAppBarNode(title = ComposableNode.TextNode(text = "Top App Bar")),
+                    content = ComposableNode.ColumnNode(children = listOf(ComposableNode.TextNode(text = "Scaffold Content")))
+                )
+            }
         ))
 
         register(StandardComponentDefinition(
@@ -421,7 +426,27 @@ object ComponentRegistry {
             category = ComponentCategory.Navigation,
             iconName = "view_stream",
             acceptsChildren = true,
-            factory = { ComposableNode.NavigationBarNode() }
+            factory = {
+                ComposableNode.NavigationBarNode(
+                    items = listOf(
+                        ComposableNode.NavigationBarItemNode(
+                            selected = true,
+                            icon = ComposableNode.TextNode(text = "★"),
+                            label = ComposableNode.TextNode(text = "Home")
+                        ),
+                        ComposableNode.NavigationBarItemNode(
+                            selected = false,
+                            icon = ComposableNode.TextNode(text = "⌕"),
+                            label = ComposableNode.TextNode(text = "Search")
+                        ),
+                        ComposableNode.NavigationBarItemNode(
+                            selected = false,
+                            icon = ComposableNode.TextNode(text = "●"),
+                            label = ComposableNode.TextNode(text = "Profile")
+                        )
+                    )
+                )
+            }
         ))
 
         register(StandardComponentDefinition(
@@ -475,7 +500,21 @@ object ComponentRegistry {
                     acceptedTypes = setOf(ComponentType.FloatingActionButton)
                 )
             ),
-            factory = { ComposableNode.BottomAppBarNode() }
+            factory = {
+                ComposableNode.BottomAppBarNode(
+                    actions = listOf(
+                        ComposableNode.IconButtonNode(
+                            content = listOf(ComposableNode.TextNode(text = "☰"))
+                        ),
+                        ComposableNode.IconButtonNode(
+                            content = listOf(ComposableNode.TextNode(text = "🔍"))
+                        )
+                    ),
+                    floatingActionButton = ComposableNode.FloatingActionButtonNode(
+                        content = listOf(ComposableNode.TextNode(text = "+"))
+                    )
+                )
+            }
         ))
 
         register(StandardComponentDefinition(
@@ -493,7 +532,28 @@ object ComponentRegistry {
                     acceptedTypes = emptySet()
                 )
             ),
-            factory = { ComposableNode.NavigationRailNode() }
+            factory = {
+                ComposableNode.NavigationRailNode(
+                    header = ComposableNode.TextNode(text = "M3"),
+                    items = listOf(
+                        ComposableNode.NavigationRailItemNode(
+                            selected = true,
+                            icon = ComposableNode.TextNode(text = "★"),
+                            label = ComposableNode.TextNode(text = "Home")
+                        ),
+                        ComposableNode.NavigationRailItemNode(
+                            selected = false,
+                            icon = ComposableNode.TextNode(text = "⌕"),
+                            label = ComposableNode.TextNode(text = "Search")
+                        ),
+                        ComposableNode.NavigationRailItemNode(
+                            selected = false,
+                            icon = ComposableNode.TextNode(text = "●"),
+                            label = ComposableNode.TextNode(text = "Profile")
+                        )
+                    )
+                )
+            }
         ))
 
         register(StandardComponentDefinition(

@@ -406,6 +406,89 @@ fun PropertyInspector(
                 )
             }
 
+            is ComposableNode.NavigationBarNode -> {
+                InspectorField(label = "Tonal Elevation") {
+                    DpOptionChips(
+                        options = listOf(0f, 1f, 3f, 6f, 8f),
+                        selected = selectedNode.tonalElevation.value,
+                        onSelect = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(tonalElevation = DpVal(it)))) }
+                    )
+                }
+                InspectorField(label = "Navigation Items (${selectedNode.items.size})") {
+                    Button(
+                        onClick = {
+                            val newItem = ComponentRegistry.findByType(ComponentType.NavigationBarItem)?.createDefault()
+                            if (newItem != null) {
+                                viewModel.dispatch(WorkspaceIntent.InsertChild(
+                                    parentId = selectedNode.id,
+                                    node = newItem
+                                ))
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = StudioColors.Primary),
+                        shape = RoundedCornerShape(4.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("+ Add Navigation Item", style = StudioTypography.Caption)
+                    }
+                }
+            }
+
+            is ComposableNode.BottomAppBarNode -> {
+                InspectorField(label = "Actions (${selectedNode.actions.size})") {
+                    Button(
+                        onClick = {
+                            val newItem = ComponentRegistry.findByType(ComponentType.IconButton)?.createDefault()
+                            if (newItem != null) {
+                                viewModel.dispatch(WorkspaceIntent.InsertChild(
+                                    parentId = selectedNode.id,
+                                    node = newItem
+                                ))
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = StudioColors.Primary),
+                        shape = RoundedCornerShape(4.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("+ Add Action Button", style = StudioTypography.Caption)
+                    }
+                }
+                InspectorField(label = "Floating Action Button") {
+                    Text(
+                        text = if (selectedNode.floatingActionButton != null) "Configured" else "None",
+                        style = StudioTypography.Caption,
+                        color = StudioColors.TextSecondary
+                    )
+                }
+            }
+
+            is ComposableNode.ScaffoldNode -> {
+                InspectorField(label = "Scaffold Slots") {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            text = "TopBar: ${if (selectedNode.topBar != null) "Configured (${selectedNode.topBar!!::class.simpleName?.removeSuffix("Node")})" else "Empty"}",
+                            style = StudioTypography.Caption,
+                            color = StudioColors.TextSecondary
+                        )
+                        Text(
+                            text = "BottomBar: ${if (selectedNode.bottomBar != null) "Configured (${selectedNode.bottomBar!!::class.simpleName?.removeSuffix("Node")})" else "Empty"}",
+                            style = StudioTypography.Caption,
+                            color = StudioColors.TextSecondary
+                        )
+                        Text(
+                            text = "FAB: ${if (selectedNode.floatingActionButton != null) "Configured (${selectedNode.floatingActionButton!!::class.simpleName?.removeSuffix("Node")})" else "Empty"}",
+                            style = StudioTypography.Caption,
+                            color = StudioColors.TextSecondary
+                        )
+                        Text(
+                            text = "Content: ${if (selectedNode.content != null) "Configured (${selectedNode.content!!::class.simpleName?.removeSuffix("Node")})" else "Empty"}",
+                            style = StudioTypography.Caption,
+                            color = StudioColors.TextSecondary
+                        )
+                    }
+                }
+            }
+
             is ComposableNode.ColumnNode -> {
                 InspectorField(label = "Vertical Arrangement") {
                     EnumSelector(

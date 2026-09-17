@@ -57,7 +57,11 @@ class DocumentController(initialRoot: ComposableNode) {
         }
 
         val targetParent = selectedNode ?: workspaceState.rootNode
-        val parentId = if (isContainerNode(targetParent)) targetParent.id else workspaceState.rootNode.id
+        val parentId = if (isContainerNode(targetParent)) {
+            targetParent.id
+        } else {
+            TreeMutator.findParent(workspaceState.rootNode, targetParent.id)?.id ?: workspaceState.rootNode.id
+        }
         dispatch(WorkspaceIntent.InsertChild(parentId = parentId, node = newNode))
         dispatch(WorkspaceIntent.SelectNode(newNode.id))
     }
@@ -147,7 +151,12 @@ class DocumentController(initialRoot: ComposableNode) {
         is ComposableNode.IconButtonNode,
         is ComposableNode.FloatingActionButtonNode,
         is ComposableNode.ScaffoldNode,
-        is ComposableNode.NavigationBarNode -> true
+        is ComposableNode.NavigationBarNode,
+        is ComposableNode.BottomAppBarNode,
+        is ComposableNode.NavigationRailNode,
+        is ComposableNode.BadgedBoxNode,
+        is ComposableNode.TopAppBarNode,
+        is ComposableNode.AlertDialogNode -> true
         else -> false
     }
 

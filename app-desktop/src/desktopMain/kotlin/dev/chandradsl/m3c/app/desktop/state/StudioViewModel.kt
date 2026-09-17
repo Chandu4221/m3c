@@ -234,7 +234,8 @@ class StudioViewModel {
     fun isContainerTag(tag: String): Boolean = when (tag.lowercase()) {
         "column", "row", "box", "surface", "card", "elevatedcard", "outlinedcard",
         "button", "elevatedbutton", "filledtonalbutton", "outlinedbutton",
-        "textbutton", "iconbutton", "fab", "floatingactionbutton", "scaffold", "navigationbar" -> true
+        "textbutton", "iconbutton", "fab", "floatingactionbutton", "scaffold", "navigationbar",
+        "bottomappbar", "navigationrail", "badgedbox", "topappbar", "alertdialog" -> true
         else -> false
     }
 

@@ -70,7 +70,8 @@ object TreeMutator {
             }
             val targetScope = slotDef?.providedScope ?: ContainerScope.None
             val sanitizedSlotNode = slotNode?.let { sanitizeNodeModifiersForScope(it, targetScope) }
-            return root.withSlot(slotName, sanitizedSlotNode)
+            val canonicalSlotId = slotDef?.id ?: slotName
+            return root.withSlot(canonicalSlotId, sanitizedSlotNode)
         }
         return root.mapChildren { setSlot(it, parentId, slotName, slotNode) }
     }
@@ -114,7 +115,10 @@ object TreeMutator {
         is ComposableNode.RowNode -> copy(children = insertAt(children, child, index))
         is ComposableNode.BoxNode -> copy(children = insertAt(children, child, index))
         is ComposableNode.SurfaceNode -> copy(children = insertAt(children, child, index))
-        is ComposableNode.NavigationBarNode -> copy(items = insertAt(items, child, index))
+        is ComposableNode.NavigationBarNode -> when (child) {
+            is ComposableNode.NavigationBarItemNode -> copy(items = insertAt(items, child, index))
+            else -> copy(items = insertAt(items, ComposableNode.NavigationBarItemNode(icon = child, label = ComposableNode.TextNode(text = "Item")), index))
+        }
         is ComposableNode.CardNode -> copy(content = insertAt(content, child, index))
         is ComposableNode.ElevatedCardNode -> copy(content = insertAt(content, child, index))
         is ComposableNode.OutlinedCardNode -> copy(content = insertAt(content, child, index))
@@ -125,18 +129,61 @@ object TreeMutator {
         is ComposableNode.TextButtonNode -> copy(content = insertAt(content, child, index))
         is ComposableNode.IconButtonNode -> copy(content = insertAt(content, child, index))
         is ComposableNode.FloatingActionButtonNode -> copy(content = insertAt(content, child, index))
-        is ComposableNode.ScaffoldNode -> copy(content = child)
-        is ComposableNode.BottomAppBarNode -> copy(actions = insertAt(actions, child, index))
-        is ComposableNode.NavigationRailNode -> copy(items = insertAt(items, child, index))
+        is ComposableNode.ScaffoldNode -> when (child) {
+            is ComposableNode.TopAppBarNode -> copy(topBar = child)
+            is ComposableNode.NavigationBarNode,
+            is ComposableNode.BottomAppBarNode -> copy(bottomBar = child)
+            is ComposableNode.FloatingActionButtonNode -> copy(floatingActionButton = child)
+            else -> {
+                val currentContent = content
+                when {
+                    currentContent == null -> copy(content = child)
+                    currentContent is ComposableNode.ColumnNode ||
+                    currentContent is ComposableNode.RowNode ||
+                    currentContent is ComposableNode.BoxNode ||
+                    currentContent is ComposableNode.SurfaceNode -> {
+                        copy(content = currentContent.withAddedChild(child, index))
+                    }
+                    else -> copy(content = ComposableNode.ColumnNode(children = listOf(currentContent, child)))
+                }
+            }
+        }
+        is ComposableNode.BottomAppBarNode -> when (child) {
+            is ComposableNode.FloatingActionButtonNode -> copy(floatingActionButton = child)
+            else -> copy(actions = insertAt(actions, child, index))
+        }
+        is ComposableNode.NavigationRailNode -> when (child) {
+            is ComposableNode.NavigationRailItemNode -> copy(items = insertAt(items, child, index))
+            else -> if (header == null) copy(header = child) else copy(items = insertAt(items, child, index))
+        }
+        is ComposableNode.BadgedBoxNode -> when (child) {
+            is ComposableNode.BadgeNode -> copy(badge = child)
+            else -> copy(content = child)
+        }
+        is ComposableNode.TopAppBarNode -> when (child) {
+            is ComposableNode.IconButtonNode -> copy(actions = insertAt(actions, child, index))
+            is ComposableNode.TextNode -> copy(title = child)
+            else -> copy(actions = insertAt(actions, child, index))
+        }
+        is ComposableNode.AlertDialogNode -> when (child) {
+            is ComposableNode.ButtonNode,
+            is ComposableNode.TextButtonNode -> if (confirmButton == null) copy(confirmButton = child) else copy(dismissButton = child)
+            is ComposableNode.TextNode -> when {
+                title == null -> copy(title = child)
+                text == null -> copy(text = child)
+                else -> copy(text = child)
+            }
+            else -> if (icon == null) copy(icon = child) else copy(text = child)
+        }
         else -> this
     }
 
     private fun ComposableNode.withSlot(slotName: String, slotNode: ComposableNode?): ComposableNode = when (this) {
-        is ComposableNode.ScaffoldNode -> when (slotName.lowercase()) {
-            "topbar" -> copy(topBar = slotNode)
-            "bottombar" -> copy(bottomBar = slotNode)
+        is ComposableNode.ScaffoldNode -> when (slotName.lowercase().replace(" ", "").replace("_", "")) {
+            "topbar", "topappbar" -> copy(topBar = slotNode)
+            "bottombar", "bottomappbar", "navigationbar" -> copy(bottomBar = slotNode)
             "floatingactionbutton", "fab" -> copy(floatingActionButton = slotNode)
-            "content" -> copy(content = slotNode)
+            "content", "maincontent" -> copy(content = slotNode)
             else -> this
         }
         is ComposableNode.TopAppBarNode -> when (slotName.lowercase()) {

@@ -117,4 +117,84 @@ class SlotArchitectureTest {
         assertEquals(2, withAction.actions[0].modifiers.size)
         assertTrue(withAction.actions[0].modifiers.any { it is ModifierDef.RowScopeModifier.Weight })
     }
+
+    @Test
+    fun testScaffoldBottomBarSlotAcceptsNavigationAndBottomBar() {
+        val scaffoldDef = ComponentRegistry.findByType(ComponentType.Scaffold)
+        assertNotNull(scaffoldDef)
+        val bottomBarSlot = scaffoldDef.slots.find { it.id == StandardSlots.BOTTOM_BAR }
+        assertNotNull(bottomBarSlot)
+        assertTrue(bottomBarSlot.accepts(ComponentType.NavigationBar))
+        assertTrue(bottomBarSlot.accepts(ComponentType.BottomAppBar))
+        assertFalse(bottomBarSlot.accepts(ComponentType.Button))
+    }
+
+    @Test
+    fun testEmptyScaffoldTreeMutatorRouting() {
+        val emptyScaffold = ComposableNode.ScaffoldNode(
+            topBar = null,
+            bottomBar = null,
+            floatingActionButton = null,
+            content = null
+        )
+
+        // 1. Add NavigationBar -> Should route to bottomBar
+        val navBar = ComposableNode.NavigationBarNode()
+        val withNavBar = TreeMutator.insertChild(emptyScaffold, emptyScaffold.id, navBar) as ComposableNode.ScaffoldNode
+        assertNotNull(withNavBar.bottomBar)
+        assertEquals(navBar.id, withNavBar.bottomBar?.id)
+        assertNull(withNavBar.content)
+
+        // 2. Add TopAppBar -> Should route to topBar
+        val topBar = ComposableNode.TopAppBarNode(title = ComposableNode.TextNode(text = "Title"))
+        val withTopBar = TreeMutator.insertChild(emptyScaffold, emptyScaffold.id, topBar) as ComposableNode.ScaffoldNode
+        assertNotNull(withTopBar.topBar)
+        assertEquals(topBar.id, withTopBar.topBar?.id)
+        assertNull(withTopBar.content)
+
+        // 3. Add FAB -> Should route to floatingActionButton
+        val fab = ComposableNode.FloatingActionButtonNode()
+        val withFab = TreeMutator.insertChild(emptyScaffold, emptyScaffold.id, fab) as ComposableNode.ScaffoldNode
+        assertNotNull(withFab.floatingActionButton)
+        assertEquals(fab.id, withFab.floatingActionButton?.id)
+        assertNull(withFab.content)
+
+        // 4. Add regular content (e.g. Column) -> Should route to content
+        val column = ComposableNode.ColumnNode()
+        val withColumn = TreeMutator.insertChild(emptyScaffold, emptyScaffold.id, column) as ComposableNode.ScaffoldNode
+        assertNotNull(withColumn.content)
+        assertEquals(column.id, withColumn.content?.id)
+
+        // 5. Add BottomAppBar -> Should route to bottomBar
+        val bottomAppBar = ComposableNode.BottomAppBarNode()
+        val withBottomAppBar = TreeMutator.insertChild(emptyScaffold, emptyScaffold.id, bottomAppBar) as ComposableNode.ScaffoldNode
+        assertNotNull(withBottomAppBar.bottomBar)
+        assertEquals(bottomAppBar.id, withBottomAppBar.bottomBar?.id)
+    }
+
+    @Test
+    fun testNavigationBarDefaultFactoryHasItems() {
+        val navBarDef = ComponentRegistry.findByType(ComponentType.NavigationBar)
+        assertNotNull(navBarDef)
+        val defaultNode = navBarDef.createDefault() as ComposableNode.NavigationBarNode
+        assertTrue(defaultNode.items.isNotEmpty(), "Default NavigationBar must have items")
+        assertEquals(3, defaultNode.items.size)
+    }
+
+    @Test
+    fun testContainersWithAddedChild() {
+        // BottomAppBar with added child should add to actions
+        val bottomBar = ComposableNode.BottomAppBarNode()
+        val iconBtn = ComposableNode.IconButtonNode()
+        val updatedBottomBar = TreeMutator.insertChild(bottomBar, bottomBar.id, iconBtn) as ComposableNode.BottomAppBarNode
+        assertEquals(1, updatedBottomBar.actions.size)
+        assertEquals(iconBtn.id, updatedBottomBar.actions[0].id)
+
+        // NavigationRail with added child should add to items
+        val navRail = ComposableNode.NavigationRailNode()
+        val railItem = ComposableNode.NavigationRailItemNode(icon = ComposableNode.TextNode(text = "Home"))
+        val updatedRail = TreeMutator.insertChild(navRail, navRail.id, railItem) as ComposableNode.NavigationRailNode
+        assertEquals(1, updatedRail.items.size)
+        assertEquals(railItem.id, updatedRail.items[0].id)
+    }
 }

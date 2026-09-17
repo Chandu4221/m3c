@@ -58,13 +58,13 @@ fun NodeRenderer(
         is ComposableNode.LinearProgressIndicatorNode -> RenderLinearProgressIndicator(node, state, onIntent, modifier)
 
         // 6. Scaffolding & Navigation
-        is ComposableNode.ScaffoldNode -> RenderScaffold(node, state, onIntent, modifier)
-        is ComposableNode.TopAppBarNode -> RenderTopAppBar(node, state, onIntent, modifier)
-        is ComposableNode.NavigationBarNode -> RenderNavigationBar(node, state, onIntent, modifier)
+        is ComposableNode.ScaffoldNode -> RenderScaffold(node, state, onIntent, modifier, isInteractiveMode)
+        is ComposableNode.TopAppBarNode -> RenderTopAppBar(node, state, onIntent, modifier, isInteractiveMode)
+        is ComposableNode.NavigationBarNode -> RenderNavigationBar(node, state, onIntent, modifier, isInteractiveMode)
         is ComposableNode.NavigationBarItemNode -> {
             // Standalone fallback: Wrap in Row so RowScope.RenderNavigationBarItem can render
             Row {
-                RenderNavigationBarItem(node, state, onIntent, modifier)
+                RenderNavigationBarItem(node, state, onIntent, modifier, isInteractiveMode)
             }
         }
         is ComposableNode.BottomAppBarNode -> RenderBottomAppBar(node, state, onIntent, modifier, isInteractiveMode)
