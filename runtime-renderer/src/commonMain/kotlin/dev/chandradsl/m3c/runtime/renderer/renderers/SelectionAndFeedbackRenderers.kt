@@ -5,6 +5,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ProgressIndicatorDefaults
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.RangeSlider
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.runtime.Composable
@@ -188,5 +189,36 @@ fun RenderLinearProgressIndicator(
                 trackColor = trackColor
             )
         }
+    }
+}
+
+@Composable
+fun RenderRangeSlider(
+    node: ComposableNode.RangeSliderNode,
+    state: WorkspaceState,
+    onIntent: (WorkspaceIntent) -> Unit,
+    modifier: Modifier = Modifier,
+    isInteractiveMode: Boolean = false
+) {
+    SelectionDecorator(
+        nodeId = node.id,
+        nodeTag = "RangeSlider",
+        isSelected = state.selectedNodeId == node.id,
+        isInteractiveMode = isInteractiveMode,
+        drillDownOnlyWhenSelected = true,
+        onSelect = { onIntent(WorkspaceIntent.SelectNode(it)) },
+        modifier = modifier
+    ) {
+        RangeSlider(
+            value = node.startValue..node.endValue,
+            onValueChange = { range ->
+                if (isInteractiveMode) {
+                    onIntent(WorkspaceIntent.UpdateNode(node.copy(startValue = range.start, endValue = range.endInclusive)))
+                }
+            },
+            steps = node.steps,
+            enabled = node.enabled,
+            modifier = node.modifiers.toComposeModifier()
+        )
     }
 }

@@ -4,6 +4,7 @@ import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.CodeBlock
 import dev.chandradsl.m3c.core.domain.model.DpVal
 import dev.chandradsl.m3c.core.domain.model.ModifierDef
+import dev.chandradsl.m3c.core.domain.scope.ContainerScope
 
 object ModifierCodeGenerator {
 
@@ -12,12 +13,17 @@ object ModifierCodeGenerator {
     /**
      * Generates a chained Modifier CodeBlock (e.g. `Modifier.fillMaxWidth().padding(16.dp)`)
      * If baseModifierName is provided (e.g. "modifier"), it chains onto that parameter instead.
+     * Scoped modifiers are validated against [parentScope] so illegal scoped extensions are never emitted.
      */
     fun generateModifierChain(
         modifiers: List<ModifierDef>,
-        baseModifierName: String? = null
+        baseModifierName: String? = null,
+        parentScope: ContainerScope = ContainerScope.None
     ): CodeBlock? {
-        if (modifiers.isEmpty() && baseModifierName == null) return null
+        val validModifiers = modifiers.filter { def ->
+            def.requiredScope == ContainerScope.None || def.requiredScope == parentScope
+        }
+        if (validModifiers.isEmpty() && baseModifierName == null) return null
 
         val builder = CodeBlock.builder()
         if (baseModifierName != null) {
@@ -26,7 +32,7 @@ object ModifierCodeGenerator {
             builder.add("%T", ModifierClass)
         }
 
-        modifiers.forEach { def ->
+        validModifiers.forEach { def ->
             builder.add("\n·") // Indented dot chaining
             builder.add(generateSingleModifier(def))
         }

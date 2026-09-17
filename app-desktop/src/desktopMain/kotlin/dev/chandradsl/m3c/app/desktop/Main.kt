@@ -12,22 +12,49 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import dev.chandradsl.m3c.app.desktop.components.*
 import dev.chandradsl.m3c.app.desktop.state.LeftDrawerTab
+import dev.chandradsl.m3c.app.desktop.state.StudioNotification
 import dev.chandradsl.m3c.app.desktop.state.StudioViewModel
+import dev.chandradsl.m3c.app.desktop.theme.StudioColors
+import dev.chandradsl.m3c.app.desktop.theme.StudioSizes
+import dev.chandradsl.m3c.app.desktop.theme.StudioTypography
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
+import org.jetbrains.jewel.intui.standalone.theme.IntUiTheme
 
 fun main() = application {
     val windowState = rememberWindowState(width = 1440.dp, height = 900.dp)
@@ -39,85 +66,389 @@ fun main() = application {
     ) {
         val viewModel = remember { StudioViewModel() }
 
-        MaterialTheme(
-            colorScheme = darkColorScheme(
-                background = Color(0xFF11111B),
-                surface = Color(0xFF181825),
-                primary = Color(0xFFCBA6F7),
-                onBackground = Color(0xFFCDD6F4),
-                onSurface = Color(0xFFCDD6F4)
-            )
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color(0xFF11111B))
-            ) {
-                // 1. Top Studio Toolbar
-                StudioToolbar(viewModel = viewModel)
+        // JetBrains Jewel Int-UI Standalone Theme (IntelliJ New UI Dark / Light)
+        IntUiTheme(isDark = viewModel.isDarkMode) {
+            StudioColors.isDark = viewModel.isDarkMode
 
-                // 2. Central Workstation
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f)
-                ) {
-                    // Left Panel: Tabs for Palette & Hierarchy Tree
+            val colorScheme = if (viewModel.isDarkMode) {
+                darkColorScheme(
+                    background = StudioColors.CanvasBackdrop,
+                    surface = StudioColors.PanelSurface,
+                    surfaceVariant = StudioColors.CardSurface,
+                    primary = StudioColors.Primary,
+                    onPrimary = StudioColors.TextInverse,
+                    onBackground = StudioColors.TextPrimary,
+                    onSurface = StudioColors.TextPrimary,
+                    outline = StudioColors.BorderSubtle,
+                    outlineVariant = StudioColors.BorderActive
+                )
+            } else {
+                lightColorScheme(
+                    background = StudioColors.CanvasBackdrop,
+                    surface = StudioColors.PanelSurface,
+                    surfaceVariant = StudioColors.CardSurface,
+                    primary = StudioColors.Primary,
+                    onPrimary = StudioColors.TextInverse,
+                    onBackground = StudioColors.TextPrimary,
+                    onSurface = StudioColors.TextPrimary,
+                    outline = StudioColors.BorderSubtle,
+                    outlineVariant = StudioColors.BorderActive
+                )
+            }
+
+            // Material 3 bridge matching active Jewel Int-UI theme (WCAG 2.2 AA Compliant)
+            MaterialTheme(colorScheme = colorScheme) {
+                Box(modifier = Modifier.fillMaxSize()) {
                     Column(
                         modifier = Modifier
-                            .width(260.dp)
-                            .fillMaxHeight()
-                            .background(Color(0xFF181825))
-                            .border(width = 1.dp, color = Color(0xFF313244))
+                            .fillMaxSize()
+                            .background(StudioColors.CanvasBackdrop)
                     ) {
-                        // Tab Switcher Header
+                        // 1. Top Studio Toolbar
+                        StudioToolbar(viewModel = viewModel)
+
+                        // 2. Central Workstation
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(40.dp)
-                                .background(Color(0xFF181825))
-                                .border(width = 1.dp, color = Color(0xFF313244))
-                                .padding(4.dp),
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                .weight(1f)
                         ) {
-                            LeftTabButton(
-                                icon = Icons.Default.Widgets,
-                                text = "Palette",
-                                isActive = viewModel.leftDrawerTab == LeftDrawerTab.Palette,
-                                modifier = Modifier.weight(1f),
-                                onClick = { viewModel.leftDrawerTab = LeftDrawerTab.Palette }
+                            // Left Panel: Tabs for Palette & Hierarchy Tree (Resizable)
+                            Column(
+                                modifier = Modifier
+                                    .width(viewModel.leftPanelWidth)
+                                    .fillMaxHeight()
+                                    .background(StudioColors.PanelSurface)
+                                    .border(width = 1.dp, color = StudioColors.BorderSubtle)
+                            ) {
+                                // Tab Switcher Header
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(44.dp)
+                                        .background(StudioColors.PanelSurface)
+                                        .border(width = 1.dp, color = StudioColors.BorderSubtle)
+                                        .padding(4.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    LeftTabButton(
+                                        icon = Icons.Default.Widgets,
+                                        text = "Palette",
+                                        isActive = viewModel.leftDrawerTab == LeftDrawerTab.Palette,
+                                        modifier = Modifier.weight(1f),
+                                        onClick = { viewModel.leftDrawerTab = LeftDrawerTab.Palette }
+                                    )
+                                    LeftTabButton(
+                                        icon = Icons.Default.AccountTree,
+                                        text = "Tree",
+                                        isActive = viewModel.leftDrawerTab == LeftDrawerTab.Hierarchy,
+                                        modifier = Modifier.weight(1f),
+                                        onClick = { viewModel.leftDrawerTab = LeftDrawerTab.Hierarchy }
+                                    )
+                                }
+
+                                // Active Tab Content
+                                if (viewModel.leftDrawerTab == LeftDrawerTab.Palette) {
+                                    ComponentPalette(viewModel = viewModel, modifier = Modifier.weight(1f))
+                                } else {
+                                    HierarchyTree(viewModel = viewModel, modifier = Modifier.weight(1f))
+                                }
+                            }
+
+                            // Left-to-Center Vertical Splitter
+                            DraggableSplitter(
+                                orientation = SplitterOrientation.Vertical,
+                                onDelta = viewModel::resizeLeftPanel,
+                                onDoubleClick = viewModel::resetLeftPanelWidth
                             )
-                            LeftTabButton(
-                                icon = Icons.Default.AccountTree,
-                                text = "Tree",
-                                isActive = viewModel.leftDrawerTab == LeftDrawerTab.Hierarchy,
-                                modifier = Modifier.weight(1f),
-                                onClick = { viewModel.leftDrawerTab = LeftDrawerTab.Hierarchy }
+
+                            // Center: Zoomable/Pannable Device Canvas
+                            CanvasViewport(
+                                viewModel = viewModel,
+                                modifier = Modifier.weight(1f)
+                            )
+
+                            // Center-to-Right Vertical Splitter
+                            DraggableSplitter(
+                                orientation = SplitterOrientation.Vertical,
+                                onDelta = { delta -> viewModel.resizeRightPanel(-delta) },
+                                onDoubleClick = viewModel::resetRightPanelWidth
+                            )
+
+                            // Right: Two-Way Property & Modifier Inspector (Resizable)
+                            PropertyInspector(
+                                viewModel = viewModel
                             )
                         }
 
-                        // Active Tab Content
-                        if (viewModel.leftDrawerTab == LeftDrawerTab.Palette) {
-                            ComponentPalette(viewModel = viewModel, modifier = Modifier.weight(1f))
-                        } else {
-                            HierarchyTree(viewModel = viewModel, modifier = Modifier.weight(1f))
+                        // 3. Bottom: Code Drawer Horizontal Splitter & Code Preview Drawer with smooth slide/expand
+                        AnimatedVisibility(
+                            visible = viewModel.isCodeDrawerOpen,
+                            enter = expandVertically(tween(180)) + fadeIn(tween(180)),
+                            exit = shrinkVertically(tween(150)) + fadeOut(tween(150))
+                        ) {
+                            Column(modifier = Modifier.fillMaxWidth()) {
+                                DraggableSplitter(
+                                    orientation = SplitterOrientation.Horizontal,
+                                    onDelta = { delta -> viewModel.resizeCodeDrawer(-delta) },
+                                    onDoubleClick = viewModel::resetCodeDrawerHeight
+                                )
+                                CodePreviewDrawer(viewModel = viewModel)
+                            }
                         }
                     }
 
-                    // Center: Zoomable/Pannable Device Canvas
-                    CanvasViewport(
-                        viewModel = viewModel,
-                        modifier = Modifier.weight(1f)
-                    )
+                    // 4. Global Floating Drag Avatar Overlay
+                    viewModel.activeDragItem?.let { dragItem ->
+                        val avatarBorder by animateColorAsState(
+                            targetValue = if (viewModel.isCanvasDropHovered) StudioColors.Success else StudioColors.Primary,
+                            animationSpec = tween(150)
+                        )
+                        val avatarIconTint by animateColorAsState(
+                            targetValue = if (viewModel.isCanvasDropHovered) StudioColors.Success else StudioColors.Primary,
+                            animationSpec = tween(150)
+                        )
 
-                    // Right: Two-Way Property & Modifier Inspector
-                    PropertyInspector(
-                        viewModel = viewModel
-                    )
+                        Box(
+                            modifier = Modifier
+                                .offset {
+                                    androidx.compose.ui.unit.IntOffset(
+                                        x = (viewModel.dragPointerOffset.x - 24).toInt(),
+                                        y = (viewModel.dragPointerOffset.y - 24).toInt()
+                                    )
+                                }
+                                .graphicsLayer(scaleX = 1.04f, scaleY = 1.04f, rotationZ = -1.5f)
+                                .shadow(elevation = 16.dp, shape = RoundedCornerShape(8.dp))
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(StudioColors.CardSurface)
+                                .border(
+                                    width = 2.dp,
+                                    color = avatarBorder,
+                                    shape = RoundedCornerShape(8.dp)
+                                )
+                                .padding(horizontal = 14.dp, vertical = 10.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = dragItem.icon,
+                                    contentDescription = null,
+                                    tint = avatarIconTint,
+                                    modifier = Modifier.size(StudioSizes.IconStandard)
+                                )
+                                Text(
+                                    text = dragItem.name,
+                                    style = StudioTypography.UIBody.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = StudioColors.TextPrimary
+                                    )
+                                )
+                            }
+                        }
+                    }
+
+                    // 5. Global Floating Tree Drag Avatar Overlay
+                    viewModel.activeTreeDragNode?.let { treeDrag ->
+                        val treeBorder by animateColorAsState(
+                            targetValue = if (viewModel.treeDropTargetId != null) StudioColors.Success else StudioColors.Primary,
+                            animationSpec = tween(150)
+                        )
+                        val treeIconTint by animateColorAsState(
+                            targetValue = if (viewModel.treeDropTargetId != null) StudioColors.Success else StudioColors.Primary,
+                            animationSpec = tween(150)
+                        )
+
+                        Box(
+                            modifier = Modifier
+                                .offset {
+                                    androidx.compose.ui.unit.IntOffset(
+                                        x = (viewModel.dragPointerOffset.x + 16).toInt(),
+                                        y = (viewModel.dragPointerOffset.y + 16).toInt()
+                                    )
+                                }
+                                .graphicsLayer(scaleX = 1.04f, scaleY = 1.04f, rotationZ = -1.5f)
+                                .shadow(elevation = 16.dp, shape = RoundedCornerShape(8.dp))
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(StudioColors.CardSurface)
+                                .border(
+                                    width = 2.dp,
+                                    color = treeBorder,
+                                    shape = RoundedCornerShape(8.dp)
+                                )
+                                .padding(horizontal = 14.dp, vertical = 8.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.AccountTree,
+                                    contentDescription = null,
+                                    tint = treeIconTint,
+                                    modifier = Modifier.size(StudioSizes.IconStandard)
+                                )
+                                Column {
+                                    Text(
+                                        text = treeDrag.label,
+                                        style = StudioTypography.UIBody.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            color = StudioColors.TextPrimary
+                                        )
+                                    )
+                                    val actionText = when (viewModel.treeDropPosition) {
+                                        dev.chandradsl.m3c.app.desktop.state.TreeDropPosition.INSIDE -> "Drop inside container"
+                                        dev.chandradsl.m3c.app.desktop.state.TreeDropPosition.ABOVE -> "Insert before"
+                                        dev.chandradsl.m3c.app.desktop.state.TreeDropPosition.BELOW -> "Insert after"
+                                        null -> "Drag to reparent or reorder"
+                                    }
+                                    val actionColor by animateColorAsState(
+                                        targetValue = if (viewModel.treeDropTargetId != null) StudioColors.Success else StudioColors.TextSecondary,
+                                        animationSpec = tween(150)
+                                    )
+                                    Text(
+                                        text = actionText,
+                                        style = StudioTypography.Caption.copy(
+                                            color = actionColor
+                                        )
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // 6. Global Floating Modifier Drag Avatar Overlay
+                    viewModel.activeModifierDrag?.let { dragMod ->
+                        val modBorder by animateColorAsState(
+                            targetValue = if (viewModel.modifierDropTargetIndex != null) StudioColors.Success else StudioColors.Primary,
+                            animationSpec = tween(150)
+                        )
+                        val badgeBg by animateColorAsState(
+                            targetValue = if (viewModel.modifierDropTargetIndex != null) StudioColors.Success else StudioColors.Primary,
+                            animationSpec = tween(150)
+                        )
+
+                        Box(
+                            modifier = Modifier
+                                .offset {
+                                    androidx.compose.ui.unit.IntOffset(
+                                        x = (viewModel.dragPointerOffset.x + 12).toInt(),
+                                        y = (viewModel.dragPointerOffset.y + 12).toInt()
+                                    )
+                                }
+                                .graphicsLayer(scaleX = 1.03f, scaleY = 1.03f, rotationZ = 1f)
+                                .shadow(elevation = 16.dp, shape = RoundedCornerShape(8.dp))
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(StudioColors.CardSurface)
+                                .border(
+                                    width = 2.dp,
+                                    color = modBorder,
+                                    shape = RoundedCornerShape(8.dp)
+                                )
+                                .padding(horizontal = 14.dp, vertical = 8.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(4.dp))
+                                        .background(badgeBg)
+                                        .padding(horizontal = 6.dp, vertical = 2.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = "${(viewModel.modifierDropTargetIndex ?: dragMod.fromIndex) + 1}",
+                                        style = StudioTypography.Badge.copy(color = StudioColors.TextInverse)
+                                    )
+                                }
+                                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                    Text(
+                                        text = dragMod.name,
+                                        style = StudioTypography.UIBody.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            color = StudioColors.TextPrimary
+                                        )
+                                    )
+                                    if (dragMod.summary.isNotBlank()) {
+                                        Text(
+                                            text = dragMod.summary,
+                                            style = StudioTypography.Caption.copy(
+                                                color = StudioColors.TextSecondary
+                                            )
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // 7. Reactive Toast / Notification Banner Overlay
+                    var currentNotification by remember { mutableStateOf<StudioNotification?>(null) }
+                    LaunchedEffect(Unit) {
+                        viewModel.notificationFlow.collectLatest { notification ->
+                            currentNotification = notification
+                            delay(2500)
+                            if (currentNotification == notification) {
+                                currentNotification = null
+                            }
+                        }
+                    }
+
+                    AnimatedVisibility(
+                        visible = currentNotification != null,
+                        enter = fadeIn(tween(200)) + slideInVertically(tween(200)) { it / 2 },
+                        exit = fadeOut(tween(200)) + slideOutVertically(tween(200)) { it / 2 },
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(end = 24.dp, bottom = 24.dp)
+                    ) {
+                        currentNotification?.let { notif ->
+                            val borderColor = when (notif) {
+                                is StudioNotification.Success -> StudioColors.Success
+                                is StudioNotification.Warning -> StudioColors.Warning
+                                is StudioNotification.Error -> StudioColors.Error
+                                is StudioNotification.Info -> StudioColors.Primary
+                            }
+                            val iconVector = when (notif) {
+                                is StudioNotification.Success -> Icons.Default.CheckCircle
+                                is StudioNotification.Warning -> Icons.Default.Warning
+                                is StudioNotification.Error -> Icons.Default.Error
+                                is StudioNotification.Info -> Icons.Default.Info
+                            }
+
+                            Box(
+                                modifier = Modifier
+                                    .shadow(elevation = 12.dp, shape = RoundedCornerShape(8.dp))
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(StudioColors.PanelSurface)
+                                    .border(width = 1.dp, color = borderColor, shape = RoundedCornerShape(8.dp))
+                                    .padding(horizontal = 16.dp, vertical = 10.dp)
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = iconVector,
+                                        contentDescription = null,
+                                        tint = borderColor,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Text(
+                                        text = notif.message,
+                                        style = StudioTypography.Caption.copy(
+                                            color = StudioColors.TextPrimary,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
-
-                // 3. Bottom: Real-Time Generated Kotlin Source Code Drawer
-                CodePreviewDrawer(viewModel = viewModel)
             }
         }
     }
@@ -131,8 +462,8 @@ private fun LeftTabButton(
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
-    val bgColor = if (isActive) Color(0xFF313244) else Color.Transparent
-    val tintColor = if (isActive) Color(0xFFCBA6F7) else Color(0xFF6C7086)
+    val bgColor = if (isActive) StudioColors.ActiveSurface else Color.Transparent
+    val tintColor = if (isActive) StudioColors.Primary else StudioColors.TextSecondary
 
     Row(
         modifier = modifier
@@ -140,7 +471,7 @@ private fun LeftTabButton(
             .clip(RoundedCornerShape(4.dp))
             .background(bgColor)
             .clickable(onClick = onClick)
-            .padding(horizontal = 8.dp),
+            .padding(horizontal = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center
     ) {
@@ -148,13 +479,17 @@ private fun LeftTabButton(
             imageVector = icon,
             contentDescription = text,
             tint = tintColor,
-            modifier = Modifier.width(14.dp)
+            modifier = Modifier.size(StudioSizes.IconMedium)
         )
         Text(
             text = text,
-            color = tintColor,
-            fontSize = 11.sp,
-            fontWeight = if (isActive) FontWeight.SemiBold else FontWeight.Normal,
+            style = StudioTypography.UIBody.copy(
+                color = tintColor,
+                fontWeight = if (isActive) FontWeight.SemiBold else FontWeight.Normal
+            ),
+            maxLines = 1,
+            softWrap = false,
+            overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(start = 6.dp)
         )
     }
