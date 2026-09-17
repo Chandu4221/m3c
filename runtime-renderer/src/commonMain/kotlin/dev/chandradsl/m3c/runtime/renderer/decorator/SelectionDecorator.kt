@@ -1,5 +1,17 @@
 package dev.chandradsl.m3c.runtime.renderer.decorator
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -11,6 +23,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -52,16 +65,29 @@ fun SelectionDecorator(
     val hoveredCanvasParentId = LocalHoveredCanvasParentId.current
     val isHoveredDropTarget = hoveredCanvasParentId == nodeId
 
-    val borderColor = when {
+    val targetBorderColor = when {
         isHoveredDropTarget -> Color(0xFF499C54) // Bright emerald / success green
         isSelected -> MaterialTheme.colorScheme.primary
         else -> MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
     }
-    val borderWidth = when {
+    val targetBorderWidth = when {
         isHoveredDropTarget -> 2.5.dp
         isSelected -> 2.dp
         else -> 1.dp
     }
+
+    val animatedBorderColor by animateColorAsState(
+        targetValue = targetBorderColor,
+        animationSpec = tween(durationMillis = 150, easing = FastOutSlowInEasing)
+    )
+    val animatedBorderWidth by animateDpAsState(
+        targetValue = targetBorderWidth,
+        animationSpec = tween(durationMillis = 150, easing = FastOutSlowInEasing)
+    )
+    val animatedDropTintAlpha by animateFloatAsState(
+        targetValue = if (isHoveredDropTarget) 0.08f else 0f,
+        animationSpec = tween(durationMillis = 150, easing = FastOutSlowInEasing)
+    )
 
     val shouldIntercept = drillDownOnlyWhenSelected && !isSelected && !isChildSelected
 
@@ -70,9 +96,10 @@ fun SelectionDecorator(
             .onGloballyPositioned { coords ->
                 reporter?.invoke(nodeId, nodeTag, coords.boundsInWindow())
             }
+            .background(Color(0xFF499C54).copy(alpha = animatedDropTintAlpha))
             .border(
-                width = borderWidth,
-                color = borderColor,
+                width = animatedBorderWidth,
+                color = animatedBorderColor,
                 shape = RoundedCornerShape(2.dp)
             )
             .clickable(
@@ -100,11 +127,15 @@ fun SelectionDecorator(
             )
         }
 
-        // Selection Tag pill in the top-start corner when selected
-        if (isSelected) {
+        // Selection Tag pill in the top-start corner when selected (smooth animated entrance/exit)
+        AnimatedVisibility(
+            visible = isSelected,
+            enter = fadeIn(tween(140)) + scaleIn(initialScale = 0.85f),
+            exit = fadeOut(tween(100)) + scaleOut(targetScale = 0.85f),
+            modifier = Modifier.align(Alignment.TopStart)
+        ) {
             Box(
                 modifier = Modifier
-                    .align(Alignment.TopStart)
                     .clip(RoundedCornerShape(bottomEnd = 4.dp))
                     .background(MaterialTheme.colorScheme.primary)
                     .padding(horizontal = 4.dp, vertical = 2.dp)
@@ -119,10 +150,14 @@ fun SelectionDecorator(
         }
 
         // Drop Target Indicator Badge in top-end corner when hovered during drag & drop
-        if (isHoveredDropTarget) {
+        AnimatedVisibility(
+            visible = isHoveredDropTarget,
+            enter = fadeIn(tween(140)) + slideInVertically(tween(140)) { -it / 2 } + scaleIn(initialScale = 0.85f),
+            exit = fadeOut(tween(100)) + slideOutVertically(tween(100)) { -it / 2 } + scaleOut(targetScale = 0.85f),
+            modifier = Modifier.align(Alignment.TopEnd)
+        ) {
             Box(
                 modifier = Modifier
-                    .align(Alignment.TopEnd)
                     .clip(RoundedCornerShape(bottomStart = 6.dp))
                     .background(Color(0xFF499C54))
                     .padding(horizontal = 6.dp, vertical = 2.dp)

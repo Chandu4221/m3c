@@ -21,6 +21,10 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -36,6 +40,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.changedToUp
 import androidx.compose.ui.input.pointer.pointerHoverIcon
@@ -240,16 +245,24 @@ private fun ModifierSortableCard(
     onMoveDown: () -> Unit,
     onDelete: () -> Unit
 ) {
-    val cardBorderColor = when {
+    val targetBorderColor = when {
         isDropTarget -> StudioColors.Success
         isSourceDragging -> StudioColors.BorderSubtle.copy(alpha = 0.5f)
         else -> StudioColors.BorderSubtle
     }
-    val cardBackground = when {
+    val cardBorderColor by animateColorAsState(targetBorderColor, tween(150))
+
+    val targetBackground = when {
         isDropTarget -> StudioColors.Success.copy(alpha = 0.12f)
         isSourceDragging -> StudioColors.ActiveSurface.copy(alpha = 0.35f)
         else -> StudioColors.CardSurface
     }
+    val cardBackground by animateColorAsState(targetBackground, tween(150))
+    val cardBorderWidth by animateDpAsState(if (isDropTarget) 2.dp else 1.dp, tween(150))
+    val cardAlpha by animateFloatAsState(if (isSourceDragging) 0.35f else 1.0f, tween(150))
+
+    val badgeBg by animateColorAsState(if (isDropTarget) StudioColors.Success else StudioColors.ActiveSurface, tween(150))
+    val badgeTextColor by animateColorAsState(if (isDropTarget) StudioColors.TextInverse else StudioColors.TextPrimary, tween(150))
 
     var cardPositionInWindow by remember { mutableStateOf(Offset.Zero) }
 
@@ -257,6 +270,7 @@ private fun ModifierSortableCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .graphicsLayer(alpha = cardAlpha)
                 .onGloballyPositioned { coordinates ->
                     onBoundsChanged(coordinates.boundsInWindow())
                     cardPositionInWindow = coordinates.positionInWindow()
@@ -265,7 +279,7 @@ private fun ModifierSortableCard(
                 .clip(RoundedCornerShape(6.dp))
                 .background(cardBackground)
                 .border(
-                    width = if (isDropTarget) 2.dp else 1.dp,
+                    width = cardBorderWidth,
                     color = cardBorderColor,
                     shape = RoundedCornerShape(6.dp)
                 )
@@ -326,7 +340,7 @@ private fun ModifierSortableCard(
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(4.dp))
-                        .background(if (isDropTarget) StudioColors.Success else StudioColors.ActiveSurface)
+                        .background(badgeBg)
                         .border(width = 1.dp, color = StudioColors.BorderSubtle, shape = RoundedCornerShape(4.dp))
                         .padding(horizontal = 6.dp, vertical = 2.dp),
                     contentAlignment = Alignment.Center
@@ -334,7 +348,7 @@ private fun ModifierSortableCard(
                     Text(
                         text = "${index + 1}",
                         style = StudioTypography.Badge.copy(
-                            color = if (isDropTarget) StudioColors.TextInverse else StudioColors.TextPrimary
+                            color = badgeTextColor
                         )
                     )
                 }

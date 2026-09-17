@@ -13,13 +13,17 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -169,6 +173,15 @@ fun main() = application {
 
                     // 4. Global Floating Drag Avatar Overlay
                     viewModel.activeDragItem?.let { dragItem ->
+                        val avatarBorder by animateColorAsState(
+                            targetValue = if (viewModel.isCanvasDropHovered) StudioColors.Success else StudioColors.Primary,
+                            animationSpec = tween(150)
+                        )
+                        val avatarIconTint by animateColorAsState(
+                            targetValue = if (viewModel.isCanvasDropHovered) StudioColors.Success else StudioColors.Primary,
+                            animationSpec = tween(150)
+                        )
+
                         Box(
                             modifier = Modifier
                                 .offset {
@@ -177,12 +190,13 @@ fun main() = application {
                                         y = (viewModel.dragPointerOffset.y - 24).toInt()
                                     )
                                 }
+                                .graphicsLayer(scaleX = 1.04f, scaleY = 1.04f, rotationZ = -1.5f)
                                 .shadow(elevation = 16.dp, shape = RoundedCornerShape(8.dp))
                                 .clip(RoundedCornerShape(8.dp))
                                 .background(StudioColors.CardSurface)
                                 .border(
                                     width = 2.dp,
-                                    color = if (viewModel.isCanvasDropHovered) StudioColors.Success else StudioColors.Primary,
+                                    color = avatarBorder,
                                     shape = RoundedCornerShape(8.dp)
                                 )
                                 .padding(horizontal = 14.dp, vertical = 10.dp)
@@ -194,7 +208,7 @@ fun main() = application {
                                 Icon(
                                     imageVector = dragItem.icon,
                                     contentDescription = null,
-                                    tint = if (viewModel.isCanvasDropHovered) StudioColors.Success else StudioColors.Primary,
+                                    tint = avatarIconTint,
                                     modifier = Modifier.size(StudioSizes.IconStandard)
                                 )
                                 Text(
@@ -210,6 +224,15 @@ fun main() = application {
 
                     // 5. Global Floating Tree Drag Avatar Overlay
                     viewModel.activeTreeDragNode?.let { treeDrag ->
+                        val treeBorder by animateColorAsState(
+                            targetValue = if (viewModel.treeDropTargetId != null) StudioColors.Success else StudioColors.Primary,
+                            animationSpec = tween(150)
+                        )
+                        val treeIconTint by animateColorAsState(
+                            targetValue = if (viewModel.treeDropTargetId != null) StudioColors.Success else StudioColors.Primary,
+                            animationSpec = tween(150)
+                        )
+
                         Box(
                             modifier = Modifier
                                 .offset {
@@ -218,12 +241,13 @@ fun main() = application {
                                         y = (viewModel.dragPointerOffset.y + 16).toInt()
                                     )
                                 }
+                                .graphicsLayer(scaleX = 1.04f, scaleY = 1.04f, rotationZ = -1.5f)
                                 .shadow(elevation = 16.dp, shape = RoundedCornerShape(8.dp))
                                 .clip(RoundedCornerShape(8.dp))
                                 .background(StudioColors.CardSurface)
                                 .border(
                                     width = 2.dp,
-                                    color = if (viewModel.treeDropTargetId != null) StudioColors.Success else StudioColors.Primary,
+                                    color = treeBorder,
                                     shape = RoundedCornerShape(8.dp)
                                 )
                                 .padding(horizontal = 14.dp, vertical = 8.dp)
@@ -235,7 +259,7 @@ fun main() = application {
                                 Icon(
                                     imageVector = Icons.Default.AccountTree,
                                     contentDescription = null,
-                                    tint = if (viewModel.treeDropTargetId != null) StudioColors.Success else StudioColors.Primary,
+                                    tint = treeIconTint,
                                     modifier = Modifier.size(StudioSizes.IconStandard)
                                 )
                                 Column {
@@ -252,10 +276,14 @@ fun main() = application {
                                         dev.chandradsl.m3c.app.desktop.state.TreeDropPosition.BELOW -> "Insert after"
                                         null -> "Drag to reparent or reorder"
                                     }
+                                    val actionColor by animateColorAsState(
+                                        targetValue = if (viewModel.treeDropTargetId != null) StudioColors.Success else StudioColors.TextSecondary,
+                                        animationSpec = tween(150)
+                                    )
                                     Text(
                                         text = actionText,
                                         style = StudioTypography.Caption.copy(
-                                            color = if (viewModel.treeDropTargetId != null) StudioColors.Success else StudioColors.TextSecondary
+                                            color = actionColor
                                         )
                                     )
                                 }
@@ -265,6 +293,15 @@ fun main() = application {
 
                     // 6. Global Floating Modifier Drag Avatar Overlay
                     viewModel.activeModifierDrag?.let { dragMod ->
+                        val modBorder by animateColorAsState(
+                            targetValue = if (viewModel.modifierDropTargetIndex != null) StudioColors.Success else StudioColors.Primary,
+                            animationSpec = tween(150)
+                        )
+                        val badgeBg by animateColorAsState(
+                            targetValue = if (viewModel.modifierDropTargetIndex != null) StudioColors.Success else StudioColors.Primary,
+                            animationSpec = tween(150)
+                        )
+
                         Box(
                             modifier = Modifier
                                 .offset {
@@ -273,12 +310,13 @@ fun main() = application {
                                         y = (viewModel.dragPointerOffset.y + 12).toInt()
                                     )
                                 }
+                                .graphicsLayer(scaleX = 1.03f, scaleY = 1.03f, rotationZ = 1f)
                                 .shadow(elevation = 16.dp, shape = RoundedCornerShape(8.dp))
                                 .clip(RoundedCornerShape(8.dp))
                                 .background(StudioColors.CardSurface)
                                 .border(
                                     width = 2.dp,
-                                    color = StudioColors.Primary,
+                                    color = modBorder,
                                     shape = RoundedCornerShape(8.dp)
                                 )
                                 .padding(horizontal = 14.dp, vertical = 8.dp)
@@ -290,7 +328,7 @@ fun main() = application {
                                 Box(
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(4.dp))
-                                        .background(StudioColors.Primary)
+                                        .background(badgeBg)
                                         .padding(horizontal = 6.dp, vertical = 2.dp),
                                     contentAlignment = Alignment.Center
                                 ) {

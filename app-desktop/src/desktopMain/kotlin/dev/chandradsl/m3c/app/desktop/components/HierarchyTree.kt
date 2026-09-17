@@ -49,6 +49,15 @@ import androidx.compose.material.icons.filled.ViewColumn
 import androidx.compose.material.icons.filled.ViewStream
 import androidx.compose.material.icons.filled.WebAsset
 import androidx.compose.material3.Icon
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -61,6 +70,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.changedToUp
 import androidx.compose.ui.input.pointer.pointerInput
@@ -358,8 +368,12 @@ fun HierarchyTree(
                             itemPositionInWindow = coords.positionInWindow()
                         }
                 ) {
-                    // Insertion indicator ABOVE node
-                    if (isDropTarget && dropPos == TreeDropPosition.ABOVE) {
+                    // Insertion indicator ABOVE node with smooth expand/shrink and fade
+                    AnimatedVisibility(
+                        visible = isDropTarget && dropPos == TreeDropPosition.ABOVE,
+                        enter = expandVertically(tween(120)) + fadeIn(tween(120)),
+                        exit = shrinkVertically(tween(100)) + fadeOut(tween(100))
+                    ) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -387,20 +401,26 @@ fun HierarchyTree(
                     }
 
                     // Tree Node Row Content
+                    val targetBg = when {
+                        isInsideTarget -> StudioColors.Success.copy(alpha = 0.15f)
+                        isBeingDragged -> StudioColors.ActiveSurface.copy(alpha = 0.35f)
+                        else -> Color.Transparent
+                    }
+                    val rowBackground by animateColorAsState(targetBg, tween(150))
+                    val rowBorderColor by animateColorAsState(if (isInsideTarget) StudioColors.Success else Color.Transparent, tween(150))
+                    val rowBorderWidth by animateDpAsState(if (isInsideTarget) 1.5.dp else 0.dp, tween(150))
+                    val rowAlpha by animateFloatAsState(if (isBeingDragged) 0.35f else 1.0f, tween(150))
+                    val nodeIconTint by animateColorAsState(if (isInsideTarget) StudioColors.Success else StudioColors.Primary, tween(150))
+
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .graphicsLayer(alpha = rowAlpha)
                             .clip(RoundedCornerShape(4.dp))
-                            .background(
-                                when {
-                                    isInsideTarget -> StudioColors.Success.copy(alpha = 0.15f)
-                                    isBeingDragged -> StudioColors.ActiveSurface.copy(alpha = 0.35f)
-                                    else -> Color.Transparent
-                                }
-                            )
+                            .background(rowBackground)
                             .border(
-                                width = if (isInsideTarget) 1.5.dp else 0.dp,
-                                color = if (isInsideTarget) StudioColors.Success else Color.Transparent,
+                                width = rowBorderWidth,
+                                color = rowBorderColor,
                                 shape = RoundedCornerShape(4.dp)
                             )
                             .then(
@@ -456,7 +476,7 @@ fun HierarchyTree(
                         Icon(
                             imageVector = getNodeIcon(node),
                             contentDescription = null,
-                            tint = if (isInsideTarget) StudioColors.Success else StudioColors.Primary,
+                            tint = nodeIconTint,
                             modifier = Modifier.size(StudioSizes.IconSmall)
                         )
 
@@ -494,8 +514,12 @@ fun HierarchyTree(
                         }
                     }
 
-                    // Insertion indicator BELOW node
-                    if (isDropTarget && dropPos == TreeDropPosition.BELOW) {
+                    // Insertion indicator BELOW node with smooth expand/shrink and fade
+                    AnimatedVisibility(
+                        visible = isDropTarget && dropPos == TreeDropPosition.BELOW,
+                        enter = expandVertically(tween(120)) + fadeIn(tween(120)),
+                        exit = shrinkVertically(tween(100)) + fadeOut(tween(100))
+                    ) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()

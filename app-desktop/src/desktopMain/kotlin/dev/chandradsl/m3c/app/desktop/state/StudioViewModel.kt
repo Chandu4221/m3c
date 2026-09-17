@@ -399,9 +399,12 @@ class StudioViewModel {
         }
 
     fun dispatch(intent: WorkspaceIntent) {
+        val oldRoot = store.state.rootNode
         store.dispatch(intent)
         workspaceState = store.state
-        generatedCode = generateCode()
+        if (store.state.rootNode != oldRoot) {
+            generatedCode = generateCode()
+        }
     }
 
     fun insertComponent(newNode: ComposableNode) {

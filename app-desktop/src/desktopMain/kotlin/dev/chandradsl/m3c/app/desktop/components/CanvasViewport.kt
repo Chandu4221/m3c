@@ -30,6 +30,14 @@ import androidx.compose.material.icons.filled.TabletMac
 import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material.icons.filled.ZoomIn
 import androidx.compose.material.icons.filled.ZoomOut
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -38,6 +46,7 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import dev.chandradsl.m3c.runtime.renderer.decorator.LocalCanvasContainerBoundsReporter
 import dev.chandradsl.m3c.runtime.renderer.decorator.LocalHoveredCanvasParentId
@@ -229,16 +238,37 @@ fun CanvasViewport(
                         transformOrigin = TransformOrigin(0.5f, 0f)
                     )
             ) {
-                // Drop Indicator Overlay Banner
-                if (isDraggingComponent) {
+                // Drop Indicator Overlay Banner with smooth enter/exit and color transitions
+                AnimatedVisibility(
+                    visible = isDraggingComponent,
+                    enter = fadeIn(tween(150)) + slideInVertically(tween(150)) { -it / 2 },
+                    exit = fadeOut(tween(100)) + slideOutVertically(tween(100)) { -it / 2 }
+                ) {
+                    val bannerBg by animateColorAsState(
+                        targetValue = if (isDropHovered) StudioColors.Success.copy(alpha = 0.15f) else StudioColors.PanelSurface,
+                        animationSpec = tween(150)
+                    )
+                    val bannerBorder by animateColorAsState(
+                        targetValue = if (isDropHovered) StudioColors.Success else StudioColors.Primary,
+                        animationSpec = tween(150)
+                    )
+                    val bannerIconTint by animateColorAsState(
+                        targetValue = if (isDropHovered) StudioColors.Success else StudioColors.Primary,
+                        animationSpec = tween(150)
+                    )
+                    val bannerTextColor by animateColorAsState(
+                        targetValue = if (isDropHovered) StudioColors.Success else StudioColors.TextPrimary,
+                        animationSpec = tween(150)
+                    )
+
                     Box(
                         modifier = Modifier
                             .padding(bottom = 14.dp)
                             .clip(RoundedCornerShape(8.dp))
-                            .background(if (isDropHovered) StudioColors.Success.copy(alpha = 0.15f) else StudioColors.PanelSurface)
+                            .background(bannerBg)
                             .border(
                                 width = 1.5.dp,
-                                color = if (isDropHovered) StudioColors.Success else StudioColors.Primary,
+                                color = bannerBorder,
                                 shape = RoundedCornerShape(8.dp)
                             )
                             .padding(horizontal = 16.dp, vertical = 8.dp)
@@ -250,7 +280,7 @@ fun CanvasViewport(
                             Icon(
                                 imageVector = if (isDropHovered) Icons.Default.AddCircle else Icons.Default.TouchApp,
                                 contentDescription = null,
-                                tint = if (isDropHovered) StudioColors.Success else StudioColors.Primary,
+                                tint = bannerIconTint,
                                 modifier = Modifier.size(StudioSizes.IconMedium)
                             )
                             val targetName = viewModel.hoveredCanvasParentName
@@ -262,7 +292,7 @@ fun CanvasViewport(
                             Text(
                                 text = bannerText,
                                 style = StudioTypography.UIBody.copy(
-                                    color = if (isDropHovered) StudioColors.Success else StudioColors.TextPrimary,
+                                    color = bannerTextColor,
                                     fontWeight = FontWeight.SemiBold
                                 )
                             )
@@ -277,13 +307,15 @@ fun CanvasViewport(
                     modifier = Modifier.padding(bottom = 10.dp)
                 )
 
-                val frameBorderColor = when {
+                val targetBorderColor = when {
                     viewModel.isInteractiveMode -> StudioColors.Success.copy(alpha = 0.5f)
                     isDraggingComponent && isDropHovered -> StudioColors.Success
                     isDraggingComponent -> StudioColors.Primary.copy(alpha = 0.6f)
                     else -> StudioColors.BorderSubtle
                 }
-                val frameBorderWidth = if (isDraggingComponent && isDropHovered) 3.dp else 2.dp
+                val frameBorderColor by animateColorAsState(targetBorderColor, tween(180))
+                val targetBorderWidth = if (isDraggingComponent && isDropHovered) 3.dp else 2.dp
+                val frameBorderWidth by animateDpAsState(targetBorderWidth, tween(180))
 
                 // Simulated Device Frame
                 Box(
