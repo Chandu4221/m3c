@@ -176,3 +176,111 @@ fun RowScope.RenderNavigationBarItem(
         )
     }
 }
+
+@Composable
+fun RenderBottomAppBar(
+    node: ComposableNode.BottomAppBarNode,
+    state: WorkspaceState,
+    onIntent: (WorkspaceIntent) -> Unit,
+    modifier: Modifier = Modifier,
+    isInteractiveMode: Boolean = false
+) {
+    SelectionDecorator(
+        nodeId = node.id,
+        nodeTag = "BottomAppBar",
+        isSelected = state.selectedNodeId == node.id,
+        isInteractiveMode = isInteractiveMode,
+        drillDownOnlyWhenSelected = true,
+        onSelect = { onIntent(WorkspaceIntent.SelectNode(it)) },
+        modifier = modifier
+    ) {
+        BottomAppBar(
+            actions = {
+                node.actions.forEach { actionNode ->
+                    NodeRenderer(node = actionNode, state = state, onIntent = onIntent, isInteractiveMode = isInteractiveMode)
+                }
+            },
+            floatingActionButton = node.floatingActionButton?.let { fabNode ->
+                { NodeRenderer(node = fabNode, state = state, onIntent = onIntent, isInteractiveMode = isInteractiveMode) }
+            },
+            containerColor = node.containerColor?.toComposeColor() ?: BottomAppBarDefaults.containerColor,
+            contentColor = node.contentColor?.toComposeColor() ?: contentColorFor(BottomAppBarDefaults.containerColor),
+            modifier = node.modifiers.toComposeModifier()
+        )
+    }
+}
+
+@Composable
+fun RenderNavigationRail(
+    node: ComposableNode.NavigationRailNode,
+    state: WorkspaceState,
+    onIntent: (WorkspaceIntent) -> Unit,
+    modifier: Modifier = Modifier,
+    isInteractiveMode: Boolean = false
+) {
+    SelectionDecorator(
+        nodeId = node.id,
+        nodeTag = "NavigationRail",
+        isSelected = state.selectedNodeId == node.id,
+        isInteractiveMode = isInteractiveMode,
+        drillDownOnlyWhenSelected = true,
+        onSelect = { onIntent(WorkspaceIntent.SelectNode(it)) },
+        modifier = modifier
+    ) {
+        NavigationRail(
+            modifier = node.modifiers.toComposeModifier(),
+            containerColor = node.containerColor?.toComposeColor() ?: NavigationRailDefaults.ContainerColor,
+            contentColor = node.contentColor?.toComposeColor() ?: contentColorFor(NavigationRailDefaults.ContainerColor),
+            header = node.header?.let { headerNode ->
+                { NodeRenderer(node = headerNode, state = state, onIntent = onIntent, isInteractiveMode = isInteractiveMode) }
+            }
+        ) {
+            node.items.forEach { itemNode ->
+                if (itemNode is ComposableNode.NavigationRailItemNode) {
+                    RenderNavigationRailItem(node = itemNode, state = state, onIntent = onIntent, isInteractiveMode = isInteractiveMode)
+                } else {
+                    NodeRenderer(node = itemNode, state = state, onIntent = onIntent, isInteractiveMode = isInteractiveMode)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun RenderNavigationRailItem(
+    node: ComposableNode.NavigationRailItemNode,
+    state: WorkspaceState,
+    onIntent: (WorkspaceIntent) -> Unit,
+    modifier: Modifier = Modifier,
+    isInteractiveMode: Boolean = false
+) {
+    SelectionDecorator(
+        nodeId = node.id,
+        nodeTag = "RailItem",
+        isSelected = state.selectedNodeId == node.id,
+        isInteractiveMode = isInteractiveMode,
+        drillDownOnlyWhenSelected = true,
+        onSelect = { onIntent(WorkspaceIntent.SelectNode(it)) },
+        modifier = modifier
+    ) {
+        NavigationRailItem(
+            selected = node.selected,
+            onClick = {
+                if (isInteractiveMode) {
+                    onIntent(WorkspaceIntent.UpdateNode(node.copy(selected = !node.selected)))
+                } else {
+                    onIntent(WorkspaceIntent.SelectNode(node.id))
+                }
+            },
+            icon = {
+                NodeRenderer(node = node.icon, state = state, onIntent = onIntent, isInteractiveMode = isInteractiveMode)
+            },
+            label = node.label?.let { labelNode ->
+                { NodeRenderer(node = labelNode, state = state, onIntent = onIntent, isInteractiveMode = isInteractiveMode) }
+            },
+            alwaysShowLabel = node.alwaysShowLabel,
+            enabled = node.enabled,
+            modifier = node.modifiers.toComposeModifier()
+        )
+    }
+}

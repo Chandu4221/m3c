@@ -93,4 +93,50 @@ class ComposeCodeGeneratorTest {
         assertTrue(code.contains(".fillMaxSize()"))
         assertTrue(code.contains(".padding(16.0.dp)"))
     }
+
+    @Test
+    fun testGeneratePhase6Components() {
+        val root = ComposableNode.ColumnNode(
+            children = listOf(
+                ComposableNode.AssistChipNode(label = "Action"),
+                ComposableNode.FilterChipNode(label = "Filter", selected = true),
+                ComposableNode.InputChipNode(label = "Tag", selected = false),
+                ComposableNode.SuggestionChipNode(label = "Suggestion"),
+                ComposableNode.BadgedBoxNode(
+                    badge = ComposableNode.BadgeNode(text = "5"),
+                    content = ComposableNode.TextNode(text = "Inbox")
+                ),
+                ComposableNode.BottomAppBarNode(
+                    actions = listOf(ComposableNode.IconButtonNode())
+                ),
+                ComposableNode.NavigationRailNode(
+                    items = listOf(
+                        ComposableNode.NavigationRailItemNode(
+                            selected = true,
+                            icon = ComposableNode.TextNode(text = "Home")
+                        )
+                    )
+                ),
+                ComposableNode.RangeSliderNode(startValue = 0.25f, endValue = 0.75f),
+                ComposableNode.AlertDialogNode(
+                    title = ComposableNode.TextNode(text = "Alert"),
+                    text = ComposableNode.TextNode(text = "Message"),
+                    confirmButton = ComposableNode.TextButtonNode(content = listOf(ComposableNode.TextNode(text = "OK")))
+                )
+            )
+        )
+
+        val code = ComposeCodeGenerator.generateCodeString(rootNode = root)
+        assertTrue(code.contains("AssistChip("))
+        assertTrue(code.contains("FilterChip("))
+        assertTrue(code.contains("InputChip("))
+        assertTrue(code.contains("SuggestionChip("))
+        assertTrue(code.contains("BadgedBox("))
+        assertTrue(code.contains("Badge("))
+        assertTrue(code.contains("BottomAppBar("))
+        assertTrue(code.contains("NavigationRail("))
+        assertTrue(code.contains("NavigationRailItem("))
+        assertTrue(code.contains("RangeSlider("))
+        assertTrue(code.contains("AlertDialog("))
+    }
 }

@@ -452,6 +452,285 @@ object ComponentRegistry {
                 )
             }
         ))
+
+        register(StandardComponentDefinition(
+            type = ComponentType.BottomAppBar,
+            displayName = "BottomAppBar",
+            description = "Bottom application toolbar",
+            category = ComponentCategory.Navigation,
+            iconName = "view_agenda",
+            acceptsChildren = true,
+            slots = listOf(
+                SlotDefinition(
+                    id = StandardSlots.ACTIONS,
+                    displayName = "Actions",
+                    cardinality = SlotCardinality.List,
+                    acceptedTypes = emptySet(),
+                    providedScope = ContainerScope.Row
+                ),
+                SlotDefinition(
+                    id = StandardSlots.FLOATING_ACTION_BUTTON,
+                    displayName = "FAB",
+                    cardinality = SlotCardinality.Single,
+                    acceptedTypes = setOf(ComponentType.FloatingActionButton)
+                )
+            ),
+            factory = { ComposableNode.BottomAppBarNode() }
+        ))
+
+        register(StandardComponentDefinition(
+            type = ComponentType.NavigationRail,
+            displayName = "NavigationRail",
+            description = "Vertical side navigation rail",
+            category = ComponentCategory.Navigation,
+            iconName = "view_sidebar",
+            acceptsChildren = true,
+            slots = listOf(
+                SlotDefinition(
+                    id = StandardSlots.HEADER,
+                    displayName = "Header",
+                    cardinality = SlotCardinality.Single,
+                    acceptedTypes = emptySet()
+                )
+            ),
+            factory = { ComposableNode.NavigationRailNode() }
+        ))
+
+        register(StandardComponentDefinition(
+            type = ComponentType.NavigationRailItem,
+            displayName = "Navigation Rail Item",
+            description = "Destination item in navigation rail",
+            category = ComponentCategory.Navigation,
+            iconName = "touch_app",
+            acceptsChildren = false,
+            slots = listOf(
+                SlotDefinition(
+                    id = StandardSlots.ICON,
+                    displayName = "Icon",
+                    cardinality = SlotCardinality.Single,
+                    acceptedTypes = setOf(ComponentType.IconButton, ComponentType.Text)
+                ),
+                SlotDefinition(
+                    id = StandardSlots.LABEL,
+                    displayName = "Label",
+                    cardinality = SlotCardinality.Single,
+                    acceptedTypes = setOf(ComponentType.Text)
+                )
+            ),
+            factory = {
+                ComposableNode.NavigationRailItemNode(
+                    icon = ComposableNode.TextNode(text = "★"),
+                    label = ComposableNode.TextNode(text = "Rail")
+                )
+            }
+        ))
+
+        // ====================================================================
+        // 8. Chips & Badges
+        // ====================================================================
+        register(StandardComponentDefinition(
+            type = ComponentType.AssistChip,
+            displayName = "AssistChip",
+            description = "Smart suggestion or action chip",
+            category = ComponentCategory.ChipsAndBadges,
+            iconName = "label",
+            acceptsChildren = false,
+            slots = listOf(
+                SlotDefinition(
+                    id = StandardSlots.LEADING_ICON,
+                    displayName = "Leading Icon",
+                    cardinality = SlotCardinality.Single,
+                    acceptedTypes = setOf(ComponentType.Text, ComponentType.IconButton)
+                )
+            ),
+            properties = listOf(
+                PropertyDefinition.StringProperty("label", "Label", "Assist"),
+                PropertyDefinition.BooleanProperty("enabled", "Enabled", true)
+            ),
+            factory = { ComposableNode.AssistChipNode(label = "Assist") }
+        ))
+
+        register(StandardComponentDefinition(
+            type = ComponentType.FilterChip,
+            displayName = "FilterChip",
+            description = "Filter selection chip",
+            category = ComponentCategory.ChipsAndBadges,
+            iconName = "label",
+            acceptsChildren = false,
+            slots = listOf(
+                SlotDefinition(
+                    id = StandardSlots.LEADING_ICON,
+                    displayName = "Leading Icon",
+                    cardinality = SlotCardinality.Single,
+                    acceptedTypes = setOf(ComponentType.Text, ComponentType.IconButton)
+                )
+            ),
+            properties = listOf(
+                PropertyDefinition.StringProperty("label", "Label", "Filter"),
+                PropertyDefinition.BooleanProperty("selected", "Selected", false),
+                PropertyDefinition.BooleanProperty("enabled", "Enabled", true)
+            ),
+            factory = { ComposableNode.FilterChipNode(label = "Filter") }
+        ))
+
+        register(StandardComponentDefinition(
+            type = ComponentType.InputChip,
+            displayName = "InputChip",
+            description = "Input tag or recipient chip",
+            category = ComponentCategory.ChipsAndBadges,
+            iconName = "label",
+            acceptsChildren = false,
+            slots = listOf(
+                SlotDefinition(
+                    id = StandardSlots.LEADING_ICON,
+                    displayName = "Leading Icon",
+                    cardinality = SlotCardinality.Single,
+                    acceptedTypes = setOf(ComponentType.Text, ComponentType.IconButton)
+                ),
+                SlotDefinition(
+                    id = StandardSlots.TRAILING_ICON,
+                    displayName = "Trailing Icon",
+                    cardinality = SlotCardinality.Single,
+                    acceptedTypes = setOf(ComponentType.Text, ComponentType.IconButton)
+                )
+            ),
+            properties = listOf(
+                PropertyDefinition.StringProperty("label", "Label", "Input"),
+                PropertyDefinition.BooleanProperty("selected", "Selected", false),
+                PropertyDefinition.BooleanProperty("enabled", "Enabled", true)
+            ),
+            factory = { ComposableNode.InputChipNode(label = "Input") }
+        ))
+
+        register(StandardComponentDefinition(
+            type = ComponentType.SuggestionChip,
+            displayName = "SuggestionChip",
+            description = "Dynamic suggestion chip",
+            category = ComponentCategory.ChipsAndBadges,
+            iconName = "label",
+            acceptsChildren = false,
+            slots = listOf(
+                SlotDefinition(
+                    id = StandardSlots.ICON,
+                    displayName = "Icon",
+                    cardinality = SlotCardinality.Single,
+                    acceptedTypes = setOf(ComponentType.Text, ComponentType.IconButton)
+                )
+            ),
+            properties = listOf(
+                PropertyDefinition.StringProperty("label", "Label", "Suggestion"),
+                PropertyDefinition.BooleanProperty("enabled", "Enabled", true)
+            ),
+            factory = { ComposableNode.SuggestionChipNode(label = "Suggestion") }
+        ))
+
+        register(StandardComponentDefinition(
+            type = ComponentType.Badge,
+            displayName = "Badge",
+            description = "Notification count or indicator badge",
+            category = ComponentCategory.ChipsAndBadges,
+            iconName = "notifications",
+            acceptsChildren = false,
+            properties = listOf(
+                PropertyDefinition.StringProperty("text", "Text", "8")
+            ),
+            factory = { ComposableNode.BadgeNode(text = "8") }
+        ))
+
+        register(StandardComponentDefinition(
+            type = ComponentType.BadgedBox,
+            displayName = "BadgedBox",
+            description = "Container linking a badge to content",
+            category = ComponentCategory.ChipsAndBadges,
+            iconName = "notifications",
+            acceptsChildren = false,
+            slots = listOf(
+                SlotDefinition(
+                    id = StandardSlots.BADGE,
+                    displayName = "Badge",
+                    cardinality = SlotCardinality.Single,
+                    acceptedTypes = setOf(ComponentType.Badge)
+                ),
+                SlotDefinition(
+                    id = StandardSlots.CONTENT,
+                    displayName = "Content",
+                    cardinality = SlotCardinality.Single,
+                    acceptedTypes = emptySet()
+                )
+            ),
+            factory = {
+                ComposableNode.BadgedBoxNode(
+                    badge = ComposableNode.BadgeNode(text = "3"),
+                    content = ComposableNode.TextNode(text = "Mail")
+                )
+            }
+        ))
+
+        // ====================================================================
+        // 9. Additional Controls & Dialogs
+        // ====================================================================
+        register(StandardComponentDefinition(
+            type = ComponentType.RangeSlider,
+            displayName = "RangeSlider",
+            description = "Dual-thumb range selector",
+            category = ComponentCategory.SelectionAndFeedback,
+            iconName = "linear_scale",
+            acceptsChildren = false,
+            properties = listOf(
+                PropertyDefinition.FloatProperty("startValue", "Start Value", 0f, 1f, 0.2f),
+                PropertyDefinition.FloatProperty("endValue", "End Value", 0f, 1f, 0.8f),
+                PropertyDefinition.BooleanProperty("enabled", "Enabled", true)
+            ),
+            factory = { ComposableNode.RangeSliderNode(startValue = 0.2f, endValue = 0.8f) }
+        ))
+
+        register(StandardComponentDefinition(
+            type = ComponentType.AlertDialog,
+            displayName = "AlertDialog",
+            description = "Material 3 modal alert dialog",
+            category = ComponentCategory.Dialogs,
+            iconName = "feedback",
+            acceptsChildren = false,
+            slots = listOf(
+                SlotDefinition(
+                    id = StandardSlots.ICON,
+                    displayName = "Icon",
+                    cardinality = SlotCardinality.Single,
+                    acceptedTypes = setOf(ComponentType.Text, ComponentType.IconButton)
+                ),
+                SlotDefinition(
+                    id = StandardSlots.TITLE,
+                    displayName = "Title",
+                    cardinality = SlotCardinality.Single,
+                    acceptedTypes = setOf(ComponentType.Text)
+                ),
+                SlotDefinition(
+                    id = StandardSlots.TEXT,
+                    displayName = "Body Text",
+                    cardinality = SlotCardinality.Single,
+                    acceptedTypes = setOf(ComponentType.Text)
+                ),
+                SlotDefinition(
+                    id = StandardSlots.CONFIRM_BUTTON,
+                    displayName = "Confirm Button",
+                    cardinality = SlotCardinality.Single,
+                    acceptedTypes = setOf(ComponentType.Button, ComponentType.TextButton)
+                ),
+                SlotDefinition(
+                    id = StandardSlots.DISMISS_BUTTON,
+                    displayName = "Dismiss Button",
+                    cardinality = SlotCardinality.Single,
+                    acceptedTypes = setOf(ComponentType.Button, ComponentType.TextButton)
+                )
+            ),
+            factory = {
+                ComposableNode.AlertDialogNode(
+                    title = ComposableNode.TextNode(text = "Dialog Title"),
+                    text = ComposableNode.TextNode(text = "A dialog is a type of modal window that appears in front of app content."),
+                    confirmButton = ComposableNode.TextButtonNode(content = listOf(ComposableNode.TextNode(text = "Confirm")))
+                )
+            }
+        ))
     }
 
     fun register(definition: ComponentDefinition) {
@@ -510,4 +789,15 @@ val ComposableNode.componentType: ComponentType
         is ComposableNode.TopAppBarNode -> ComponentType.TopAppBar
         is ComposableNode.NavigationBarNode -> ComponentType.NavigationBar
         is ComposableNode.NavigationBarItemNode -> ComponentType.NavigationBarItem
+        is ComposableNode.AssistChipNode -> ComponentType.AssistChip
+        is ComposableNode.FilterChipNode -> ComponentType.FilterChip
+        is ComposableNode.InputChipNode -> ComponentType.InputChip
+        is ComposableNode.SuggestionChipNode -> ComponentType.SuggestionChip
+        is ComposableNode.BadgeNode -> ComponentType.Badge
+        is ComposableNode.BadgedBoxNode -> ComponentType.BadgedBox
+        is ComposableNode.BottomAppBarNode -> ComponentType.BottomAppBar
+        is ComposableNode.NavigationRailNode -> ComponentType.NavigationRail
+        is ComposableNode.NavigationRailItemNode -> ComponentType.NavigationRailItem
+        is ComposableNode.RangeSliderNode -> ComponentType.RangeSlider
+        is ComposableNode.AlertDialogNode -> ComponentType.AlertDialog
     }

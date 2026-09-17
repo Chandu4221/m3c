@@ -597,34 +597,7 @@ private fun getNodeLabel(node: ComposableNode): String = when (node) {
     else -> ComponentRegistry.findByNode(node)?.displayName ?: "Component"
 }
 
-private fun getNodeIcon(node: ComposableNode): ImageVector = when (node) {
-    is ComposableNode.ColumnNode -> Icons.Default.ViewColumn
-    is ComposableNode.RowNode -> Icons.Default.ViewStream
-    is ComposableNode.BoxNode -> Icons.Default.Layers
-    is ComposableNode.SurfaceNode -> Icons.Default.WebAsset
-    is ComposableNode.CardNode -> Icons.Default.CropPortrait
-    is ComposableNode.ElevatedCardNode -> Icons.AutoMirrored.Filled.FeaturedPlayList
-    is ComposableNode.OutlinedCardNode -> Icons.Default.CheckBoxOutlineBlank
-    is ComposableNode.ButtonNode -> Icons.Default.SmartButton
-    is ComposableNode.ElevatedButtonNode -> Icons.Default.AdsClick
-    is ComposableNode.FilledTonalButtonNode -> Icons.Default.CropLandscape
-    is ComposableNode.OutlinedButtonNode -> Icons.Default.CropLandscape
-    is ComposableNode.TextButtonNode -> Icons.Default.TextFormat
-    is ComposableNode.IconButtonNode -> Icons.Default.TouchApp
-    is ComposableNode.FloatingActionButtonNode -> Icons.Default.AddCircle
-    is ComposableNode.TextNode -> Icons.Default.TextFields
-    is ComposableNode.TextFieldNode, is ComposableNode.OutlinedTextFieldNode -> Icons.Default.EditNote
-    is ComposableNode.CheckboxNode -> Icons.Default.CheckBox
-    is ComposableNode.SwitchNode -> Icons.Default.ToggleOn
-    is ComposableNode.RadioButtonNode -> Icons.Default.RadioButtonChecked
-    is ComposableNode.SliderNode -> Icons.Default.LinearScale
-    is ComposableNode.CircularProgressIndicatorNode -> Icons.Default.Autorenew
-    is ComposableNode.LinearProgressIndicatorNode -> Icons.Default.HorizontalRule
-    is ComposableNode.SpacerNode -> Icons.Default.SpaceBar
-    is ComposableNode.HorizontalDividerNode -> Icons.Default.HorizontalDistribute
-    is ComposableNode.VerticalDividerNode -> Icons.Default.VerticalDistribute
-    is ComposableNode.ScaffoldNode -> Icons.Default.Tab
-    is ComposableNode.TopAppBarNode -> Icons.Default.ViewAgenda
-    is ComposableNode.NavigationBarNode -> Icons.Default.Navigation
-    is ComposableNode.NavigationBarItemNode -> Icons.Default.TouchApp
+private fun getNodeIcon(node: ComposableNode): ImageVector {
+    val def = ComponentRegistry.findByNode(node)
+    return if (def != null) resolveComponentIcon(def.iconName) else Icons.Default.WebAsset
 }

@@ -40,5 +40,10 @@ object StandardSlots {
     const val TRAILING_ICON = "trailingIcon"
     const val ICON = "icon"
     const val LABEL = "label"
+    const val HEADER = "header"
+    const val BADGE = "badge"
+    const val CONFIRM_BUTTON = "confirmButton"
+    const val DISMISS_BUTTON = "dismissButton"
+    const val TEXT = "text"
 }
 

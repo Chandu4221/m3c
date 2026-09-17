@@ -8,7 +8,9 @@ enum class ComponentCategory(val displayName: String) {
     SurfacesAndCards("SURFACES & CARDS"),
     ButtonsAndActions("BUTTONS & ACTIONS"),
     TextAndInputs("TEXT & INPUTS"),
+    ChipsAndBadges("CHIPS & BADGES"),
     SelectionAndFeedback("SELECTION & FEEDBACK"),
     Dividers("DIVIDERS"),
-    Navigation("NAVIGATION")
+    Navigation("NAVIGATION"),
+    Dialogs("DIALOGS")
 }

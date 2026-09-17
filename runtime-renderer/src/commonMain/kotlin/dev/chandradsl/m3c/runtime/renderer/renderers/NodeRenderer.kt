@@ -5,35 +5,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import dev.chandradsl.m3c.core.domain.model.ComposableNode
 import dev.chandradsl.m3c.core.domain.model.NodeId
+import dev.chandradsl.m3c.core.domain.model.allDirectChildren
 import dev.chandradsl.m3c.core.domain.store.WorkspaceIntent
 import dev.chandradsl.m3c.core.domain.store.WorkspaceState
 
 fun ComposableNode.hasDescendant(targetId: NodeId?): Boolean {
     if (targetId == null) return false
-    return when (this) {
-        is ComposableNode.ColumnNode -> children.any { it.id == targetId || it.hasDescendant(targetId) }
-        is ComposableNode.RowNode -> children.any { it.id == targetId || it.hasDescendant(targetId) }
-        is ComposableNode.BoxNode -> children.any { it.id == targetId || it.hasDescendant(targetId) }
-        is ComposableNode.SurfaceNode -> children.any { it.id == targetId || it.hasDescendant(targetId) }
-        is ComposableNode.CardNode -> content.any { it.id == targetId || it.hasDescendant(targetId) }
-        is ComposableNode.ElevatedCardNode -> content.any { it.id == targetId || it.hasDescendant(targetId) }
-        is ComposableNode.OutlinedCardNode -> content.any { it.id == targetId || it.hasDescendant(targetId) }
-        is ComposableNode.ButtonNode -> content.any { it.id == targetId || it.hasDescendant(targetId) }
-        is ComposableNode.ElevatedButtonNode -> content.any { it.id == targetId || it.hasDescendant(targetId) }
-        is ComposableNode.FilledTonalButtonNode -> content.any { it.id == targetId || it.hasDescendant(targetId) }
-        is ComposableNode.OutlinedButtonNode -> content.any { it.id == targetId || it.hasDescendant(targetId) }
-        is ComposableNode.TextButtonNode -> content.any { it.id == targetId || it.hasDescendant(targetId) }
-        is ComposableNode.IconButtonNode -> content.any { it.id == targetId || it.hasDescendant(targetId) }
-        is ComposableNode.FloatingActionButtonNode -> content.any { it.id == targetId || it.hasDescendant(targetId) }
-        is ComposableNode.NavigationBarNode -> items.any { it.id == targetId || it.hasDescendant(targetId) }
-        is ComposableNode.ScaffoldNode -> {
-            topBar?.let { it.id == targetId || it.hasDescendant(targetId) } == true ||
-            bottomBar?.let { it.id == targetId || it.hasDescendant(targetId) } == true ||
-            floatingActionButton?.let { it.id == targetId || it.hasDescendant(targetId) } == true ||
-            content?.let { it.id == targetId || it.hasDescendant(targetId) } == true
-        }
-        else -> false
-    }
+    return allDirectChildren.any { it.id == targetId || it.hasDescendant(targetId) }
 }
 
 @Composable
@@ -89,8 +67,23 @@ fun NodeRenderer(
                 RenderNavigationBarItem(node, state, onIntent, modifier)
             }
         }
+        is ComposableNode.BottomAppBarNode -> RenderBottomAppBar(node, state, onIntent, modifier, isInteractiveMode)
+        is ComposableNode.NavigationRailNode -> RenderNavigationRail(node, state, onIntent, modifier, isInteractiveMode)
+        is ComposableNode.NavigationRailItemNode -> RenderNavigationRailItem(node, state, onIntent, modifier, isInteractiveMode)
 
-        // 7. Dividers & Utilities
+        // 7. Chips & Badges
+        is ComposableNode.AssistChipNode -> RenderAssistChip(node, state, onIntent, modifier, isInteractiveMode)
+        is ComposableNode.FilterChipNode -> RenderFilterChip(node, state, onIntent, modifier, isInteractiveMode)
+        is ComposableNode.InputChipNode -> RenderInputChip(node, state, onIntent, modifier, isInteractiveMode)
+        is ComposableNode.SuggestionChipNode -> RenderSuggestionChip(node, state, onIntent, modifier, isInteractiveMode)
+        is ComposableNode.BadgeNode -> RenderBadge(node, state, onIntent, modifier, isInteractiveMode)
+        is ComposableNode.BadgedBoxNode -> RenderBadgedBox(node, state, onIntent, modifier, isInteractiveMode)
+
+        // 8. Dialogs & Range Controls
+        is ComposableNode.RangeSliderNode -> RenderRangeSlider(node, state, onIntent, modifier, isInteractiveMode)
+        is ComposableNode.AlertDialogNode -> RenderAlertDialog(node, state, onIntent, modifier, isInteractiveMode)
+
+        // 9. Dividers & Utilities
         is ComposableNode.HorizontalDividerNode -> RenderHorizontalDivider(node, state, onIntent, modifier)
         is ComposableNode.VerticalDividerNode -> RenderVerticalDivider(node, state, onIntent, modifier)
     }

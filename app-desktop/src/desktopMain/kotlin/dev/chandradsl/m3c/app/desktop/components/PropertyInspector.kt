@@ -542,6 +542,135 @@ fun PropertyInspector(
                 )
             }
 
+            is ComposableNode.AssistChipNode -> {
+                InspectorField(label = "Label") {
+                    InspectorTextInput(
+                        value = selectedNode.label,
+                        onValueChange = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(label = it))) }
+                    )
+                }
+                InspectorSwitchField(
+                    label = "Enabled",
+                    checked = selectedNode.enabled,
+                    onCheckedChange = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(enabled = it))) }
+                )
+            }
+
+            is ComposableNode.FilterChipNode -> {
+                InspectorField(label = "Label") {
+                    InspectorTextInput(
+                        value = selectedNode.label,
+                        onValueChange = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(label = it))) }
+                    )
+                }
+                InspectorSwitchField(
+                    label = "Selected",
+                    checked = selectedNode.selected,
+                    onCheckedChange = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(selected = it))) }
+                )
+                InspectorSwitchField(
+                    label = "Enabled",
+                    checked = selectedNode.enabled,
+                    onCheckedChange = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(enabled = it))) }
+                )
+            }
+
+            is ComposableNode.InputChipNode -> {
+                InspectorField(label = "Label") {
+                    InspectorTextInput(
+                        value = selectedNode.label,
+                        onValueChange = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(label = it))) }
+                    )
+                }
+                InspectorSwitchField(
+                    label = "Selected",
+                    checked = selectedNode.selected,
+                    onCheckedChange = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(selected = it))) }
+                )
+                InspectorSwitchField(
+                    label = "Enabled",
+                    checked = selectedNode.enabled,
+                    onCheckedChange = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(enabled = it))) }
+                )
+            }
+
+            is ComposableNode.SuggestionChipNode -> {
+                InspectorField(label = "Label") {
+                    InspectorTextInput(
+                        value = selectedNode.label,
+                        onValueChange = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(label = it))) }
+                    )
+                }
+                InspectorSwitchField(
+                    label = "Enabled",
+                    checked = selectedNode.enabled,
+                    onCheckedChange = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(enabled = it))) }
+                )
+            }
+
+            is ComposableNode.BadgeNode -> {
+                InspectorField(label = "Badge Text") {
+                    InspectorTextInput(
+                        value = selectedNode.text ?: "",
+                        onValueChange = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(text = it.ifBlank { null }))) }
+                    )
+                }
+            }
+
+            is ComposableNode.NavigationRailItemNode -> {
+                InspectorSwitchField(
+                    label = "Selected",
+                    checked = selectedNode.selected,
+                    onCheckedChange = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(selected = it))) }
+                )
+                InspectorSwitchField(
+                    label = "Always Show Label",
+                    checked = selectedNode.alwaysShowLabel,
+                    onCheckedChange = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(alwaysShowLabel = it))) }
+                )
+                InspectorSwitchField(
+                    label = "Enabled",
+                    checked = selectedNode.enabled,
+                    onCheckedChange = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(enabled = it))) }
+                )
+            }
+
+            is ComposableNode.RangeSliderNode -> {
+                InspectorField(label = "Start Value (${(selectedNode.startValue * 100).toInt()}%)") {
+                    Slider(
+                        value = selectedNode.startValue,
+                        onValueChange = {
+                            val newStart = it.coerceAtMost(selectedNode.endValue)
+                            viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(startValue = newStart)))
+                        },
+                        valueRange = 0f..1f,
+                        colors = SliderDefaults.colors(
+                            thumbColor = StudioColors.Primary,
+                            activeTrackColor = StudioColors.Primary
+                        )
+                    )
+                }
+                InspectorField(label = "End Value (${(selectedNode.endValue * 100).toInt()}%)") {
+                    Slider(
+                        value = selectedNode.endValue,
+                        onValueChange = {
+                            val newEnd = it.coerceAtLeast(selectedNode.startValue)
+                            viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(endValue = newEnd)))
+                        },
+                        valueRange = 0f..1f,
+                        colors = SliderDefaults.colors(
+                            thumbColor = StudioColors.Primary,
+                            activeTrackColor = StudioColors.Primary
+                        )
+                    )
+                }
+                InspectorSwitchField(
+                    label = "Enabled",
+                    checked = selectedNode.enabled,
+                    onCheckedChange = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(enabled = it))) }
+                )
+            }
+
             else -> {
                 Text(
                     text = "No custom properties for this component type.",

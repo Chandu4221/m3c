@@ -82,6 +82,10 @@ import dev.chandradsl.m3c.app.desktop.theme.StudioTypography
 import dev.chandradsl.m3c.core.domain.model.ComposableNode
 import dev.chandradsl.m3c.core.domain.schema.ComponentCategory
 import dev.chandradsl.m3c.core.domain.schema.ComponentRegistry
+import androidx.compose.material.icons.automirrored.filled.Label
+import androidx.compose.material.icons.automirrored.filled.ViewSidebar
+import androidx.compose.material.icons.filled.CircleNotifications
+import androidx.compose.material.icons.filled.Feedback
 
 fun resolveComponentIcon(iconName: String): ImageVector = when (iconName) {
     "view_column" -> Icons.Default.ViewColumn
@@ -110,6 +114,10 @@ fun resolveComponentIcon(iconName: String): ImageVector = when (iconName) {
     "horizontal_distribute" -> Icons.Default.HorizontalDistribute
     "vertical_distribute" -> Icons.Default.VerticalDistribute
     "view_agenda" -> Icons.Default.ViewAgenda
+    "label" -> Icons.AutoMirrored.Filled.Label
+    "notifications" -> Icons.Default.CircleNotifications
+    "view_sidebar" -> Icons.AutoMirrored.Filled.ViewSidebar
+    "feedback" -> Icons.Default.Feedback
     else -> Icons.Default.WebAsset
 }
 

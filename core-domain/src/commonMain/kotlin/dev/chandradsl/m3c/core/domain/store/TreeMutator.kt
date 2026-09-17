@@ -126,6 +126,8 @@ object TreeMutator {
         is ComposableNode.IconButtonNode -> copy(content = insertAt(content, child, index))
         is ComposableNode.FloatingActionButtonNode -> copy(content = insertAt(content, child, index))
         is ComposableNode.ScaffoldNode -> copy(content = child)
+        is ComposableNode.BottomAppBarNode -> copy(actions = insertAt(actions, child, index))
+        is ComposableNode.NavigationRailNode -> copy(items = insertAt(items, child, index))
         else -> this
     }
 
@@ -156,6 +158,50 @@ object TreeMutator {
         is ComposableNode.NavigationBarItemNode -> when (slotName.lowercase()) {
             "icon" -> if (slotNode != null) copy(icon = slotNode) else this
             "label" -> copy(label = slotNode)
+            else -> this
+        }
+        is ComposableNode.AssistChipNode -> when (slotName.lowercase()) {
+            "leadingicon" -> copy(leadingIcon = slotNode)
+            else -> this
+        }
+        is ComposableNode.FilterChipNode -> when (slotName.lowercase()) {
+            "leadingicon" -> copy(leadingIcon = slotNode)
+            else -> this
+        }
+        is ComposableNode.InputChipNode -> when (slotName.lowercase()) {
+            "leadingicon" -> copy(leadingIcon = slotNode)
+            "trailingicon" -> copy(trailingIcon = slotNode)
+            else -> this
+        }
+        is ComposableNode.SuggestionChipNode -> when (slotName.lowercase()) {
+            "icon" -> copy(icon = slotNode)
+            else -> this
+        }
+        is ComposableNode.BadgedBoxNode -> when (slotName.lowercase()) {
+            "badge" -> copy(badge = slotNode)
+            "content" -> copy(content = slotNode)
+            else -> this
+        }
+        is ComposableNode.BottomAppBarNode -> when (slotName.lowercase()) {
+            "action", "actions" -> if (slotNode != null) copy(actions = actions + slotNode) else copy(actions = emptyList())
+            "floatingactionbutton", "fab" -> copy(floatingActionButton = slotNode)
+            else -> this
+        }
+        is ComposableNode.NavigationRailNode -> when (slotName.lowercase()) {
+            "header" -> copy(header = slotNode)
+            else -> this
+        }
+        is ComposableNode.NavigationRailItemNode -> when (slotName.lowercase()) {
+            "icon" -> if (slotNode != null) copy(icon = slotNode) else this
+            "label" -> copy(label = slotNode)
+            else -> this
+        }
+        is ComposableNode.AlertDialogNode -> when (slotName.lowercase()) {
+            "icon" -> copy(icon = slotNode)
+            "title" -> copy(title = slotNode)
+            "text" -> copy(text = slotNode)
+            "confirmbutton", "confirm" -> copy(confirmButton = slotNode)
+            "dismissbutton", "dismiss" -> copy(dismissButton = slotNode)
             else -> this
         }
         else -> this
@@ -192,6 +238,17 @@ object TreeMutator {
         is ComposableNode.TopAppBarNode -> copy(modifiers = newModifiers)
         is ComposableNode.NavigationBarNode -> copy(modifiers = newModifiers)
         is ComposableNode.NavigationBarItemNode -> copy(modifiers = newModifiers)
+        is ComposableNode.AssistChipNode -> copy(modifiers = newModifiers)
+        is ComposableNode.FilterChipNode -> copy(modifiers = newModifiers)
+        is ComposableNode.InputChipNode -> copy(modifiers = newModifiers)
+        is ComposableNode.SuggestionChipNode -> copy(modifiers = newModifiers)
+        is ComposableNode.BadgeNode -> copy(modifiers = newModifiers)
+        is ComposableNode.BadgedBoxNode -> copy(modifiers = newModifiers)
+        is ComposableNode.BottomAppBarNode -> copy(modifiers = newModifiers)
+        is ComposableNode.NavigationRailNode -> copy(modifiers = newModifiers)
+        is ComposableNode.NavigationRailItemNode -> copy(modifiers = newModifiers)
+        is ComposableNode.RangeSliderNode -> copy(modifiers = newModifiers)
+        is ComposableNode.AlertDialogNode -> copy(modifiers = newModifiers)
     }
 
     private fun ComposableNode.mapChildren(transform: (ComposableNode) -> ComposableNode): ComposableNode = when (this) {
@@ -233,6 +290,36 @@ object TreeMutator {
             icon = transform(icon),
             label = label?.let(transform)
         )
+        is ComposableNode.AssistChipNode -> copy(leadingIcon = leadingIcon?.let(transform))
+        is ComposableNode.FilterChipNode -> copy(leadingIcon = leadingIcon?.let(transform))
+        is ComposableNode.InputChipNode -> copy(
+            leadingIcon = leadingIcon?.let(transform),
+            trailingIcon = trailingIcon?.let(transform)
+        )
+        is ComposableNode.SuggestionChipNode -> copy(icon = icon?.let(transform))
+        is ComposableNode.BadgedBoxNode -> copy(
+            badge = badge?.let(transform),
+            content = content?.let(transform)
+        )
+        is ComposableNode.BottomAppBarNode -> copy(
+            actions = actions.map(transform),
+            floatingActionButton = floatingActionButton?.let(transform)
+        )
+        is ComposableNode.NavigationRailNode -> copy(
+            header = header?.let(transform),
+            items = items.map(transform)
+        )
+        is ComposableNode.NavigationRailItemNode -> copy(
+            icon = transform(icon),
+            label = label?.let(transform)
+        )
+        is ComposableNode.AlertDialogNode -> copy(
+            icon = icon?.let(transform),
+            title = title?.let(transform),
+            text = text?.let(transform),
+            confirmButton = confirmButton?.let(transform),
+            dismissButton = dismissButton?.let(transform)
+        )
         else -> this
     }
 
@@ -272,6 +359,41 @@ object TreeMutator {
         )
         is ComposableNode.NavigationBarItemNode -> copy(
             label = if (label?.id == targetId) null else label?.let(transform)
+        )
+        is ComposableNode.AssistChipNode -> copy(
+            leadingIcon = if (leadingIcon?.id == targetId) null else leadingIcon?.let(transform)
+        )
+        is ComposableNode.FilterChipNode -> copy(
+            leadingIcon = if (leadingIcon?.id == targetId) null else leadingIcon?.let(transform)
+        )
+        is ComposableNode.InputChipNode -> copy(
+            leadingIcon = if (leadingIcon?.id == targetId) null else leadingIcon?.let(transform),
+            trailingIcon = if (trailingIcon?.id == targetId) null else trailingIcon?.let(transform)
+        )
+        is ComposableNode.SuggestionChipNode -> copy(
+            icon = if (icon?.id == targetId) null else icon?.let(transform)
+        )
+        is ComposableNode.BadgedBoxNode -> copy(
+            badge = if (badge?.id == targetId) null else badge?.let(transform),
+            content = if (content?.id == targetId) null else content?.let(transform)
+        )
+        is ComposableNode.BottomAppBarNode -> copy(
+            actions = actions.filter { it.id != targetId }.mapNotNull(transform),
+            floatingActionButton = if (floatingActionButton?.id == targetId) null else floatingActionButton?.let(transform)
+        )
+        is ComposableNode.NavigationRailNode -> copy(
+            header = if (header?.id == targetId) null else header?.let(transform),
+            items = items.filter { it.id != targetId }.mapNotNull(transform)
+        )
+        is ComposableNode.NavigationRailItemNode -> copy(
+            label = if (label?.id == targetId) null else label?.let(transform)
+        )
+        is ComposableNode.AlertDialogNode -> copy(
+            icon = if (icon?.id == targetId) null else icon?.let(transform),
+            title = if (title?.id == targetId) null else title?.let(transform),
+            text = if (text?.id == targetId) null else text?.let(transform),
+            confirmButton = if (confirmButton?.id == targetId) null else confirmButton?.let(transform),
+            dismissButton = if (dismissButton?.id == targetId) null else dismissButton?.let(transform)
         )
         else -> this
     }

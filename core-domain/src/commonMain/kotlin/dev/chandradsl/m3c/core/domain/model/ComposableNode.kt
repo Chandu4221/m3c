@@ -365,6 +365,129 @@ sealed interface ComposableNode {
         val alwaysShowLabel: Boolean = true,
         val enabled: Boolean = true
     ) : ComposableNode
+
+    // 8. Chips & Badges
+    @Serializable
+    @SerialName("assist_chip")
+    data class AssistChipNode(
+        override val id: NodeId = NodeId.generate("chip"),
+        override val modifiers: List<ModifierDef> = emptyList(),
+        val label: String = "Assist",
+        val leadingIcon: ComposableNode? = null,
+        val enabled: Boolean = true
+    ) : ComposableNode
+
+    @Serializable
+    @SerialName("filter_chip")
+    data class FilterChipNode(
+        override val id: NodeId = NodeId.generate("chip"),
+        override val modifiers: List<ModifierDef> = emptyList(),
+        val label: String = "Filter",
+        val selected: Boolean = false,
+        val leadingIcon: ComposableNode? = null,
+        val enabled: Boolean = true
+    ) : ComposableNode
+
+    @Serializable
+    @SerialName("input_chip")
+    data class InputChipNode(
+        override val id: NodeId = NodeId.generate("chip"),
+        override val modifiers: List<ModifierDef> = emptyList(),
+        val label: String = "Input",
+        val selected: Boolean = false,
+        val leadingIcon: ComposableNode? = null,
+        val trailingIcon: ComposableNode? = null,
+        val enabled: Boolean = true
+    ) : ComposableNode
+
+    @Serializable
+    @SerialName("suggestion_chip")
+    data class SuggestionChipNode(
+        override val id: NodeId = NodeId.generate("chip"),
+        override val modifiers: List<ModifierDef> = emptyList(),
+        val label: String = "Suggestion",
+        val icon: ComposableNode? = null,
+        val enabled: Boolean = true
+    ) : ComposableNode
+
+    @Serializable
+    @SerialName("badge")
+    data class BadgeNode(
+        override val id: NodeId = NodeId.generate("badge"),
+        override val modifiers: List<ModifierDef> = emptyList(),
+        val containerColor: ColorSource? = null,
+        val contentColor: ColorSource? = null,
+        val text: String? = null
+    ) : ComposableNode
+
+    @Serializable
+    @SerialName("badged_box")
+    data class BadgedBoxNode(
+        override val id: NodeId = NodeId.generate("badged_box"),
+        override val modifiers: List<ModifierDef> = emptyList(),
+        val badge: ComposableNode? = null,
+        val content: ComposableNode? = null
+    ) : ComposableNode
+
+    // 9. Additional Navigation
+    @Serializable
+    @SerialName("bottom_app_bar")
+    data class BottomAppBarNode(
+        override val id: NodeId = NodeId.generate("bottom_bar"),
+        override val modifiers: List<ModifierDef> = emptyList(),
+        val containerColor: ColorSource? = null,
+        val contentColor: ColorSource? = null,
+        val actions: List<ComposableNode> = emptyList(),
+        val floatingActionButton: ComposableNode? = null
+    ) : ComposableNode
+
+    @Serializable
+    @SerialName("navigation_rail")
+    data class NavigationRailNode(
+        override val id: NodeId = NodeId.generate("nav_rail"),
+        override val modifiers: List<ModifierDef> = emptyList(),
+        val containerColor: ColorSource? = null,
+        val contentColor: ColorSource? = null,
+        val header: ComposableNode? = null,
+        val items: List<ComposableNode> = emptyList()
+    ) : ComposableNode
+
+    @Serializable
+    @SerialName("navigation_rail_item")
+    data class NavigationRailItemNode(
+        override val id: NodeId = NodeId.generate("rail_item"),
+        override val modifiers: List<ModifierDef> = emptyList(),
+        val selected: Boolean = false,
+        val icon: ComposableNode,
+        val label: ComposableNode? = null,
+        val alwaysShowLabel: Boolean = true,
+        val enabled: Boolean = true
+    ) : ComposableNode
+
+    // 10. Additional Controls & Dialogs
+    @Serializable
+    @SerialName("range_slider")
+    data class RangeSliderNode(
+        override val id: NodeId = NodeId.generate("range_sld"),
+        override val modifiers: List<ModifierDef> = emptyList(),
+        val startValue: Float = 0.2f,
+        val endValue: Float = 0.8f,
+        val steps: Int = 0,
+        val enabled: Boolean = true
+    ) : ComposableNode
+
+    @Serializable
+    @SerialName("alert_dialog")
+    data class AlertDialogNode(
+        override val id: NodeId = NodeId.generate("dialog"),
+        override val modifiers: List<ModifierDef> = emptyList(),
+        val icon: ComposableNode? = null,
+        val title: ComposableNode? = null,
+        val text: ComposableNode? = null,
+        val confirmButton: ComposableNode? = null,
+        val dismissButton: ComposableNode? = null,
+        val containerColor: ColorSource? = null
+    ) : ComposableNode
 }
 
 /**
@@ -392,6 +515,15 @@ val ComposableNode.allDirectChildren: List<ComposableNode>
         is ComposableNode.TextFieldNode -> listOfNotNull(leadingIcon, trailingIcon)
         is ComposableNode.OutlinedTextFieldNode -> listOfNotNull(leadingIcon, trailingIcon)
         is ComposableNode.NavigationBarItemNode -> listOf(icon) + listOfNotNull(label)
+        is ComposableNode.AssistChipNode -> listOfNotNull(leadingIcon)
+        is ComposableNode.FilterChipNode -> listOfNotNull(leadingIcon)
+        is ComposableNode.InputChipNode -> listOfNotNull(leadingIcon, trailingIcon)
+        is ComposableNode.SuggestionChipNode -> listOfNotNull(icon)
+        is ComposableNode.BadgedBoxNode -> listOfNotNull(badge, content)
+        is ComposableNode.BottomAppBarNode -> actions + listOfNotNull(floatingActionButton)
+        is ComposableNode.NavigationRailNode -> listOfNotNull(header) + items
+        is ComposableNode.NavigationRailItemNode -> listOf(icon) + listOfNotNull(label)
+        is ComposableNode.AlertDialogNode -> listOfNotNull(icon, title, text, confirmButton, dismissButton)
         else -> emptyList()
     }
 

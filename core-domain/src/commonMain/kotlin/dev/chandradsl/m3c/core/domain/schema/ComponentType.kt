@@ -30,21 +30,36 @@ enum class ComponentType(val id: String) {
     TextField("text_field"),
     OutlinedTextField("outlined_text_field"),
 
-    // 5. Selection & Feedback
+    // 5. Chips & Badges
+    AssistChip("assist_chip"),
+    FilterChip("filter_chip"),
+    InputChip("input_chip"),
+    SuggestionChip("suggestion_chip"),
+    Badge("badge"),
+    BadgedBox("badged_box"),
+
+    // 6. Selection & Feedback
     Checkbox("checkbox"),
     Switch("switch"),
     RadioButton("radio_button"),
     Slider("slider"),
+    RangeSlider("range_slider"),
     CircularProgressIndicator("circular_progress_indicator"),
     LinearProgressIndicator("linear_progress_indicator"),
 
-    // 6. Dividers
+    // 7. Dividers
     HorizontalDivider("horizontal_divider"),
     VerticalDivider("vertical_divider"),
 
-    // 7. Scaffolding & Navigation
+    // 8. Scaffolding & Navigation
     Scaffold("scaffold"),
     TopAppBar("top_app_bar"),
+    BottomAppBar("bottom_app_bar"),
     NavigationBar("navigation_bar"),
-    NavigationBarItem("navigation_bar_item")
+    NavigationBarItem("navigation_bar_item"),
+    NavigationRail("navigation_rail"),
+    NavigationRailItem("navigation_rail_item"),
+
+    // 9. Dialogs
+    AlertDialog("alert_dialog")
 }
