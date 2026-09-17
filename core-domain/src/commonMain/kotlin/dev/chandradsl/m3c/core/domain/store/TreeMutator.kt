@@ -4,6 +4,8 @@ import dev.chandradsl.m3c.core.domain.model.ComposableNode
 import dev.chandradsl.m3c.core.domain.model.ModifierDef
 import dev.chandradsl.m3c.core.domain.model.NodeId
 import dev.chandradsl.m3c.core.domain.model.allDirectChildren
+import dev.chandradsl.m3c.core.domain.schema.ComponentRegistry
+import dev.chandradsl.m3c.core.domain.schema.StandardSlots
 import dev.chandradsl.m3c.core.domain.scope.ContainerScope
 import dev.chandradsl.m3c.core.domain.scope.childScope
 
@@ -62,7 +64,12 @@ object TreeMutator {
 
     fun setSlot(root: ComposableNode, parentId: NodeId, slotName: String, slotNode: ComposableNode?): ComposableNode {
         if (root.id == parentId) {
-            val sanitizedSlotNode = slotNode?.let { sanitizeNodeModifiersForScope(it, ContainerScope.None) }
+            val componentDef = ComponentRegistry.findByNode(root)
+            val slotDef = componentDef?.slots?.find {
+                it.id.equals(slotName, ignoreCase = true) || it.displayName.equals(slotName, ignoreCase = true)
+            }
+            val targetScope = slotDef?.providedScope ?: ContainerScope.None
+            val sanitizedSlotNode = slotNode?.let { sanitizeNodeModifiersForScope(it, targetScope) }
             return root.withSlot(slotName, sanitizedSlotNode)
         }
         return root.mapChildren { setSlot(it, parentId, slotName, slotNode) }
@@ -133,7 +140,7 @@ object TreeMutator {
         is ComposableNode.TopAppBarNode -> when (slotName.lowercase()) {
             "title" -> if (slotNode != null) copy(title = slotNode) else this
             "navigationicon" -> copy(navigationIcon = slotNode)
-            "action" -> if (slotNode != null) copy(actions = actions + slotNode) else this
+            "action", "actions" -> if (slotNode != null) copy(actions = actions + slotNode) else copy(actions = emptyList())
             else -> this
         }
         is ComposableNode.TextFieldNode -> when (slotName.lowercase()) {

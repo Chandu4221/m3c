@@ -87,6 +87,8 @@ import dev.chandradsl.m3c.app.desktop.theme.StudioSizes
 import dev.chandradsl.m3c.app.desktop.theme.StudioTypography
 import dev.chandradsl.m3c.core.domain.model.ComposableNode
 import dev.chandradsl.m3c.core.domain.model.NodeId
+import dev.chandradsl.m3c.core.domain.schema.ComponentRegistry
+import dev.chandradsl.m3c.core.domain.schema.childrenWithSlots
 import dev.chandradsl.m3c.core.domain.store.WorkspaceIntent
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.ViewAgenda
@@ -569,46 +571,10 @@ fun buildJewelTree(rootNode: ComposableNode): Tree<AstTreeNodeData> = buildTree 
     populateAstTree(rootNode, null)
 }
 
-fun getChildNodesWithSlots(node: ComposableNode): List<Pair<ComposableNode, String?>> = when (node) {
-    is ComposableNode.ColumnNode -> node.children.map { it to null }
-    is ComposableNode.RowNode -> node.children.map { it to null }
-    is ComposableNode.BoxNode -> node.children.map { it to null }
-    is ComposableNode.SurfaceNode -> node.children.map { it to null }
-    is ComposableNode.CardNode -> node.content.map { it to null }
-    is ComposableNode.ElevatedCardNode -> node.content.map { it to null }
-    is ComposableNode.OutlinedCardNode -> node.content.map { it to null }
-    is ComposableNode.ButtonNode -> node.content.map { it to null }
-    is ComposableNode.ElevatedButtonNode -> node.content.map { it to null }
-    is ComposableNode.FilledTonalButtonNode -> node.content.map { it to null }
-    is ComposableNode.OutlinedButtonNode -> node.content.map { it to null }
-    is ComposableNode.TextButtonNode -> node.content.map { it to null }
-    is ComposableNode.IconButtonNode -> node.content.map { it to null }
-    is ComposableNode.FloatingActionButtonNode -> node.content.map { it to null }
-    is ComposableNode.ScaffoldNode -> buildList {
-        node.topBar?.let { add(it to "topBar") }
-        node.bottomBar?.let { add(it to "bottomBar") }
-        node.floatingActionButton?.let { add(it to "fab") }
-        node.content?.let { add(it to "content") }
+fun getChildNodesWithSlots(node: ComposableNode): List<Pair<ComposableNode, String?>> {
+    return node.childrenWithSlots().map { (child, slotDef) ->
+        child to slotDef?.displayName
     }
-    is ComposableNode.TopAppBarNode -> buildList {
-        add(node.title to "title")
-        node.navigationIcon?.let { add(it to "navIcon") }
-        node.actions.forEach { add(it to "action") }
-    }
-    is ComposableNode.NavigationBarNode -> node.items.map { it to null }
-    is ComposableNode.NavigationBarItemNode -> buildList {
-        add(node.icon to "icon")
-        node.label?.let { add(it to "label") }
-    }
-    is ComposableNode.TextFieldNode -> buildList {
-        node.leadingIcon?.let { add(it to "leading") }
-        node.trailingIcon?.let { add(it to "trailing") }
-    }
-    is ComposableNode.OutlinedTextFieldNode -> buildList {
-        node.leadingIcon?.let { add(it to "leading") }
-        node.trailingIcon?.let { add(it to "trailing") }
-    }
-    else -> emptyList()
 }
 
 fun collectAllContainerIds(node: ComposableNode): Set<String> {
@@ -625,36 +591,10 @@ fun collectAllContainerIds(node: ComposableNode): Set<String> {
 }
 
 private fun getNodeLabel(node: ComposableNode): String = when (node) {
-    is ComposableNode.ColumnNode -> "Column"
-    is ComposableNode.RowNode -> "Row"
-    is ComposableNode.BoxNode -> "Box"
-    is ComposableNode.SurfaceNode -> "Surface"
-    is ComposableNode.CardNode -> "Card"
-    is ComposableNode.ElevatedCardNode -> "Elevated Card"
-    is ComposableNode.OutlinedCardNode -> "Outlined Card"
-    is ComposableNode.ButtonNode -> "Button"
-    is ComposableNode.ElevatedButtonNode -> "Elevated Button"
-    is ComposableNode.FilledTonalButtonNode -> "Tonal Button"
-    is ComposableNode.OutlinedButtonNode -> "Outlined Button"
-    is ComposableNode.TextButtonNode -> "Text Button"
-    is ComposableNode.IconButtonNode -> "Icon Button"
-    is ComposableNode.FloatingActionButtonNode -> "FAB"
     is ComposableNode.TextNode -> "Text: \"${node.text.take(16)}\""
     is ComposableNode.TextFieldNode -> "TextField: ${node.label ?: ""}"
     is ComposableNode.OutlinedTextFieldNode -> "OutlinedTextField: ${node.label ?: ""}"
-    is ComposableNode.CheckboxNode -> "Checkbox"
-    is ComposableNode.SwitchNode -> "Switch"
-    is ComposableNode.RadioButtonNode -> "RadioButton"
-    is ComposableNode.SliderNode -> "Slider"
-    is ComposableNode.CircularProgressIndicatorNode -> "CircularProgress"
-    is ComposableNode.LinearProgressIndicatorNode -> "LinearProgress"
-    is ComposableNode.SpacerNode -> "Spacer"
-    is ComposableNode.HorizontalDividerNode -> "HorizontalDivider"
-    is ComposableNode.VerticalDividerNode -> "VerticalDivider"
-    is ComposableNode.ScaffoldNode -> "Scaffold"
-    is ComposableNode.TopAppBarNode -> "TopAppBar"
-    is ComposableNode.NavigationBarNode -> "NavigationBar"
-    is ComposableNode.NavigationBarItemNode -> "NavItem"
+    else -> ComponentRegistry.findByNode(node)?.displayName ?: "Component"
 }
 
 private fun getNodeIcon(node: ComposableNode): ImageVector = when (node) {

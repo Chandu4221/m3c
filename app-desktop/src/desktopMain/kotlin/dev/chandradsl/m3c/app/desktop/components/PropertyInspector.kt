@@ -51,6 +51,10 @@ import dev.chandradsl.m3c.core.domain.model.ShapeDef
 import dev.chandradsl.m3c.core.domain.model.ShapeToken
 import dev.chandradsl.m3c.core.domain.model.TypographyToken
 import dev.chandradsl.m3c.core.domain.schema.ComponentRegistry
+import dev.chandradsl.m3c.core.domain.schema.ComponentType
+import dev.chandradsl.m3c.core.domain.schema.SlotCardinality
+import dev.chandradsl.m3c.core.domain.schema.SlotDefinition
+import dev.chandradsl.m3c.core.domain.schema.getSlotChildren
 import dev.chandradsl.m3c.core.domain.store.WorkspaceIntent
 
 @Composable
@@ -188,6 +192,31 @@ fun PropertyInspector(
         }
 
         Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(StudioColors.BorderSubtle))
+
+        // 3b. Slots Section (for slotted components: Scaffold, TopAppBar, TextField, NavigationBarItem, etc.)
+        componentDef?.let { def ->
+            if (def.slots.isNotEmpty()) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "SLOTS",
+                        style = StudioTypography.SectionHeader
+                    )
+
+                    def.slots.forEach { slot ->
+                        SlotField(
+                            slot = slot,
+                            selectedNode = selectedNode,
+                            viewModel = viewModel
+                        )
+                    }
+                }
+
+                Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(StudioColors.BorderSubtle))
+            }
+        }
 
         // 4. Specific Component Property Editors
         when (selectedNode) {
@@ -687,3 +716,149 @@ fun <T : Enum<T>> EnumSelector(
         }
     }
 }
+
+@Composable
+private fun SlotField(
+    slot: SlotDefinition,
+    selectedNode: ComposableNode,
+    viewModel: StudioViewModel
+) {
+    val slotChildren = selectedNode.getSlotChildren(slot.id)
+    val isPopulated = slotChildren.isNotEmpty()
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(6.dp))
+            .background(StudioColors.CardSurface)
+            .border(1.dp, StudioColors.BorderSubtle, RoundedCornerShape(6.dp))
+            .padding(8.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = slot.displayName,
+                    style = StudioTypography.Caption.copy(
+                        fontWeight = FontWeight.SemiBold,
+                        color = StudioColors.TextPrimary
+                    )
+                )
+                if (slot.cardinality == SlotCardinality.List) {
+                    Text(
+                        text = "[List]",
+                        style = StudioTypography.Caption.copy(color = StudioColors.TextMuted)
+                    )
+                }
+            }
+
+            if (!isPopulated || slot.cardinality == SlotCardinality.List) {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(StudioColors.ActiveSurface)
+                        .border(1.dp, StudioColors.BorderSubtle, RoundedCornerShape(4.dp))
+                        .clickable {
+                            val candidateType = slot.acceptedTypes.firstOrNull() ?: ComponentType.Text
+                            val newNode = ComponentRegistry.findByType(candidateType)?.createDefault()
+                            if (newNode != null) {
+                                viewModel.dispatch(
+                                    WorkspaceIntent.SetSlot(
+                                        parentId = selectedNode.id,
+                                        slotName = slot.id,
+                                        node = newNode
+                                    )
+                                )
+                            }
+                        }
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                ) {
+                    Text(
+                        text = if (isPopulated) "+ Add" else "+ Assign",
+                        style = StudioTypography.Caption.copy(
+                            color = StudioColors.Primary,
+                            fontWeight = FontWeight.Medium
+                        )
+                    )
+                }
+            }
+        }
+
+        if (isPopulated) {
+            slotChildren.forEach { child ->
+                val childDef = ComponentRegistry.findByNode(child)
+                val childLabel = childDef?.displayName ?: (child::class.simpleName?.replace("Node", "") ?: "Component")
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(StudioColors.ActiveSurface)
+                        .border(1.dp, StudioColors.BorderSubtle, RoundedCornerShape(4.dp))
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable { viewModel.dispatch(WorkspaceIntent.SelectNode(child.id)) },
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "↳ $childLabel",
+                            style = StudioTypography.UIBody.copy(fontWeight = FontWeight.Medium),
+                            color = StudioColors.TextPrimary
+                        )
+                        Text(
+                            text = "#${child.id.value.takeLast(4)}",
+                            style = StudioTypography.Caption.copy(color = StudioColors.TextMuted)
+                        )
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .size(20.dp)
+                            .clip(RoundedCornerShape(3.dp))
+                            .clickable {
+                                if (slot.cardinality == SlotCardinality.List) {
+                                    viewModel.dispatch(WorkspaceIntent.RemoveNode(child.id))
+                                } else {
+                                    viewModel.dispatch(
+                                        WorkspaceIntent.SetSlot(
+                                            parentId = selectedNode.id,
+                                            slotName = slot.id,
+                                            node = null
+                                        )
+                                    )
+                                }
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "✕",
+                            style = StudioTypography.Caption.copy(
+                                color = StudioColors.TextMuted,
+                                fontWeight = FontWeight.Bold
+                            )
+                        )
+                    }
+                }
+            }
+        } else {
+            Text(
+                text = "Empty (not assigned)",
+                style = StudioTypography.Caption.copy(color = StudioColors.TextMuted)
+            )
+        }
+    }
+}
+

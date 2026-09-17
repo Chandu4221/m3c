@@ -6,6 +6,7 @@ import dev.chandradsl.m3c.core.domain.model.ModifierDef
 import dev.chandradsl.m3c.core.domain.model.ShapeDef
 import dev.chandradsl.m3c.core.domain.model.ShapeToken
 import dev.chandradsl.m3c.core.domain.model.TypographyToken
+import dev.chandradsl.m3c.core.domain.scope.ContainerScope
 
 /**
  * Central registry of all supported Material 3 composable component definitions.
@@ -216,6 +217,20 @@ object ComponentRegistry {
             category = ComponentCategory.TextAndInputs,
             iconName = "edit_note",
             acceptsChildren = false,
+            slots = listOf(
+                SlotDefinition(
+                    id = StandardSlots.LEADING_ICON,
+                    displayName = "Leading Icon",
+                    cardinality = SlotCardinality.Single,
+                    acceptedTypes = setOf(ComponentType.IconButton, ComponentType.Text)
+                ),
+                SlotDefinition(
+                    id = StandardSlots.TRAILING_ICON,
+                    displayName = "Trailing Icon",
+                    cardinality = SlotCardinality.Single,
+                    acceptedTypes = setOf(ComponentType.IconButton, ComponentType.Text)
+                )
+            ),
             factory = { ComposableNode.TextFieldNode(label = "Input Label") }
         ))
 
@@ -226,6 +241,20 @@ object ComponentRegistry {
             category = ComponentCategory.TextAndInputs,
             iconName = "edit_note",
             acceptsChildren = false,
+            slots = listOf(
+                SlotDefinition(
+                    id = StandardSlots.LEADING_ICON,
+                    displayName = "Leading Icon",
+                    cardinality = SlotCardinality.Single,
+                    acceptedTypes = setOf(ComponentType.IconButton, ComponentType.Text)
+                ),
+                SlotDefinition(
+                    id = StandardSlots.TRAILING_ICON,
+                    displayName = "Trailing Icon",
+                    cardinality = SlotCardinality.Single,
+                    acceptedTypes = setOf(ComponentType.IconButton, ComponentType.Text)
+                )
+            ),
             factory = { ComposableNode.OutlinedTextFieldNode(label = "Input Label") }
         ))
 
@@ -325,6 +354,32 @@ object ComponentRegistry {
             category = ComponentCategory.Navigation,
             iconName = "web_asset",
             acceptsChildren = true,
+            slots = listOf(
+                SlotDefinition(
+                    id = StandardSlots.TOP_BAR,
+                    displayName = "Top App Bar",
+                    cardinality = SlotCardinality.Single,
+                    acceptedTypes = setOf(ComponentType.TopAppBar)
+                ),
+                SlotDefinition(
+                    id = StandardSlots.BOTTOM_BAR,
+                    displayName = "Bottom Bar",
+                    cardinality = SlotCardinality.Single,
+                    acceptedTypes = setOf(ComponentType.NavigationBar)
+                ),
+                SlotDefinition(
+                    id = StandardSlots.FLOATING_ACTION_BUTTON,
+                    displayName = "Floating Action Button",
+                    cardinality = SlotCardinality.Single,
+                    acceptedTypes = setOf(ComponentType.FloatingActionButton)
+                ),
+                SlotDefinition(
+                    id = StandardSlots.CONTENT,
+                    displayName = "Main Content",
+                    cardinality = SlotCardinality.Single,
+                    acceptedTypes = emptySet()
+                )
+            ),
             factory = { ComposableNode.ScaffoldNode() }
         ))
 
@@ -335,6 +390,27 @@ object ComponentRegistry {
             category = ComponentCategory.Navigation,
             iconName = "view_agenda",
             acceptsChildren = true,
+            slots = listOf(
+                SlotDefinition(
+                    id = StandardSlots.TITLE,
+                    displayName = "Title",
+                    cardinality = SlotCardinality.Single,
+                    acceptedTypes = setOf(ComponentType.Text)
+                ),
+                SlotDefinition(
+                    id = StandardSlots.NAVIGATION_ICON,
+                    displayName = "Navigation Icon",
+                    cardinality = SlotCardinality.Single,
+                    acceptedTypes = setOf(ComponentType.IconButton)
+                ),
+                SlotDefinition(
+                    id = StandardSlots.ACTIONS,
+                    displayName = "Actions",
+                    cardinality = SlotCardinality.List,
+                    acceptedTypes = setOf(ComponentType.IconButton),
+                    providedScope = ContainerScope.Row
+                )
+            ),
             factory = { ComposableNode.TopAppBarNode(title = ComposableNode.TextNode(text = "Title")) }
         ))
 
@@ -355,6 +431,20 @@ object ComponentRegistry {
             category = ComponentCategory.Navigation,
             iconName = "touch_app",
             acceptsChildren = false,
+            slots = listOf(
+                SlotDefinition(
+                    id = StandardSlots.ICON,
+                    displayName = "Icon",
+                    cardinality = SlotCardinality.Single,
+                    acceptedTypes = setOf(ComponentType.IconButton, ComponentType.Text)
+                ),
+                SlotDefinition(
+                    id = StandardSlots.LABEL,
+                    displayName = "Label",
+                    cardinality = SlotCardinality.Single,
+                    acceptedTypes = setOf(ComponentType.Text)
+                )
+            ),
             factory = {
                 ComposableNode.NavigationBarItemNode(
                     icon = ComposableNode.TextNode(text = "★"),
