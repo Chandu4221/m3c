@@ -181,13 +181,18 @@ fun RowScope.RenderNavigationBarItem(
         nodeTag = "NavItem",
         isSelected = state.selectedNodeId == node.id,
         isInteractiveMode = isInteractiveMode,
+        drillDownOnlyWhenSelected = true,
         onSelect = { onIntent(WorkspaceIntent.SelectNode(it)) },
-        modifier = modifier
+        modifier = modifier.weight(1f)
     ) {
         NavigationBarItem(
             selected = node.selected,
             onClick = {
-                onIntent(WorkspaceIntent.UpdateNode(node.copy(selected = !node.selected)))
+                if (isInteractiveMode) {
+                    onIntent(WorkspaceIntent.UpdateNode(node.copy(selected = !node.selected)))
+                } else {
+                    onIntent(WorkspaceIntent.SelectNode(node.id))
+                }
             },
             icon = {
                 NodeRenderer(node = node.icon, state = state, onIntent = onIntent, isInteractiveMode = isInteractiveMode)
