@@ -1,5 +1,6 @@
 package dev.chandradsl.m3c.app.desktop.state
 
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -20,6 +21,33 @@ import dev.chandradsl.m3c.core.domain.scope.ContainerScope
 import dev.chandradsl.m3c.core.domain.store.TreeMutator
 import dev.chandradsl.m3c.core.domain.store.WorkspaceIntent
 import dev.chandradsl.m3c.core.domain.store.WorkspaceState
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.mapLatest
+import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlin.time.Duration.Companion.milliseconds
+
+sealed interface StudioNotification {
+    val message: String
+
+    data class Info(override val message: String) : StudioNotification
+    data class Success(override val message: String) : StudioNotification
+    data class Warning(override val message: String) : StudioNotification
+    data class Error(override val message: String) : StudioNotification
+}
 
 data class DraggedPaletteItem(
     val name: String,
@@ -96,12 +124,42 @@ class StudioViewModel {
         )
     )
 
-    // 2. Focused Sub-Controllers
+    // 2. Coroutine Scope & Notifications
+    val viewModelScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+
+    private val _notificationChannel = Channel<StudioNotification>(Channel.BUFFERED)
+    val notificationFlow: Flow<StudioNotification> = _notificationChannel.receiveAsFlow()
+
+    fun notify(message: String) {
+        viewModelScope.launch {
+            _notificationChannel.send(StudioNotification.Info(message))
+        }
+    }
+
+    fun notifySuccess(message: String) {
+        viewModelScope.launch {
+            _notificationChannel.send(StudioNotification.Success(message))
+        }
+    }
+
+    fun notifyWarning(message: String) {
+        viewModelScope.launch {
+            _notificationChannel.send(StudioNotification.Warning(message))
+        }
+    }
+
+    fun notifyError(message: String) {
+        viewModelScope.launch {
+            _notificationChannel.send(StudioNotification.Error(message))
+        }
+    }
+
+    // 3. Focused Sub-Controllers
     val documentController = DocumentController(initialRoot)
     val canvasController = CanvasController()
     val dragController = DragController()
 
-    // 3. Document State & Intent Delegation
+    // 4. Document State & Intent Delegation
     val workspaceState: WorkspaceState get() = documentController.workspaceState
     val selectedNode: ComposableNode? get() = documentController.selectedNode
     val targetedSlot: Pair<NodeId, String>? get() = documentController.targetedSlot
@@ -354,21 +412,31 @@ class StudioViewModel {
 
     fun cancelModifierDrag() = dragController.cancelModifierDrag()
 
-    // 8. Lazy Derived & Memoized Code Generation (Zero sync lag on selection)
-    private var _cachedGeneratedCode: String? = null
-    private var _lastGeneratedRoot: ComposableNode? = null
-
-    val generatedCode: String
-        get() {
-            val currentRoot = workspaceState.rootNode
-            if (_cachedGeneratedCode == null || _lastGeneratedRoot != currentRoot) {
-                _lastGeneratedRoot = currentRoot
-                _cachedGeneratedCode = ComposeCodeGenerator.generateCodeString(
+    // 8. Reactive, Off-Thread & Debounced Code Generation
+    @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
+    val generatedCodeFlow: StateFlow<String> = snapshotFlow { workspaceState.rootNode }
+        .debounce(150.milliseconds)
+        .distinctUntilChanged()
+        .mapLatest { rootNode ->
+            withContext(Dispatchers.Default) {
+                ComposeCodeGenerator.generateCodeString(
                     packageName = "dev.chandradsl.m3c.preview",
                     componentName = "MyScreen",
-                    rootNode = currentRoot
+                    rootNode = rootNode
                 )
             }
-            return _cachedGeneratedCode!!
         }
+        .flowOn(Dispatchers.Default)
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.Eagerly,
+            initialValue = ComposeCodeGenerator.generateCodeString(
+                packageName = "dev.chandradsl.m3c.preview",
+                componentName = "MyScreen",
+                rootNode = initialRoot
+            )
+        )
+
+    val generatedCode: String
+        get() = generatedCodeFlow.value
 }

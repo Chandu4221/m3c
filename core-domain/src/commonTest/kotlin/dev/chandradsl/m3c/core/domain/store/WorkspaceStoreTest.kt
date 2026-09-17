@@ -201,4 +201,21 @@ class WorkspaceStoreTest {
         val decodedScreen = json.decodeFromString<ComposableNode>(encodedJson)
         assertEquals(m3Screen, decodedScreen)
     }
+
+    @Test
+    fun testWorkspaceStoreStateFlowEmitsUpdates() = kotlinx.coroutines.test.runTest {
+        val root = ComposableNode.ColumnNode(id = NodeId("root"))
+        val store = WorkspaceStore(root)
+
+        assertEquals(root.id, store.stateFlow.value.rootNode.id)
+
+        val child = ComposableNode.TextNode(text = "Reactive Text")
+        store.dispatch(WorkspaceIntent.InsertChild(parentId = root.id, node = child))
+
+        val emittedState = store.stateFlow.value
+        val updatedColumn = emittedState.rootNode as ComposableNode.ColumnNode
+        assertEquals(1, updatedColumn.children.size)
+        assertEquals(child.id, updatedColumn.children.first().id)
+        assertTrue(emittedState.canUndo)
+    }
 }

@@ -20,9 +20,18 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -38,10 +47,13 @@ import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import dev.chandradsl.m3c.app.desktop.components.*
 import dev.chandradsl.m3c.app.desktop.state.LeftDrawerTab
+import dev.chandradsl.m3c.app.desktop.state.StudioNotification
 import dev.chandradsl.m3c.app.desktop.state.StudioViewModel
 import dev.chandradsl.m3c.app.desktop.theme.StudioColors
 import dev.chandradsl.m3c.app.desktop.theme.StudioSizes
 import dev.chandradsl.m3c.app.desktop.theme.StudioTypography
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import org.jetbrains.jewel.intui.standalone.theme.IntUiTheme
 
 fun main() = application {
@@ -368,6 +380,70 @@ fun main() = application {
                                             )
                                         )
                                     }
+                                }
+                            }
+                        }
+                    }
+
+                    // 7. Reactive Toast / Notification Banner Overlay
+                    var currentNotification by remember { mutableStateOf<StudioNotification?>(null) }
+                    LaunchedEffect(Unit) {
+                        viewModel.notificationFlow.collectLatest { notification ->
+                            currentNotification = notification
+                            delay(2500)
+                            if (currentNotification == notification) {
+                                currentNotification = null
+                            }
+                        }
+                    }
+
+                    AnimatedVisibility(
+                        visible = currentNotification != null,
+                        enter = fadeIn(tween(200)) + slideInVertically(tween(200)) { it / 2 },
+                        exit = fadeOut(tween(200)) + slideOutVertically(tween(200)) { it / 2 },
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(end = 24.dp, bottom = 24.dp)
+                    ) {
+                        currentNotification?.let { notif ->
+                            val borderColor = when (notif) {
+                                is StudioNotification.Success -> StudioColors.Success
+                                is StudioNotification.Warning -> StudioColors.Warning
+                                is StudioNotification.Error -> StudioColors.Error
+                                is StudioNotification.Info -> StudioColors.Primary
+                            }
+                            val iconVector = when (notif) {
+                                is StudioNotification.Success -> Icons.Default.CheckCircle
+                                is StudioNotification.Warning -> Icons.Default.Warning
+                                is StudioNotification.Error -> Icons.Default.Error
+                                is StudioNotification.Info -> Icons.Default.Info
+                            }
+
+                            Box(
+                                modifier = Modifier
+                                    .shadow(elevation = 12.dp, shape = RoundedCornerShape(8.dp))
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(StudioColors.PanelSurface)
+                                    .border(width = 1.dp, color = borderColor, shape = RoundedCornerShape(8.dp))
+                                    .padding(horizontal = 16.dp, vertical = 10.dp)
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = iconVector,
+                                        contentDescription = null,
+                                        tint = borderColor,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Text(
+                                        text = notif.message,
+                                        style = StudioTypography.Caption.copy(
+                                            color = StudioColors.TextPrimary,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    )
                                 }
                             }
                         }

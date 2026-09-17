@@ -25,6 +25,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -50,6 +51,7 @@ fun CodePreviewDrawer(
     val vScroll = rememberScrollState()
     val hScroll = rememberScrollState()
     var copied by remember { mutableStateOf(false) }
+    val generatedCode by viewModel.generatedCodeFlow.collectAsState()
 
     LaunchedEffect(copied) {
         if (copied) {
@@ -104,9 +106,10 @@ fun CodePreviewDrawer(
                         .background(copyBtnBg)
                         .border(width = 1.dp, color = copyBtnBorder, shape = RoundedCornerShape(4.dp))
                         .clickable {
-                            val selection = StringSelection(viewModel.generatedCode)
+                            val selection = StringSelection(generatedCode)
                             Toolkit.getDefaultToolkit().systemClipboard.setContents(selection, null)
                             copied = true
+                            viewModel.notifySuccess("Generated Kotlin Compose code copied to clipboard!")
                         }
                         .padding(horizontal = 10.dp, vertical = 5.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -156,7 +159,7 @@ fun CodePreviewDrawer(
                 .horizontalScroll(hScroll)
         ) {
             Text(
-                text = viewModel.generatedCode,
+                text = generatedCode,
                 style = StudioTypography.CodeMonospace
             )
         }
