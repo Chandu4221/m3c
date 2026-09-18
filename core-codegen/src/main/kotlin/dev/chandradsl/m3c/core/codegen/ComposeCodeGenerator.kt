@@ -12,6 +12,7 @@ import dev.chandradsl.m3c.core.domain.model.AlignmentVerticalDef
 import dev.chandradsl.m3c.core.domain.model.ArrangementHorizontalDef
 import dev.chandradsl.m3c.core.domain.model.ArrangementVerticalDef
 import dev.chandradsl.m3c.core.domain.model.ComposableNode
+import dev.chandradsl.m3c.core.domain.model.M3cScreen
 import dev.chandradsl.m3c.core.domain.model.MaterialIconCatalog
 import dev.chandradsl.m3c.core.domain.scope.ContainerScope
 
@@ -94,6 +95,71 @@ object ComposeCodeGenerator {
         componentName: String = "GeneratedScreen",
         rootNode: ComposableNode
     ): String = generateFile(packageName, componentName, rootNode).toString()
+
+    /**
+     * Generates a complete Navigation Graph file hosting all project screens.
+     */
+    fun generateNavGraphFile(
+        packageName: String = "dev.chandradsl.m3c.generated",
+        screens: List<M3cScreen>,
+        graphName: String = "AppNavHost"
+    ): FileSpec {
+        val startDest = screens.firstOrNull { it.isStartDestination }?.route
+            ?: screens.firstOrNull()?.route
+            ?: "home"
+
+        val navHostClass = ClassName("androidx.navigation.compose", "NavHost")
+        val composableFun = MemberName("androidx.navigation.compose", "composable")
+        val rememberNavControllerFun = MemberName("androidx.navigation.compose", "rememberNavController")
+        val navHostControllerClass = ClassName("androidx.navigation", "NavHostController")
+
+        val funBuilder = FunSpec.builder(graphName)
+            .addAnnotation(ComposableClass)
+            .addParameter(
+                ParameterSpec.builder("modifier", ModifierClass)
+                    .defaultValue("%T", ModifierClass)
+                    .build()
+            )
+            .addParameter(
+                ParameterSpec.builder("navController", navHostControllerClass)
+                    .defaultValue("%M()", rememberNavControllerFun)
+                    .build()
+            )
+            .addParameter(
+                ParameterSpec.builder("startDestination", String::class)
+                    .defaultValue("%S", startDest)
+                    .build()
+            )
+
+        val navHostBlock = CodeBlock.builder()
+        navHostBlock.beginControlFlow(
+            "%T(navController = navController, startDestination = startDestination, modifier = modifier)",
+            navHostClass
+        )
+
+        for (screen in screens) {
+            val screenComp = MemberName(packageName, screen.name)
+            navHostBlock.beginControlFlow("%M(%S)", composableFun, screen.route)
+            navHostBlock.addStatement("%M()", screenComp)
+            navHostBlock.endControlFlow()
+        }
+
+        navHostBlock.endControlFlow()
+        funBuilder.addCode(navHostBlock.build())
+
+        return FileSpec.builder(packageName, graphName)
+            .addFunction(funBuilder.build())
+            .build()
+    }
+
+    /**
+     * Generates Navigation Graph Kotlin code as a String.
+     */
+    fun generateNavGraphCodeString(
+        packageName: String = "dev.chandradsl.m3c.generated",
+        screens: List<M3cScreen>,
+        graphName: String = "AppNavHost"
+    ): String = generateNavGraphFile(packageName, screens, graphName).toString()
 
     /**
      * Generates the @Composable FunSpec.

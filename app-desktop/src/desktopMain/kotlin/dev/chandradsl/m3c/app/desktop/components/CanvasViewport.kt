@@ -87,7 +87,12 @@ fun CanvasViewport(
             .background(StudioColors.CanvasBackdrop)
     ) {
         // ====================================================================
-        // Canvas Control Bar: Presets & Zoom
+        // 0. Screen Navigation Tab Bar
+        // ====================================================================
+        ScreenTabBar(viewModel = viewModel)
+
+        // ====================================================================
+        // 1. Canvas Control Bar: Presets & Zoom
         // ====================================================================
         Row(
             modifier = Modifier

@@ -23,5 +23,6 @@ data class M3cScreen(
     val id: String,
     val name: String,
     val route: String,
-    val rootNode: ComposableNode
+    val rootNode: ComposableNode,
+    val isStartDestination: Boolean = false
 )

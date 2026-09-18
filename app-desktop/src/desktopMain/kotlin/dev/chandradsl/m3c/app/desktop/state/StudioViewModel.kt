@@ -95,17 +95,23 @@ enum class DevicePreset(val label: String, val width: Dp, val height: Dp) {
     Desktop("Desktop", 1024.dp, 768.dp)
 }
 
+enum class CodePreviewMode {
+    ActiveScreen,
+    NavGraph
+}
+
 /**
  * Main Studio ViewModel composing DocumentController, CanvasController, and DragController.
  * Provides derived, lazily-memoized Kotlin code generation.
  */
 class StudioViewModel {
 
-    // 0. Project File & Dirty State Management
+    // 0. Project File, Multi-Screen & Dirty State Management
     var projectName: String by mutableStateOf("Untitled")
     var packageName: String by mutableStateOf("com.example.app")
     var currentProjectFile: File? by mutableStateOf(null)
     var isDirty: Boolean by mutableStateOf(false)
+    var codePreviewMode: CodePreviewMode by mutableStateOf(CodePreviewMode.ActiveScreen)
 
     private fun createDefaultScaffold(): ComposableNode = ComposableNode.ScaffoldNode(
         id = NodeId("scaffold_root"),
@@ -143,6 +149,22 @@ class StudioViewModel {
     // 1. Initial starter screen
     private val initialRoot: ComposableNode = createDefaultScaffold()
 
+    var screens: List<M3cScreen> by mutableStateOf(
+        listOf(
+            M3cScreen(
+                id = "screen_main",
+                name = "MainScreen",
+                route = "main",
+                rootNode = initialRoot,
+                isStartDestination = true
+            )
+        )
+    )
+    var activeScreenId: String by mutableStateOf("screen_main")
+
+    val activeScreen: M3cScreen?
+        get() = screens.firstOrNull { it.id == activeScreenId } ?: screens.firstOrNull()
+
     // 2. Coroutine Scope & Notifications
     val viewModelScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
@@ -173,9 +195,286 @@ class StudioViewModel {
         }
     }
 
-    // 3. Project File Operations
+    // 3. Multi-Screen Operations
+    fun syncCurrentScreenRoot() {
+        val curId = activeScreenId
+        val curRoot = workspaceState.rootNode
+        screens = screens.map { screen ->
+            if (screen.id == curId) {
+                screen.copy(rootNode = curRoot)
+            } else screen
+        }
+    }
+
+    fun selectScreen(screenId: String) {
+        if (screenId == activeScreenId) return
+        syncCurrentScreenRoot()
+        val target = screens.firstOrNull { it.id == screenId } ?: return
+        activeScreenId = target.id
+        dispatch(WorkspaceIntent.LoadDocument(target.rootNode))
+        notify("Switched to ${target.name}")
+    }
+
+    private fun createStarterScreenNode(title: String, hasBackButton: Boolean = true): ComposableNode {
+        val timeId = System.currentTimeMillis()
+        val topBarNode = if (hasBackButton) {
+            ComposableNode.TopAppBarNode(
+                id = NodeId("top_bar_$timeId"),
+                title = ComposableNode.TextNode(
+                    id = NodeId("title_$timeId"),
+                    text = title,
+                    typography = TypographyToken.TitleLarge
+                ),
+                navigationIcon = ComposableNode.IconButtonNode(
+                    id = NodeId("nav_back_$timeId"),
+                    content = listOf(
+                        ComposableNode.IconNode(
+                            id = NodeId("icon_back_$timeId"),
+                            iconName = "ArrowBack",
+                            contentDescription = "Back"
+                        )
+                    )
+                ),
+                containerColor = ColorSource.Theme(ColorToken.SurfaceContainer)
+            )
+        } else {
+            ComposableNode.TopAppBarNode(
+                id = NodeId("top_bar_$timeId"),
+                title = ComposableNode.TextNode(
+                    id = NodeId("title_$timeId"),
+                    text = title,
+                    typography = TypographyToken.TitleLarge
+                ),
+                containerColor = ColorSource.Theme(ColorToken.SurfaceContainer)
+            )
+        }
+
+        return ComposableNode.ScaffoldNode(
+            id = NodeId("scaffold_$timeId"),
+            topBar = topBarNode,
+            content = ComposableNode.ColumnNode(
+                id = NodeId("content_col_$timeId"),
+                modifiers = listOf(
+                    ModifierDef.FillMaxSize(),
+                    ModifierDef.Padding.all(DpVal(16f))
+                ),
+                children = listOf(
+                    ComposableNode.TextNode(
+                        id = NodeId("text_header_$timeId"),
+                        text = "$title Screen",
+                        typography = TypographyToken.HeadlineSmall
+                    )
+                )
+            )
+        )
+    }
+
+    fun addScreen(
+        name: String,
+        route: String,
+        isStartDestination: Boolean = false
+    ) {
+        syncCurrentScreenRoot()
+        val sanitizedName = name.trim().replace(Regex("[^a-zA-Z0-9_]"), "").let {
+            if (it.isBlank()) "Screen${screens.size + 1}" else it.replaceFirstChar { c -> c.uppercase() }
+        }
+        val sanitizedRoute = route.trim().lowercase().replace(Regex("[^a-z0-9_]"), "_").let {
+            if (it.isBlank()) sanitizedName.lowercase() else it
+        }
+        val uniqueId = "screen_${System.currentTimeMillis()}"
+        val starterRoot = createStarterScreenNode(sanitizedName, hasBackButton = screens.isNotEmpty())
+
+        val newScreen = M3cScreen(
+            id = uniqueId,
+            name = sanitizedName,
+            route = sanitizedRoute,
+            rootNode = starterRoot,
+            isStartDestination = isStartDestination || screens.isEmpty()
+        )
+
+        screens = if (newScreen.isStartDestination) {
+            screens.map { it.copy(isStartDestination = false) } + newScreen
+        } else {
+            screens + newScreen
+        }
+
+        activeScreenId = newScreen.id
+        dispatch(WorkspaceIntent.LoadDocument(newScreen.rootNode))
+        isDirty = true
+        notifySuccess("Added screen '$sanitizedName'")
+    }
+
+    fun updateScreen(
+        screenId: String,
+        name: String,
+        route: String,
+        isStartDestination: Boolean = false
+    ) {
+        val sanitizedName = name.trim().replace(Regex("[^a-zA-Z0-9_]"), "").let {
+            if (it.isBlank()) "Screen" else it.replaceFirstChar { c -> c.uppercase() }
+        }
+        val sanitizedRoute = route.trim().lowercase().replace(Regex("[^a-z0-9_]"), "_").let {
+            if (it.isBlank()) sanitizedName.lowercase() else it
+        }
+
+        screens = screens.map { screen ->
+            if (screen.id == screenId) {
+                screen.copy(
+                    name = sanitizedName,
+                    route = sanitizedRoute,
+                    isStartDestination = isStartDestination
+                )
+            } else if (isStartDestination) {
+                screen.copy(isStartDestination = false)
+            } else screen
+        }
+        isDirty = true
+        notifySuccess("Updated screen '$sanitizedName'")
+    }
+
+    private fun deepCloneWithNewIds(node: ComposableNode): ComposableNode {
+        val freshId = NodeId("${node.id.value}_copy_${(1000..9999).random()}")
+        return when (node) {
+            is ComposableNode.ColumnNode -> node.copy(id = freshId, children = node.children.map { deepCloneWithNewIds(it) })
+            is ComposableNode.RowNode -> node.copy(id = freshId, children = node.children.map { deepCloneWithNewIds(it) })
+            is ComposableNode.BoxNode -> node.copy(id = freshId, children = node.children.map { deepCloneWithNewIds(it) })
+            is ComposableNode.ScaffoldNode -> node.copy(
+                id = freshId,
+                topBar = node.topBar?.let { deepCloneWithNewIds(it) as? ComposableNode.TopAppBarNode },
+                bottomBar = node.bottomBar?.let { deepCloneWithNewIds(it) as? ComposableNode.NavigationBarNode },
+                floatingActionButton = node.floatingActionButton?.let { deepCloneWithNewIds(it) as? ComposableNode.FloatingActionButtonNode },
+                content = node.content?.let { deepCloneWithNewIds(it) }
+            )
+            is ComposableNode.TopAppBarNode -> node.copy(
+                id = freshId,
+                title = deepCloneWithNewIds(node.title),
+                navigationIcon = node.navigationIcon?.let { deepCloneWithNewIds(it) },
+                actions = node.actions.map { deepCloneWithNewIds(it) }
+            )
+            is ComposableNode.ButtonNode -> node.copy(id = freshId, content = node.content.map { deepCloneWithNewIds(it) })
+            is ComposableNode.ElevatedButtonNode -> node.copy(id = freshId, content = node.content.map { deepCloneWithNewIds(it) })
+            is ComposableNode.FilledTonalButtonNode -> node.copy(id = freshId, content = node.content.map { deepCloneWithNewIds(it) })
+            is ComposableNode.OutlinedButtonNode -> node.copy(id = freshId, content = node.content.map { deepCloneWithNewIds(it) })
+            is ComposableNode.TextButtonNode -> node.copy(id = freshId, content = node.content.map { deepCloneWithNewIds(it) })
+            is ComposableNode.CardNode -> node.copy(id = freshId, content = node.content.map { deepCloneWithNewIds(it) })
+            is ComposableNode.OutlinedCardNode -> node.copy(id = freshId, content = node.content.map { deepCloneWithNewIds(it) })
+            is ComposableNode.ElevatedCardNode -> node.copy(id = freshId, content = node.content.map { deepCloneWithNewIds(it) })
+            is ComposableNode.TextNode -> node.copy(id = freshId)
+            is ComposableNode.IconNode -> node.copy(id = freshId)
+            is ComposableNode.IconButtonNode -> node.copy(id = freshId, content = node.content.map { deepCloneWithNewIds(it) })
+            is ComposableNode.FloatingActionButtonNode -> node.copy(id = freshId, content = node.content.map { deepCloneWithNewIds(it) })
+            is ComposableNode.NavigationBarNode -> node.copy(id = freshId, items = node.items.map { deepCloneWithNewIds(it) })
+            is ComposableNode.NavigationBarItemNode -> node.copy(
+                id = freshId,
+                icon = deepCloneWithNewIds(node.icon),
+                label = node.label?.let { deepCloneWithNewIds(it) }
+            )
+            is ComposableNode.TextFieldNode -> node.copy(id = freshId)
+            is ComposableNode.OutlinedTextFieldNode -> node.copy(id = freshId)
+            is ComposableNode.CheckboxNode -> node.copy(id = freshId)
+            is ComposableNode.SwitchNode -> node.copy(id = freshId)
+            is ComposableNode.RadioButtonNode -> node.copy(id = freshId)
+            is ComposableNode.SliderNode -> node.copy(id = freshId)
+            is ComposableNode.RangeSliderNode -> node.copy(id = freshId)
+            is ComposableNode.SpacerNode -> node.copy(id = freshId)
+            is ComposableNode.SurfaceNode -> node.copy(id = freshId, children = node.children.map { deepCloneWithNewIds(it) })
+            is ComposableNode.CircularProgressIndicatorNode -> node.copy(id = freshId)
+            is ComposableNode.LinearProgressIndicatorNode -> node.copy(id = freshId)
+            is ComposableNode.HorizontalDividerNode -> node.copy(id = freshId)
+            is ComposableNode.VerticalDividerNode -> node.copy(id = freshId)
+            is ComposableNode.AssistChipNode -> node.copy(id = freshId)
+            is ComposableNode.FilterChipNode -> node.copy(id = freshId)
+            is ComposableNode.InputChipNode -> node.copy(id = freshId)
+            is ComposableNode.SuggestionChipNode -> node.copy(id = freshId)
+            is ComposableNode.BadgeNode -> node.copy(id = freshId)
+            is ComposableNode.BadgedBoxNode -> node.copy(
+                id = freshId,
+                badge = node.badge?.let { deepCloneWithNewIds(it) as? ComposableNode.BadgeNode },
+                content = node.content?.let { deepCloneWithNewIds(it) }
+            )
+            is ComposableNode.BottomAppBarNode -> node.copy(
+                id = freshId,
+                actions = node.actions.map { deepCloneWithNewIds(it) },
+                floatingActionButton = node.floatingActionButton?.let { deepCloneWithNewIds(it) }
+            )
+            is ComposableNode.NavigationRailNode -> node.copy(
+                id = freshId,
+                header = node.header?.let { deepCloneWithNewIds(it) },
+                items = node.items.map { deepCloneWithNewIds(it) }
+            )
+            is ComposableNode.NavigationRailItemNode -> node.copy(id = freshId)
+            is ComposableNode.AlertDialogNode -> node.copy(id = freshId)
+        }
+    }
+
+    fun duplicateScreen(screenId: String) {
+        syncCurrentScreenRoot()
+        val source = screens.firstOrNull { it.id == screenId } ?: return
+        val newId = "screen_${System.currentTimeMillis()}"
+        val newName = "${source.name}Copy"
+        val newRoute = "${source.route}_copy"
+        val clonedRoot = deepCloneWithNewIds(source.rootNode)
+
+        val clonedScreen = M3cScreen(
+            id = newId,
+            name = newName,
+            route = newRoute,
+            rootNode = clonedRoot,
+            isStartDestination = false
+        )
+
+        screens = screens + clonedScreen
+        activeScreenId = clonedScreen.id
+        dispatch(WorkspaceIntent.LoadDocument(clonedScreen.rootNode))
+        isDirty = true
+        notifySuccess("Duplicated '${source.name}'")
+    }
+
+    fun deleteScreen(screenId: String) {
+        if (screens.size <= 1) {
+            notifyWarning("Cannot delete the only screen in the project")
+            return
+        }
+        val target = screens.firstOrNull { it.id == screenId } ?: return
+        val remaining = screens.filterNot { it.id == screenId }
+
+        val updatedRemaining = if (target.isStartDestination && remaining.none { it.isStartDestination }) {
+            remaining.mapIndexed { idx, s -> if (idx == 0) s.copy(isStartDestination = true) else s }
+        } else {
+            remaining
+        }
+
+        screens = updatedRemaining
+        if (activeScreenId == screenId) {
+            val nextScreen = updatedRemaining.first()
+            activeScreenId = nextScreen.id
+            dispatch(WorkspaceIntent.LoadDocument(nextScreen.rootNode))
+        }
+        isDirty = true
+        notifySuccess("Deleted '${target.name}'")
+    }
+
+    fun setStartDestination(screenId: String) {
+        screens = screens.map { screen ->
+            screen.copy(isStartDestination = (screen.id == screenId))
+        }
+        isDirty = true
+        val name = screens.firstOrNull { it.id == screenId }?.name ?: ""
+        notifySuccess("Set '$name' as Start Destination")
+    }
+
+    // 4. Project File Operations
     fun newProject(parentFrame: Frame? = null) {
         val freshRoot = createDefaultScaffold()
+        val defaultScreen = M3cScreen(
+            id = "screen_main",
+            name = "MainScreen",
+            route = "main",
+            rootNode = freshRoot,
+            isStartDestination = true
+        )
+        screens = listOf(defaultScreen)
+        activeScreenId = defaultScreen.id
         dispatch(WorkspaceIntent.LoadDocument(freshRoot))
         currentProjectFile = null
         projectName = "Untitled"
@@ -192,16 +491,28 @@ class StudioViewModel {
         try {
             val content = file.readText()
             val project = M3cProjectSerializer.decode(content)
-            val screen = project.screens.firstOrNull { it.id == project.activeScreenId }
-                ?: project.screens.firstOrNull()
-                ?: error("Project contains no screens")
+            val loadedScreens = project.screens.ifEmpty {
+                listOf(
+                    M3cScreen(
+                        id = "screen_main",
+                        name = "MainScreen",
+                        route = "main",
+                        rootNode = createDefaultScaffold(),
+                        isStartDestination = true
+                    )
+                )
+            }
+            val activeScreen = loadedScreens.firstOrNull { it.id == project.activeScreenId }
+                ?: loadedScreens.first()
 
-            dispatch(WorkspaceIntent.LoadDocument(screen.rootNode))
+            screens = loadedScreens
+            activeScreenId = activeScreen.id
+            dispatch(WorkspaceIntent.LoadDocument(activeScreen.rootNode))
             currentProjectFile = file
             projectName = project.name.ifBlank { file.nameWithoutExtension }
             packageName = project.packageName
             isDirty = false
-            notifySuccess("Opened ${file.name}")
+            notifySuccess("Opened ${file.name} (${loadedScreens.size} screens)")
         } catch (e: Exception) {
             notifyError("Failed to open project: ${e.message}")
         }
@@ -223,25 +534,20 @@ class StudioViewModel {
 
     private fun saveToProjectFile(file: File) {
         try {
-            val screen = M3cScreen(
-                id = "main_screen",
-                name = "MainScreen",
-                route = "main",
-                rootNode = workspaceState.rootNode
-            )
+            syncCurrentScreenRoot()
             val project = M3cProject(
                 schemaVersion = 1,
                 name = projectName.ifBlank { file.nameWithoutExtension },
                 packageName = packageName,
-                screens = listOf(screen),
-                activeScreenId = screen.id
+                screens = screens,
+                activeScreenId = activeScreenId
             )
             val jsonText = M3cProjectSerializer.encode(project)
             file.writeText(jsonText)
             currentProjectFile = file
             projectName = file.nameWithoutExtension
             isDirty = false
-            notifySuccess("Saved to ${file.name}")
+            notifySuccess("Saved ${screens.size} screen(s) to ${file.name}")
         } catch (e: Exception) {
             notifyError("Failed to save project: ${e.message}")
         }
@@ -524,16 +830,33 @@ class StudioViewModel {
 
     // 8. Reactive, Off-Thread & Debounced Code Generation
     @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
-    val generatedCodeFlow: StateFlow<String> = snapshotFlow { workspaceState.rootNode }
+    val generatedCodeFlow: StateFlow<String> = snapshotFlow {
+        Triple(workspaceState.rootNode, codePreviewMode, activeScreenId)
+    }
         .debounce(150.milliseconds)
         .distinctUntilChanged()
-        .mapLatest { rootNode ->
+        .mapLatest { (rootNode, mode, currentScreenId) ->
             withContext(Dispatchers.Default) {
-                ComposeCodeGenerator.generateCodeString(
-                    packageName = "dev.chandradsl.m3c.preview",
-                    componentName = "MyScreen",
-                    rootNode = rootNode
-                )
+                when (mode) {
+                    CodePreviewMode.ActiveScreen -> {
+                        val currentScreenName = screens.firstOrNull { it.id == currentScreenId }?.name ?: "MainScreen"
+                        ComposeCodeGenerator.generateCodeString(
+                            packageName = packageName,
+                            componentName = currentScreenName,
+                            rootNode = rootNode
+                        )
+                    }
+                    CodePreviewMode.NavGraph -> {
+                        val updatedScreens = screens.map {
+                            if (it.id == currentScreenId) it.copy(rootNode = rootNode) else it
+                        }
+                        ComposeCodeGenerator.generateNavGraphCodeString(
+                            packageName = packageName,
+                            screens = updatedScreens,
+                            graphName = "AppNavHost"
+                        )
+                    }
+                }
             }
         }
         .flowOn(Dispatchers.Default)
@@ -541,8 +864,8 @@ class StudioViewModel {
             scope = viewModelScope,
             started = SharingStarted.Eagerly,
             initialValue = ComposeCodeGenerator.generateCodeString(
-                packageName = "dev.chandradsl.m3c.preview",
-                componentName = "MyScreen",
+                packageName = "com.example.app",
+                componentName = "MainScreen",
                 rootNode = initialRoot
             )
         )

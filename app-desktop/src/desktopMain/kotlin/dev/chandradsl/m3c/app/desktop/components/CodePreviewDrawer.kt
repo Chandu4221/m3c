@@ -34,7 +34,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import dev.chandradsl.m3c.app.desktop.state.CodePreviewMode
 import dev.chandradsl.m3c.app.desktop.state.StudioViewModel
 import dev.chandradsl.m3c.app.desktop.theme.StudioColors
 import dev.chandradsl.m3c.app.desktop.theme.StudioSizes
@@ -77,10 +80,37 @@ fun CodePreviewDrawer(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "GENERATED KOTLIN SOURCE (COMPOSE MULTIPLATFORM)",
-                style = StudioTypography.SectionHeader.copy(color = StudioColors.Primary)
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = "GENERATED SOURCE",
+                    style = StudioTypography.SectionHeader.copy(color = StudioColors.Primary)
+                )
+
+                // Code Preview Mode Switcher Tabs
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(StudioColors.CardSurface)
+                        .border(width = 1.dp, color = StudioColors.BorderSubtle, shape = RoundedCornerShape(4.dp))
+                        .padding(2.dp),
+                    horizontalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    val activeScreenName = viewModel.activeScreen?.name ?: "Screen"
+                    CodeModeTab(
+                        text = "$activeScreenName.kt",
+                        isSelected = viewModel.codePreviewMode == CodePreviewMode.ActiveScreen,
+                        onClick = { viewModel.codePreviewMode = CodePreviewMode.ActiveScreen }
+                    )
+                    CodeModeTab(
+                        text = "AppNavHost.kt",
+                        isSelected = viewModel.codePreviewMode == CodePreviewMode.NavGraph,
+                        onClick = { viewModel.codePreviewMode = CodePreviewMode.NavGraph }
+                    )
+                }
+            }
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -163,5 +193,32 @@ fun CodePreviewDrawer(
                 style = StudioTypography.CodeMonospace
             )
         }
+    }
+}
+
+@Composable
+private fun CodeModeTab(
+    text: String,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    val bg = if (isSelected) StudioColors.ActiveSurface else Color.Transparent
+    val textCol = if (isSelected) StudioColors.Primary else StudioColors.TextSecondary
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(3.dp))
+            .background(bg)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 8.dp, vertical = 3.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = text,
+            style = StudioTypography.Caption.copy(
+                color = textCol,
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                fontSize = 10.sp
+            )
+        )
     }
 }

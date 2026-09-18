@@ -4,12 +4,14 @@ import dev.chandradsl.m3c.core.domain.model.ColorSource
 import dev.chandradsl.m3c.core.domain.model.ColorToken
 import dev.chandradsl.m3c.core.domain.model.ComposableNode
 import dev.chandradsl.m3c.core.domain.model.DpVal
+import dev.chandradsl.m3c.core.domain.model.M3cScreen
 import dev.chandradsl.m3c.core.domain.model.ModifierDef
 import dev.chandradsl.m3c.core.domain.model.NodeId
 import dev.chandradsl.m3c.core.domain.model.ShapeDef
 import dev.chandradsl.m3c.core.domain.model.ShapeToken
 import dev.chandradsl.m3c.core.domain.model.TypographyToken
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class ComposeCodeGeneratorTest {
@@ -162,5 +164,38 @@ class ComposeCodeGeneratorTest {
         assertTrue(code.contains("Icon("))
         assertTrue(code.contains("Icons.AutoMirrored.Filled.ArrowBack"))
         assertTrue(code.contains("contentDescription = \"Back\""))
+    }
+
+    @Test
+    fun testGenerateNavGraph() {
+        val screen1 = M3cScreen(
+            id = "s1",
+            name = "HomeScreen",
+            route = "home",
+            rootNode = ComposableNode.ColumnNode(),
+            isStartDestination = true
+        )
+        val screen2 = M3cScreen(
+            id = "s2",
+            name = "ProfileScreen",
+            route = "profile",
+            rootNode = ComposableNode.RowNode(),
+            isStartDestination = false
+        )
+
+        val navGraphCode = ComposeCodeGenerator.generateNavGraphCodeString(
+            packageName = "com.test.app",
+            screens = listOf(screen1, screen2),
+            graphName = "AppNavHost"
+        )
+
+        assertTrue(navGraphCode.contains("package com.test.app"))
+        assertTrue(navGraphCode.contains("fun AppNavHost("))
+        assertTrue(navGraphCode.contains("startDestination: String = \"home\""))
+        assertTrue(navGraphCode.contains("NavHost(navController = navController, startDestination = startDestination"))
+        assertTrue(navGraphCode.contains("composable(\"home\") {"))
+        assertTrue(navGraphCode.contains("HomeScreen()"))
+        assertTrue(navGraphCode.contains("composable(\"profile\") {"))
+        assertTrue(navGraphCode.contains("ProfileScreen()"))
     }
 }

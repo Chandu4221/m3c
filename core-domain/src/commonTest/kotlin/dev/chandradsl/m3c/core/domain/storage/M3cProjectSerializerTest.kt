@@ -65,6 +65,40 @@ class M3cProjectSerializerTest {
     }
 
     @Test
+    fun testMultiScreenSerialization() {
+        val screen1 = M3cScreen(
+            id = "screen_1",
+            name = "HomeScreen",
+            route = "home",
+            rootNode = ComposableNode.ColumnNode(id = NodeId("home_root")),
+            isStartDestination = true
+        )
+        val screen2 = M3cScreen(
+            id = "screen_2",
+            name = "ProfileScreen",
+            route = "profile",
+            rootNode = ComposableNode.RowNode(id = NodeId("profile_root")),
+            isStartDestination = false
+        )
+        val project = M3cProject(
+            name = "MultiScreenApp",
+            packageName = "com.example.multi",
+            screens = listOf(screen1, screen2),
+            activeScreenId = "screen_2"
+        )
+
+        val json = M3cProjectSerializer.encode(project)
+        val restored = M3cProjectSerializer.decode(json)
+
+        assertEquals(2, restored.screens.size)
+        assertEquals("HomeScreen", restored.screens[0].name)
+        assertTrue(restored.screens[0].isStartDestination)
+        assertEquals("ProfileScreen", restored.screens[1].name)
+        assertFalse(restored.screens[1].isStartDestination)
+        assertEquals("screen_2", restored.activeScreenId)
+    }
+
+    @Test
     fun testWorkspaceStoreLoadDocumentResetsHistory() = runTest(UnconfinedTestDispatcher()) {
         val root = ComposableNode.ColumnNode(id = NodeId("root_initial"))
         val store = WorkspaceStore(root, UnconfinedTestDispatcher(testScheduler))

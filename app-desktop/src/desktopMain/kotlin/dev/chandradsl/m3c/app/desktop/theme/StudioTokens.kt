@@ -145,6 +145,14 @@ object StudioTypography {
             color = StudioColors.Primary
         )
 
+    val ModalTitle: TextStyle
+        @Composable @ReadOnlyComposable
+        get() = TextStyle(
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Bold,
+            color = StudioColors.TextPrimary
+        )
+
     // 12px SemiBold - Category headers with letter spacing
     val SectionHeader: TextStyle
         @Composable @ReadOnlyComposable
