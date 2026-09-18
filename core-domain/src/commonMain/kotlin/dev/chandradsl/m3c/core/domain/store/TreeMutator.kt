@@ -198,80 +198,83 @@ object TreeMutator {
         is ComposableNode.RangeSliderNode -> this
     }
 
-    private fun ComposableNode.withSlot(slotName: String, slotNode: ComposableNode?): ComposableNode = when (this) {
-        is ComposableNode.ScaffoldNode -> when (slotName.lowercase().replace(" ", "").replace("_", "")) {
-            "topbar", "topappbar" -> copy(topBar = slotNode)
-            "bottombar", "bottomappbar", "navigationbar" -> copy(bottomBar = slotNode)
-            "floatingactionbutton", "fab" -> copy(floatingActionButton = slotNode)
-            "content", "maincontent" -> copy(content = slotNode)
+    private fun ComposableNode.withSlot(slotName: String, slotNode: ComposableNode?): ComposableNode {
+        val normalized = slotName.lowercase().replace(" ", "").replace("_", "")
+        return when (this) {
+            is ComposableNode.ScaffoldNode -> when (normalized) {
+                "topbar", "topappbar" -> copy(topBar = slotNode as? ComposableNode.TopAppBarNode)
+                "bottombar", "bottomappbar", "navigationbar" -> copy(bottomBar = slotNode as? ComposableNode.NavigationBarNode)
+                "floatingactionbutton", "fab" -> copy(floatingActionButton = slotNode as? ComposableNode.FloatingActionButtonNode)
+                "content", "maincontent" -> copy(content = slotNode)
+                else -> this
+            }
+            is ComposableNode.TopAppBarNode -> when (normalized) {
+                "title" -> if (slotNode != null) copy(title = slotNode) else this
+                "navigationicon", "navicon" -> copy(navigationIcon = slotNode)
+                "action", "actions" -> if (slotNode != null) copy(actions = actions + slotNode) else copy(actions = emptyList())
+                else -> this
+            }
+            is ComposableNode.TextFieldNode -> when (normalized) {
+                "leadingicon" -> copy(leadingIcon = slotNode)
+                "trailingicon" -> copy(trailingIcon = slotNode)
+                else -> this
+            }
+            is ComposableNode.OutlinedTextFieldNode -> when (normalized) {
+                "leadingicon" -> copy(leadingIcon = slotNode)
+                "trailingicon" -> copy(trailingIcon = slotNode)
+                else -> this
+            }
+            is ComposableNode.NavigationBarItemNode -> when (normalized) {
+                "icon" -> if (slotNode != null) copy(icon = slotNode) else this
+                "label" -> copy(label = slotNode)
+                else -> this
+            }
+            is ComposableNode.AssistChipNode -> when (normalized) {
+                "leadingicon" -> copy(leadingIcon = slotNode)
+                else -> this
+            }
+            is ComposableNode.FilterChipNode -> when (normalized) {
+                "leadingicon" -> copy(leadingIcon = slotNode)
+                else -> this
+            }
+            is ComposableNode.InputChipNode -> when (normalized) {
+                "leadingicon" -> copy(leadingIcon = slotNode)
+                "trailingicon" -> copy(trailingIcon = slotNode)
+                else -> this
+            }
+            is ComposableNode.SuggestionChipNode -> when (normalized) {
+                "icon" -> copy(icon = slotNode)
+                else -> this
+            }
+            is ComposableNode.BadgedBoxNode -> when (normalized) {
+                "badge" -> copy(badge = slotNode)
+                "content" -> copy(content = slotNode)
+                else -> this
+            }
+            is ComposableNode.BottomAppBarNode -> when (normalized) {
+                "action", "actions" -> if (slotNode != null) copy(actions = actions + slotNode) else copy(actions = emptyList())
+                "floatingactionbutton", "fab" -> copy(floatingActionButton = slotNode)
+                else -> this
+            }
+            is ComposableNode.NavigationRailNode -> when (normalized) {
+                "header" -> copy(header = slotNode)
+                else -> this
+            }
+            is ComposableNode.NavigationRailItemNode -> when (normalized) {
+                "icon" -> if (slotNode != null) copy(icon = slotNode) else this
+                "label" -> copy(label = slotNode)
+                else -> this
+            }
+            is ComposableNode.AlertDialogNode -> when (normalized) {
+                "icon" -> copy(icon = slotNode)
+                "title" -> copy(title = slotNode)
+                "text" -> copy(text = slotNode)
+                "confirmbutton", "confirm" -> copy(confirmButton = slotNode)
+                "dismissbutton", "dismiss" -> copy(dismissButton = slotNode)
+                else -> this
+            }
             else -> this
         }
-        is ComposableNode.TopAppBarNode -> when (slotName.lowercase()) {
-            "title" -> if (slotNode != null) copy(title = slotNode) else this
-            "navigationicon" -> copy(navigationIcon = slotNode)
-            "action", "actions" -> if (slotNode != null) copy(actions = actions + slotNode) else copy(actions = emptyList())
-            else -> this
-        }
-        is ComposableNode.TextFieldNode -> when (slotName.lowercase()) {
-            "leadingicon" -> copy(leadingIcon = slotNode)
-            "trailingicon" -> copy(trailingIcon = slotNode)
-            else -> this
-        }
-        is ComposableNode.OutlinedTextFieldNode -> when (slotName.lowercase()) {
-            "leadingicon" -> copy(leadingIcon = slotNode)
-            "trailingicon" -> copy(trailingIcon = slotNode)
-            else -> this
-        }
-        is ComposableNode.NavigationBarItemNode -> when (slotName.lowercase()) {
-            "icon" -> if (slotNode != null) copy(icon = slotNode) else this
-            "label" -> copy(label = slotNode)
-            else -> this
-        }
-        is ComposableNode.AssistChipNode -> when (slotName.lowercase()) {
-            "leadingicon" -> copy(leadingIcon = slotNode)
-            else -> this
-        }
-        is ComposableNode.FilterChipNode -> when (slotName.lowercase()) {
-            "leadingicon" -> copy(leadingIcon = slotNode)
-            else -> this
-        }
-        is ComposableNode.InputChipNode -> when (slotName.lowercase()) {
-            "leadingicon" -> copy(leadingIcon = slotNode)
-            "trailingicon" -> copy(trailingIcon = slotNode)
-            else -> this
-        }
-        is ComposableNode.SuggestionChipNode -> when (slotName.lowercase()) {
-            "icon" -> copy(icon = slotNode)
-            else -> this
-        }
-        is ComposableNode.BadgedBoxNode -> when (slotName.lowercase()) {
-            "badge" -> copy(badge = slotNode)
-            "content" -> copy(content = slotNode)
-            else -> this
-        }
-        is ComposableNode.BottomAppBarNode -> when (slotName.lowercase()) {
-            "action", "actions" -> if (slotNode != null) copy(actions = actions + slotNode) else copy(actions = emptyList())
-            "floatingactionbutton", "fab" -> copy(floatingActionButton = slotNode)
-            else -> this
-        }
-        is ComposableNode.NavigationRailNode -> when (slotName.lowercase()) {
-            "header" -> copy(header = slotNode)
-            else -> this
-        }
-        is ComposableNode.NavigationRailItemNode -> when (slotName.lowercase()) {
-            "icon" -> if (slotNode != null) copy(icon = slotNode) else this
-            "label" -> copy(label = slotNode)
-            else -> this
-        }
-        is ComposableNode.AlertDialogNode -> when (slotName.lowercase()) {
-            "icon" -> copy(icon = slotNode)
-            "title" -> copy(title = slotNode)
-            "text" -> copy(text = slotNode)
-            "confirmbutton", "confirm" -> copy(confirmButton = slotNode)
-            "dismissbutton", "dismiss" -> copy(dismissButton = slotNode)
-            else -> this
-        }
-        else -> this
     }
 
     private fun ComposableNode.withModifiers(newModifiers: List<ModifierDef>): ComposableNode = when (this) {

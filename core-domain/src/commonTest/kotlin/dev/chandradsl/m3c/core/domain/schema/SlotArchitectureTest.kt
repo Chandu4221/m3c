@@ -197,4 +197,55 @@ class SlotArchitectureTest {
         assertEquals(1, updatedRail.items.size)
         assertEquals(railItem.id, updatedRail.items[0].id)
     }
+
+    @Test
+    fun testAlertDialogSlotMutations() {
+        val dialog = ComposableNode.AlertDialogNode(
+            title = null,
+            text = null,
+            icon = null,
+            confirmButton = null,
+            dismissButton = null
+        )
+
+        val titleNode = ComposableNode.TextNode(text = "Warning")
+        val textNode = ComposableNode.TextNode(text = "Are you sure?")
+        val iconNode = ComposableNode.IconNode(iconName = "Warning")
+        val confirmNode = ComposableNode.TextButtonNode(content = listOf(ComposableNode.TextNode(text = "Yes")))
+        val dismissNode = ComposableNode.TextButtonNode(content = listOf(ComposableNode.TextNode(text = "No")))
+
+        var updated = TreeMutator.setSlot(dialog, dialog.id, StandardSlots.TITLE, titleNode) as ComposableNode.AlertDialogNode
+        updated = TreeMutator.setSlot(updated, dialog.id, StandardSlots.TEXT, textNode) as ComposableNode.AlertDialogNode
+        updated = TreeMutator.setSlot(updated, dialog.id, StandardSlots.ICON, iconNode) as ComposableNode.AlertDialogNode
+        updated = TreeMutator.setSlot(updated, dialog.id, StandardSlots.CONFIRM_BUTTON, confirmNode) as ComposableNode.AlertDialogNode
+        updated = TreeMutator.setSlot(updated, dialog.id, StandardSlots.DISMISS_BUTTON, dismissNode) as ComposableNode.AlertDialogNode
+
+        assertEquals(titleNode.id, updated.title?.id)
+        assertEquals(textNode.id, updated.text?.id)
+        assertEquals(iconNode.id, updated.icon?.id)
+        assertEquals(confirmNode.id, updated.confirmButton?.id)
+        assertEquals(dismissNode.id, updated.dismissButton?.id)
+
+        // Clear dismiss button slot
+        val cleared = TreeMutator.setSlot(updated, dialog.id, StandardSlots.DISMISS_BUTTON, null) as ComposableNode.AlertDialogNode
+        assertNull(cleared.dismissButton)
+        assertNotNull(cleared.confirmButton)
+    }
+
+    @Test
+    fun testTextFieldSlotMutations() {
+        val textField = ComposableNode.TextFieldNode(value = "Search query")
+        val leadingIcon = ComposableNode.IconNode(iconName = "Search")
+        val trailingIcon = ComposableNode.IconNode(iconName = "Clear")
+
+        val withIcons = TreeMutator.setSlot(textField, textField.id, StandardSlots.LEADING_ICON, leadingIcon) as ComposableNode.TextFieldNode
+        val withBoth = TreeMutator.setSlot(withIcons, textField.id, StandardSlots.TRAILING_ICON, trailingIcon) as ComposableNode.TextFieldNode
+
+        assertEquals(leadingIcon.id, withBoth.leadingIcon?.id)
+        assertEquals(trailingIcon.id, withBoth.trailingIcon?.id)
+
+        val clearedTrailing = TreeMutator.setSlot(withBoth, textField.id, StandardSlots.TRAILING_ICON, null) as ComposableNode.TextFieldNode
+        assertNull(clearedTrailing.trailingIcon)
+        assertNotNull(clearedTrailing.leadingIcon)
+    }
 }

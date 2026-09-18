@@ -34,6 +34,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import dev.chandradsl.m3c.app.desktop.state.StudioViewModel
 import dev.chandradsl.m3c.app.desktop.theme.StudioColors
 import dev.chandradsl.m3c.app.desktop.theme.StudioSizes
@@ -43,8 +44,12 @@ import dev.chandradsl.m3c.core.domain.model.AlignmentHorizontalDef
 import dev.chandradsl.m3c.core.domain.model.AlignmentVerticalDef
 import dev.chandradsl.m3c.core.domain.model.ArrangementHorizontalDef
 import dev.chandradsl.m3c.core.domain.model.ArrangementVerticalDef
+import dev.chandradsl.m3c.core.domain.model.ColorSource
+import dev.chandradsl.m3c.core.domain.model.ColorToken
 import dev.chandradsl.m3c.core.domain.model.ComposableNode
 import dev.chandradsl.m3c.core.domain.model.DpVal
+import dev.chandradsl.m3c.core.domain.model.ModifierDef
+import dev.chandradsl.m3c.core.domain.model.NodeId
 import dev.chandradsl.m3c.core.domain.model.ShapeDef
 import dev.chandradsl.m3c.core.domain.model.ShapeToken
 import dev.chandradsl.m3c.core.domain.model.TypographyToken
@@ -217,6 +222,235 @@ fun PropertyInspector(
 
         // 4. Specific Component Property Editors
         when (selectedNode) {
+            is ComposableNode.ScaffoldNode -> {
+                InspectorField(label = "Top App Bar Slot") {
+                    SlotStatusRow(
+                        slotName = "Top App Bar",
+                        childNode = selectedNode.topBar,
+                        onAdd = {
+                            val newTopBar = ComposableNode.TopAppBarNode(
+                                id = NodeId.generate("top_bar"),
+                                title = ComposableNode.TextNode(
+                                    id = NodeId.generate("title"),
+                                    text = "Page Title",
+                                    typography = TypographyToken.TitleLarge
+                                ),
+                                containerColor = ColorSource.Theme(ColorToken.SurfaceContainer)
+                            )
+                            viewModel.dispatch(WorkspaceIntent.SetSlot(selectedNode.id, "top_bar", newTopBar))
+                        },
+                        onSelect = { selectedNode.topBar?.let { viewModel.dispatch(WorkspaceIntent.SelectNode(it.id)) } },
+                        onRemove = { viewModel.dispatch(WorkspaceIntent.SetSlot(selectedNode.id, "top_bar", null)) }
+                    )
+                }
+
+                InspectorField(label = "Bottom Navigation Bar Slot") {
+                    SlotStatusRow(
+                        slotName = "Bottom Bar",
+                        childNode = selectedNode.bottomBar,
+                        onAdd = {
+                            val newNav = ComposableNode.NavigationBarNode(
+                                id = NodeId.generate("nav_bar"),
+                                items = listOf(
+                                    ComposableNode.NavigationBarItemNode(
+                                        id = NodeId.generate("nav_item"),
+                                        selected = true,
+                                        icon = ComposableNode.IconNode(iconName = "Home", contentDescription = "Home"),
+                                        label = ComposableNode.TextNode(text = "Home")
+                                    ),
+                                    ComposableNode.NavigationBarItemNode(
+                                        id = NodeId.generate("nav_item"),
+                                        selected = false,
+                                        icon = ComposableNode.IconNode(iconName = "Person", contentDescription = "Profile"),
+                                        label = ComposableNode.TextNode(text = "Profile")
+                                    )
+                                )
+                            )
+                            viewModel.dispatch(WorkspaceIntent.SetSlot(selectedNode.id, "bottom_bar", newNav))
+                        },
+                        onSelect = { selectedNode.bottomBar?.let { viewModel.dispatch(WorkspaceIntent.SelectNode(it.id)) } },
+                        onRemove = { viewModel.dispatch(WorkspaceIntent.SetSlot(selectedNode.id, "bottom_bar", null)) }
+                    )
+                }
+
+                InspectorField(label = "Floating Action Button Slot") {
+                    SlotStatusRow(
+                        slotName = "FAB",
+                        childNode = selectedNode.floatingActionButton,
+                        onAdd = {
+                            val newFab = ComposableNode.FloatingActionButtonNode(
+                                id = NodeId.generate("fab"),
+                                shape = ShapeDef.Token(ShapeToken.Large),
+                                containerColor = ColorSource.Theme(ColorToken.PrimaryContainer),
+                                content = listOf(ComposableNode.IconNode(iconName = "Add", contentDescription = "Add"))
+                            )
+                            viewModel.dispatch(WorkspaceIntent.SetSlot(selectedNode.id, "floating_action_button", newFab))
+                        },
+                        onSelect = { selectedNode.floatingActionButton?.let { viewModel.dispatch(WorkspaceIntent.SelectNode(it.id)) } },
+                        onRemove = { viewModel.dispatch(WorkspaceIntent.SetSlot(selectedNode.id, "floating_action_button", null)) }
+                    )
+                }
+
+                selectedNode.content?.let { contentNode ->
+                    InspectorField(label = "Main Content Body") {
+                        OutlinedButton(
+                            onClick = { viewModel.dispatch(WorkspaceIntent.SelectNode(contentNode.id)) },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("↳ Select Content (${contentNode::class.simpleName?.replace("Node", "")})")
+                        }
+                    }
+                }
+            }
+
+            is ComposableNode.TopAppBarNode -> {
+                val currentTitleText = (selectedNode.title as? ComposableNode.TextNode)?.text ?: ""
+                InspectorField(label = "Title Text") {
+                    InspectorTextInput(
+                        value = currentTitleText,
+                        onValueChange = { newTxt ->
+                            val newTitleNode = (selectedNode.title as? ComposableNode.TextNode)?.copy(text = newTxt)
+                                ?: ComposableNode.TextNode(id = NodeId.generate("txt"), text = newTxt, typography = TypographyToken.TitleLarge)
+                            viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(title = newTitleNode)))
+                        }
+                    )
+                }
+
+                val currentColor = (selectedNode.containerColor as? ColorSource.Theme)?.token
+                InspectorField(label = "Container Background") {
+                    ColorTokenSelector(
+                        selectedToken = currentColor,
+                        onSelect = { tok ->
+                            val src = tok?.let { ColorSource.Theme(it) }
+                            viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(containerColor = src)))
+                        }
+                    )
+                }
+
+                InspectorField(label = "Navigation Icon (Back Button)") {
+                    SlotStatusRow(
+                        slotName = "Back Navigation Icon",
+                        childNode = selectedNode.navigationIcon,
+                        onAdd = {
+                            val backBtn = ComposableNode.IconButtonNode(
+                                id = NodeId.generate("nav_back"),
+                                content = listOf(ComposableNode.IconNode(iconName = "ArrowBack", contentDescription = "Back"))
+                            )
+                            viewModel.dispatch(WorkspaceIntent.SetSlot(selectedNode.id, "navigation_icon", backBtn))
+                        },
+                        onSelect = { selectedNode.navigationIcon?.let { viewModel.dispatch(WorkspaceIntent.SelectNode(it.id)) } },
+                        onRemove = { viewModel.dispatch(WorkspaceIntent.SetSlot(selectedNode.id, "navigation_icon", null)) }
+                    )
+                }
+
+                InspectorField(label = "Action Icons (${selectedNode.actions.size})") {
+                    DefaultButton(
+                        onClick = {
+                            val newAction = ComposableNode.IconButtonNode(
+                                id = NodeId.generate("action_btn"),
+                                content = listOf(ComposableNode.IconNode(iconName = "MoreVert", contentDescription = "More"))
+                            )
+                            viewModel.dispatch(WorkspaceIntent.SetSlot(selectedNode.id, "actions", newAction))
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("+ Add Action Button")
+                    }
+                }
+            }
+
+            is ComposableNode.AlertDialogNode -> {
+                val currentTitle = (selectedNode.title as? ComposableNode.TextNode)?.text ?: ""
+                InspectorField(label = "Dialog Title") {
+                    InspectorTextInput(
+                        value = currentTitle,
+                        onValueChange = { newTxt ->
+                            val newTitle = ComposableNode.TextNode(
+                                id = selectedNode.title?.id ?: NodeId.generate("title"),
+                                text = newTxt,
+                                typography = TypographyToken.HeadlineSmall
+                            )
+                            viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(title = newTitle)))
+                        }
+                    )
+                }
+
+                val currentBody = (selectedNode.text as? ComposableNode.TextNode)?.text ?: ""
+                InspectorField(label = "Dialog Message") {
+                    InspectorTextInput(
+                        value = currentBody,
+                        onValueChange = { newTxt ->
+                            val newText = ComposableNode.TextNode(
+                                id = selectedNode.text?.id ?: NodeId.generate("body"),
+                                text = newTxt,
+                                typography = TypographyToken.BodyMedium
+                            )
+                            viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(text = newText)))
+                        }
+                    )
+                }
+
+                InspectorField(label = "Dialog Icon") {
+                    SlotStatusRow(
+                        slotName = "Icon",
+                        childNode = selectedNode.icon,
+                        onAdd = {
+                            val newIcon = ComposableNode.IconNode(
+                                id = NodeId.generate("dialog_icon"),
+                                iconName = "Info",
+                                contentDescription = "Dialog Icon"
+                            )
+                            viewModel.dispatch(WorkspaceIntent.SetSlot(selectedNode.id, "icon", newIcon))
+                        },
+                        onSelect = { selectedNode.icon?.let { viewModel.dispatch(WorkspaceIntent.SelectNode(it.id)) } },
+                        onRemove = { viewModel.dispatch(WorkspaceIntent.SetSlot(selectedNode.id, "icon", null)) }
+                    )
+                }
+
+                val confirmBtnText = ((selectedNode.confirmButton as? ComposableNode.TextButtonNode)?.content?.firstOrNull() as? ComposableNode.TextNode)?.text
+                    ?: ((selectedNode.confirmButton as? ComposableNode.ButtonNode)?.content?.firstOrNull() as? ComposableNode.TextNode)?.text
+                    ?: "Confirm"
+                InspectorField(label = "Confirm Button Label") {
+                    InspectorTextInput(
+                        value = confirmBtnText,
+                        onValueChange = { newLabel ->
+                            val newBtn = ComposableNode.TextButtonNode(
+                                id = selectedNode.confirmButton?.id ?: NodeId.generate("confirm_btn"),
+                                content = listOf(ComposableNode.TextNode(text = newLabel))
+                            )
+                            viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(confirmButton = newBtn)))
+                        }
+                    )
+                }
+
+                InspectorField(label = "Dismiss / Cancel Button") {
+                    SlotStatusRow(
+                        slotName = "Dismiss Button",
+                        childNode = selectedNode.dismissButton,
+                        onAdd = {
+                            val dismissBtn = ComposableNode.TextButtonNode(
+                                id = NodeId.generate("dismiss_btn"),
+                                content = listOf(ComposableNode.TextNode(text = "Cancel"))
+                            )
+                            viewModel.dispatch(WorkspaceIntent.SetSlot(selectedNode.id, "dismiss_button", dismissBtn))
+                        },
+                        onSelect = { selectedNode.dismissButton?.let { viewModel.dispatch(WorkspaceIntent.SelectNode(it.id)) } },
+                        onRemove = { viewModel.dispatch(WorkspaceIntent.SetSlot(selectedNode.id, "dismiss_button", null)) }
+                    )
+                }
+
+                val currentColor = (selectedNode.containerColor as? ColorSource.Theme)?.token
+                InspectorField(label = "Dialog Background") {
+                    ColorTokenSelector(
+                        selectedToken = currentColor,
+                        onSelect = { tok ->
+                            val src = tok?.let { ColorSource.Theme(it) }
+                            viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(containerColor = src)))
+                        }
+                    )
+                }
+            }
+
             is ComposableNode.TextNode -> {
                 InspectorField(label = "Text Content") {
                     InspectorTextInput(
@@ -274,6 +508,38 @@ fun PropertyInspector(
                     checked = selectedNode.singleLine,
                     onCheckedChange = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(singleLine = it))) }
                 )
+                InspectorField(label = "Leading Icon") {
+                    SlotStatusRow(
+                        slotName = "Leading Icon",
+                        childNode = selectedNode.leadingIcon,
+                        onAdd = {
+                            val iconNode = ComposableNode.IconNode(
+                                id = NodeId.generate("lead_icon"),
+                                iconName = "Search",
+                                contentDescription = "Search"
+                            )
+                            viewModel.dispatch(WorkspaceIntent.SetSlot(selectedNode.id, "leading_icon", iconNode))
+                        },
+                        onSelect = { selectedNode.leadingIcon?.let { viewModel.dispatch(WorkspaceIntent.SelectNode(it.id)) } },
+                        onRemove = { viewModel.dispatch(WorkspaceIntent.SetSlot(selectedNode.id, "leading_icon", null)) }
+                    )
+                }
+                InspectorField(label = "Trailing Icon") {
+                    SlotStatusRow(
+                        slotName = "Trailing Icon",
+                        childNode = selectedNode.trailingIcon,
+                        onAdd = {
+                            val iconNode = ComposableNode.IconNode(
+                                id = NodeId.generate("trail_icon"),
+                                iconName = "Clear",
+                                contentDescription = "Clear"
+                            )
+                            viewModel.dispatch(WorkspaceIntent.SetSlot(selectedNode.id, "trailing_icon", iconNode))
+                        },
+                        onSelect = { selectedNode.trailingIcon?.let { viewModel.dispatch(WorkspaceIntent.SelectNode(it.id)) } },
+                        onRemove = { viewModel.dispatch(WorkspaceIntent.SetSlot(selectedNode.id, "trailing_icon", null)) }
+                    )
+                }
             }
 
             is ComposableNode.OutlinedTextFieldNode -> {
@@ -294,6 +560,38 @@ fun PropertyInspector(
                     checked = selectedNode.singleLine,
                     onCheckedChange = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(singleLine = it))) }
                 )
+                InspectorField(label = "Leading Icon") {
+                    SlotStatusRow(
+                        slotName = "Leading Icon",
+                        childNode = selectedNode.leadingIcon,
+                        onAdd = {
+                            val iconNode = ComposableNode.IconNode(
+                                id = NodeId.generate("lead_icon"),
+                                iconName = "Search",
+                                contentDescription = "Search"
+                            )
+                            viewModel.dispatch(WorkspaceIntent.SetSlot(selectedNode.id, "leading_icon", iconNode))
+                        },
+                        onSelect = { selectedNode.leadingIcon?.let { viewModel.dispatch(WorkspaceIntent.SelectNode(it.id)) } },
+                        onRemove = { viewModel.dispatch(WorkspaceIntent.SetSlot(selectedNode.id, "leading_icon", null)) }
+                    )
+                }
+                InspectorField(label = "Trailing Icon") {
+                    SlotStatusRow(
+                        slotName = "Trailing Icon",
+                        childNode = selectedNode.trailingIcon,
+                        onAdd = {
+                            val iconNode = ComposableNode.IconNode(
+                                id = NodeId.generate("trail_icon"),
+                                iconName = "Clear",
+                                contentDescription = "Clear"
+                            )
+                            viewModel.dispatch(WorkspaceIntent.SetSlot(selectedNode.id, "trailing_icon", iconNode))
+                        },
+                        onSelect = { selectedNode.trailingIcon?.let { viewModel.dispatch(WorkspaceIntent.SelectNode(it.id)) } },
+                        onRemove = { viewModel.dispatch(WorkspaceIntent.SetSlot(selectedNode.id, "trailing_icon", null)) }
+                    )
+                }
             }
 
             is ComposableNode.CardNode -> {
@@ -304,6 +602,14 @@ fun PropertyInspector(
                         onSelect = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(elevation = DpVal(it)))) }
                     )
                 }
+                InspectorField(label = "Corner Shape") {
+                    EnumSelector(
+                        values = ShapeToken.entries,
+                        selected = (selectedNode.shape as? ShapeDef.Token)?.token ?: ShapeToken.Medium,
+                        onSelect = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(shape = ShapeDef.Token(it)))) }
+                    )
+                }
+                CardTemplateActions(cardId = selectedNode.id, viewModel = viewModel)
             }
 
             is ComposableNode.ElevatedCardNode -> {
@@ -314,6 +620,25 @@ fun PropertyInspector(
                         onSelect = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(elevation = DpVal(it)))) }
                     )
                 }
+                InspectorField(label = "Corner Shape") {
+                    EnumSelector(
+                        values = ShapeToken.entries,
+                        selected = (selectedNode.shape as? ShapeDef.Token)?.token ?: ShapeToken.Medium,
+                        onSelect = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(shape = ShapeDef.Token(it)))) }
+                    )
+                }
+                CardTemplateActions(cardId = selectedNode.id, viewModel = viewModel)
+            }
+
+            is ComposableNode.OutlinedCardNode -> {
+                InspectorField(label = "Corner Shape") {
+                    EnumSelector(
+                        values = ShapeToken.entries,
+                        selected = (selectedNode.shape as? ShapeDef.Token)?.token ?: ShapeToken.Medium,
+                        onSelect = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(shape = ShapeDef.Token(it)))) }
+                    )
+                }
+                CardTemplateActions(cardId = selectedNode.id, viewModel = viewModel)
             }
 
             is ComposableNode.SurfaceNode -> {
@@ -486,38 +811,69 @@ fun PropertyInspector(
                         }
                     }
                 }
-                InspectorField(label = "Floating Action Button") {
-                    Text(
-                        text = if (selectedNode.floatingActionButton != null) "Configured" else "None",
-                        style = StudioTypography.Caption,
-                        color = StudioColors.TextSecondary
+                InspectorField(label = "Floating Action Button Slot") {
+                    SlotStatusRow(
+                        slotName = "FAB",
+                        childNode = selectedNode.floatingActionButton,
+                        onAdd = {
+                            val newFab = ComposableNode.FloatingActionButtonNode(
+                                id = NodeId.generate("fab"),
+                                shape = ShapeDef.Token(ShapeToken.Large),
+                                containerColor = ColorSource.Theme(ColorToken.PrimaryContainer),
+                                content = listOf(ComposableNode.IconNode(iconName = "Add", contentDescription = "Add"))
+                            )
+                            viewModel.dispatch(WorkspaceIntent.SetSlot(selectedNode.id, "floating_action_button", newFab))
+                        },
+                        onSelect = { selectedNode.floatingActionButton?.let { viewModel.dispatch(WorkspaceIntent.SelectNode(it.id)) } },
+                        onRemove = { viewModel.dispatch(WorkspaceIntent.SetSlot(selectedNode.id, "floating_action_button", null)) }
+                    )
+                }
+
+                val currentColor = (selectedNode.containerColor as? ColorSource.Theme)?.token
+                InspectorField(label = "Container Background") {
+                    ColorTokenSelector(
+                        selectedToken = currentColor,
+                        onSelect = { tok ->
+                            val src = tok?.let { ColorSource.Theme(it) }
+                            viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(containerColor = src)))
+                        }
                     )
                 }
             }
 
-            is ComposableNode.ScaffoldNode -> {
-                InspectorField(label = "Scaffold Slots") {
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(
-                            text = "TopBar: ${if (selectedNode.topBar != null) "Configured (${selectedNode.topBar!!::class.simpleName?.removeSuffix("Node")})" else "Empty"}",
-                            style = StudioTypography.Caption,
-                            color = StudioColors.TextSecondary
-                        )
-                        Text(
-                            text = "BottomBar: ${if (selectedNode.bottomBar != null) "Configured (${selectedNode.bottomBar!!::class.simpleName?.removeSuffix("Node")})" else "Empty"}",
-                            style = StudioTypography.Caption,
-                            color = StudioColors.TextSecondary
-                        )
-                        Text(
-                            text = "FAB: ${if (selectedNode.floatingActionButton != null) "Configured (${selectedNode.floatingActionButton!!::class.simpleName?.removeSuffix("Node")})" else "Empty"}",
-                            style = StudioTypography.Caption,
-                            color = StudioColors.TextSecondary
-                        )
-                        Text(
-                            text = "Content: ${if (selectedNode.content != null) "Configured (${selectedNode.content!!::class.simpleName?.removeSuffix("Node")})" else "Empty"}",
-                            style = StudioTypography.Caption,
-                            color = StudioColors.TextSecondary
-                        )
+            is ComposableNode.NavigationRailNode -> {
+                InspectorField(label = "Header Slot") {
+                    SlotStatusRow(
+                        slotName = "Header",
+                        childNode = selectedNode.header,
+                        onAdd = {
+                            val newHeader = ComposableNode.FloatingActionButtonNode(
+                                id = NodeId.generate("rail_fab"),
+                                shape = ShapeDef.Token(ShapeToken.Large),
+                                containerColor = ColorSource.Theme(ColorToken.PrimaryContainer),
+                                content = listOf(ComposableNode.IconNode(iconName = "Edit", contentDescription = "Edit"))
+                            )
+                            viewModel.dispatch(WorkspaceIntent.SetSlot(selectedNode.id, "header", newHeader))
+                        },
+                        onSelect = { selectedNode.header?.let { viewModel.dispatch(WorkspaceIntent.SelectNode(it.id)) } },
+                        onRemove = { viewModel.dispatch(WorkspaceIntent.SetSlot(selectedNode.id, "header", null)) }
+                    )
+                }
+
+                InspectorField(label = "Navigation Items (${selectedNode.items.size})") {
+                    DefaultButton(
+                        onClick = {
+                            val newItem = ComposableNode.NavigationRailItemNode(
+                                id = NodeId.generate("rail_item"),
+                                icon = ComposableNode.IconNode(iconName = "Bookmark", contentDescription = "Bookmark"),
+                                label = ComposableNode.TextNode(text = "Item"),
+                                selected = false
+                            )
+                            viewModel.dispatch(WorkspaceIntent.InsertChild(parentId = selectedNode.id, node = newItem))
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("+ Add Rail Item")
                     }
                 }
             }
@@ -1081,4 +1437,196 @@ private fun SlotField(
         }
     }
 }
+
+@Composable
+fun ColorTokenSelector(
+    selectedToken: ColorToken?,
+    onSelect: (ColorToken?) -> Unit
+) {
+    val tokens = listOf(
+        null to "Default",
+        ColorToken.Surface to "Surface",
+        ColorToken.SurfaceContainer to "Container",
+        ColorToken.SurfaceContainerLow to "Cont. Low",
+        ColorToken.SurfaceContainerHigh to "Cont. High",
+        ColorToken.PrimaryContainer to "Primary",
+        ColorToken.SecondaryContainer to "Secondary",
+        ColorToken.TertiaryContainer to "Tertiary",
+        ColorToken.ErrorContainer to "Error"
+    )
+
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        tokens.chunked(3).forEach { rowTokens ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                rowTokens.forEach { (tok, label) ->
+                    val isChosen = tok == selectedToken
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(if (isChosen) StudioColors.ActiveSurface else StudioColors.CardSurface)
+                            .border(
+                                width = 1.dp,
+                                color = if (isChosen) StudioColors.Primary else StudioColors.BorderSubtle,
+                                shape = RoundedCornerShape(4.dp)
+                            )
+                            .clickable { onSelect(tok) }
+                            .padding(vertical = 5.dp, horizontal = 4.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = label,
+                            style = StudioTypography.Caption.copy(
+                                color = if (isChosen) StudioColors.Primary else StudioColors.TextPrimary,
+                                fontWeight = if (isChosen) FontWeight.Bold else FontWeight.Normal,
+                                fontSize = 10.sp
+                            ),
+                            maxLines = 1,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SlotStatusRow(
+    slotName: String,
+    childNode: ComposableNode?,
+    onAdd: () -> Unit,
+    onSelect: () -> Unit,
+    onRemove: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(4.dp))
+            .background(StudioColors.CardSurface)
+            .border(1.dp, StudioColors.BorderSubtle, RoundedCornerShape(4.dp))
+            .padding(horizontal = 8.dp, vertical = 6.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = slotName,
+                style = StudioTypography.Caption.copy(fontWeight = FontWeight.SemiBold)
+            )
+            Text(
+                text = if (childNode != null) "Assigned (${childNode::class.simpleName?.replace("Node", "")})" else "Not set",
+                style = StudioTypography.Badge.copy(
+                    color = if (childNode != null) StudioColors.Success else StudioColors.TextMuted,
+                    fontSize = 9.sp
+                )
+            )
+        }
+
+        Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (childNode != null) {
+                OutlinedSlimButton(onClick = onSelect) {
+                    Text("Select", style = StudioTypography.Caption.copy(fontSize = 10.sp))
+                }
+                Box(
+                    modifier = Modifier
+                        .size(20.dp)
+                        .clip(RoundedCornerShape(3.dp))
+                        .clickable(onClick = onRemove),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "✕",
+                        style = StudioTypography.Caption.copy(color = StudioColors.TextMuted, fontWeight = FontWeight.Bold)
+                    )
+                }
+            } else {
+                DefaultButton(onClick = onAdd) {
+                    Text("+ Add", style = StudioTypography.Caption.copy(fontSize = 10.sp))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CardTemplateActions(
+    cardId: NodeId,
+    viewModel: StudioViewModel
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Text(
+            text = "Card Slot Templates",
+            style = StudioTypography.Caption.copy(fontWeight = FontWeight.SemiBold)
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            OutlinedButton(
+                onClick = {
+                    val headerRow = ComposableNode.RowNode(
+                        id = NodeId.generate("card_header"),
+                        horizontalArrangement = ArrangementHorizontalDef.Start,
+                        verticalAlignment = AlignmentVerticalDef.CenterVertically,
+                        modifiers = listOf(ModifierDef.Padding.all(DpVal(8f))),
+                        children = listOf(
+                            ComposableNode.IconNode(
+                                id = NodeId.generate("icon"),
+                                iconName = "Star",
+                                contentDescription = "Header Icon"
+                            ),
+                            ComposableNode.SpacerNode(
+                                id = NodeId.generate("spc"),
+                                modifiers = listOf(ModifierDef.Width(DpVal(8f)))
+                            ),
+                            ComposableNode.TextNode(
+                                id = NodeId.generate("hdr_title"),
+                                text = "Card Title",
+                                typography = TypographyToken.TitleMedium
+                            )
+                        )
+                    )
+                    viewModel.dispatch(WorkspaceIntent.InsertChild(parentId = cardId, node = headerRow, index = 0))
+                },
+                modifier = Modifier.weight(1f)
+            ) {
+                Text("+ Header", style = StudioTypography.Caption.copy(fontSize = 10.sp))
+            }
+
+            OutlinedButton(
+                onClick = {
+                    val actionsRow = ComposableNode.RowNode(
+                        id = NodeId.generate("card_actions"),
+                        horizontalArrangement = ArrangementHorizontalDef.End,
+                        verticalAlignment = AlignmentVerticalDef.CenterVertically,
+                        modifiers = listOf(ModifierDef.Padding.all(DpVal(8f))),
+                        children = listOf(
+                            ComposableNode.TextButtonNode(
+                                id = NodeId.generate("btn_cancel"),
+                                content = listOf(ComposableNode.TextNode(text = "Dismiss"))
+                            ),
+                            ComposableNode.ButtonNode(
+                                id = NodeId.generate("btn_action"),
+                                content = listOf(ComposableNode.TextNode(text = "Action"))
+                            )
+                        )
+                    )
+                    viewModel.dispatch(WorkspaceIntent.InsertChild(parentId = cardId, node = actionsRow))
+                },
+                modifier = Modifier.weight(1f)
+            ) {
+                Text("+ Actions Row", style = StudioTypography.Caption.copy(fontSize = 10.sp))
+            }
+        }
+    }
+}
+
 
