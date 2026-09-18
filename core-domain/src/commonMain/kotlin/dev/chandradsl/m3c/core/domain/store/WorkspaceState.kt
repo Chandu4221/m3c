@@ -43,4 +43,7 @@ sealed interface WorkspaceIntent {
 
     data object Undo : WorkspaceIntent
     data object Redo : WorkspaceIntent
+
+    /** Loads a new document into the workspace, resetting history and selection */
+    data class LoadDocument(val rootNode: ComposableNode) : WorkspaceIntent
 }

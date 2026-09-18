@@ -42,6 +42,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isCtrlPressed
+import androidx.compose.ui.input.key.isMetaPressed
+import androidx.compose.ui.input.key.isShiftPressed
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.type
+import java.awt.Frame
 import dev.chandradsl.m3c.app.desktop.components.*
 import dev.chandradsl.m3c.app.desktop.state.LeftDrawerTab
 import dev.chandradsl.m3c.app.desktop.state.StudioNotification
@@ -55,13 +63,64 @@ import org.jetbrains.jewel.intui.standalone.theme.IntUiTheme
 
 fun main() = application {
     val windowState = rememberWindowState(width = 1440.dp, height = 900.dp)
+    val viewModel = remember { StudioViewModel() }
+    var activeWindow by remember { mutableStateOf<Frame?>(null) }
+    val windowTitle = "m3c Studio — ${viewModel.projectName}${if (viewModel.isDirty) " *" else ""}"
 
     Window(
         onCloseRequest = ::exitApplication,
-        title = "m3c studio — Material 3 WYSIWYG Composer",
-        state = windowState
+        title = windowTitle,
+        state = windowState,
+        onPreviewKeyEvent = { keyEvent ->
+            if (keyEvent.type == KeyEventType.KeyDown) {
+                val isMetaOrCtrl = keyEvent.isMetaPressed || keyEvent.isCtrlPressed
+                if (isMetaOrCtrl) {
+                    when (keyEvent.key) {
+                        Key.S -> {
+                            if (keyEvent.isShiftPressed) {
+                                viewModel.saveProjectAs(activeWindow)
+                            } else {
+                                viewModel.saveProject(activeWindow)
+                            }
+                            true
+                        }
+                        Key.O -> {
+                            viewModel.openProject(activeWindow)
+                            true
+                        }
+                        Key.N -> {
+                            viewModel.newProject(activeWindow)
+                            true
+                        }
+                        else -> false
+                    }
+                } else false
+            } else false
+        },
+        onKeyEvent = { keyEvent ->
+            if (keyEvent.type == KeyEventType.KeyDown) {
+                val isMetaOrCtrl = keyEvent.isMetaPressed || keyEvent.isCtrlPressed
+                if (isMetaOrCtrl) {
+                    when {
+                        keyEvent.key == Key.Z && keyEvent.isShiftPressed -> {
+                            viewModel.redo()
+                            true
+                        }
+                        keyEvent.key == Key.Z -> {
+                            viewModel.undo()
+                            true
+                        }
+                        keyEvent.key == Key.Y -> {
+                            viewModel.redo()
+                            true
+                        }
+                        else -> false
+                    }
+                } else false
+            } else false
+        }
     ) {
-        val viewModel = remember { StudioViewModel() }
+        activeWindow = window
 
         // JetBrains Jewel Int-UI Standalone Theme (IntelliJ New UI Dark / Light)
         IntUiTheme(isDark = viewModel.isDarkMode) {

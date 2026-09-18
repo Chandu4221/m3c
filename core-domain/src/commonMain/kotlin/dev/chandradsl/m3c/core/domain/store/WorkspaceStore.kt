@@ -79,6 +79,19 @@ class WorkspaceStore(
             }
             is WorkspaceIntent.Undo -> performUndo()
             is WorkspaceIntent.Redo -> performRedo()
+            is WorkspaceIntent.LoadDocument -> loadDocument(intent.rootNode)
+        }
+    }
+
+    private suspend fun loadDocument(newRoot: ComposableNode) {
+        commandHistory.clear()
+        _stateFlow.update {
+            it.copy(
+                rootNode = newRoot,
+                selectedNodeId = null,
+                canUndo = false,
+                canRedo = false
+            )
         }
     }
 

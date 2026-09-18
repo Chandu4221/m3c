@@ -13,14 +13,17 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.NoteAdd
 import androidx.compose.material.icons.automirrored.filled.Redo
 import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.Brush
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import org.jetbrains.jewel.ui.component.Icon
@@ -32,7 +35,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import dev.chandradsl.m3c.app.desktop.state.StudioViewModel
 import dev.chandradsl.m3c.app.desktop.theme.StudioColors
 import dev.chandradsl.m3c.app.desktop.theme.StudioSizes
@@ -55,14 +60,59 @@ fun StudioToolbar(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Left: Branding & Current Selection Tag
+        // Left: Branding, Project File, & File Operations
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(14.dp)
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Text(
                 text = "m3c studio",
                 style = StudioTypography.AppTitle
+            )
+
+            // Project Name Badge with Dirty indicator
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(StudioColors.ActiveSurface)
+                    .border(width = 1.dp, color = StudioColors.BorderSubtle, shape = RoundedCornerShape(4.dp))
+                    .padding(horizontal = 8.dp, vertical = 4.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(5.dp)
+                ) {
+                    Text(
+                        text = viewModel.projectName,
+                        style = StudioTypography.Caption.copy(fontWeight = FontWeight.SemiBold)
+                    )
+                    if (viewModel.isDirty) {
+                        Text(
+                            text = "●",
+                            style = StudioTypography.Caption.copy(color = StudioColors.Warning, fontSize = 9.sp)
+                        )
+                    }
+                }
+            }
+
+            ToolbarIconButton(
+                icon = Icons.AutoMirrored.Filled.NoteAdd,
+                label = "New",
+                onClick = { viewModel.newProject() }
+            )
+
+            ToolbarIconButton(
+                icon = Icons.Default.FolderOpen,
+                label = "Open",
+                onClick = { viewModel.openProject() }
+            )
+
+            ToolbarIconButton(
+                icon = Icons.Default.Save,
+                label = "Save",
+                isActive = viewModel.isDirty,
+                activeColor = StudioColors.Primary,
+                onClick = { viewModel.saveProject() }
             )
 
             state.selectedNodeId?.let { selectedId ->
@@ -170,7 +220,7 @@ fun StudioToolbar(
 private fun ToolbarIconButton(
     icon: ImageVector,
     label: String,
-    enabled: Boolean,
+    enabled: Boolean = true,
     isActive: Boolean = false,
     activeColor: Color = StudioColors.Primary,
     onClick: () -> Unit

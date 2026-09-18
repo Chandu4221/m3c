@@ -1,12 +1,21 @@
 package dev.chandradsl.m3c.app.desktop.state
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import dev.chandradsl.m3c.app.desktop.io.DesktopFilePicker
 import dev.chandradsl.m3c.core.codegen.ComposeCodeGenerator
+import dev.chandradsl.m3c.core.domain.model.M3cProject
+import dev.chandradsl.m3c.core.domain.model.M3cScreen
+import dev.chandradsl.m3c.core.domain.storage.M3cProjectSerializer
+import java.awt.Frame
+import java.io.File
 import dev.chandradsl.m3c.core.domain.model.ColorSource
 import dev.chandradsl.m3c.core.domain.model.ColorToken
 import dev.chandradsl.m3c.core.domain.model.ComposableNode
@@ -92,8 +101,13 @@ enum class DevicePreset(val label: String, val width: Dp, val height: Dp) {
  */
 class StudioViewModel {
 
-    // 1. Initial starter screen
-    private val initialRoot: ComposableNode = ComposableNode.ScaffoldNode(
+    // 0. Project File & Dirty State Management
+    var projectName: String by mutableStateOf("Untitled")
+    var packageName: String by mutableStateOf("com.example.app")
+    var currentProjectFile: File? by mutableStateOf(null)
+    var isDirty: Boolean by mutableStateOf(false)
+
+    private fun createDefaultScaffold(): ComposableNode = ComposableNode.ScaffoldNode(
         id = NodeId("scaffold_root"),
         topBar = ComposableNode.TopAppBarNode(
             id = NodeId("top_bar"),
@@ -126,6 +140,9 @@ class StudioViewModel {
         )
     )
 
+    // 1. Initial starter screen
+    private val initialRoot: ComposableNode = createDefaultScaffold()
+
     // 2. Coroutine Scope & Notifications
     val viewModelScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
@@ -156,18 +173,97 @@ class StudioViewModel {
         }
     }
 
-    // 3. Focused Sub-Controllers
+    // 3. Project File Operations
+    fun newProject(parentFrame: Frame? = null) {
+        val freshRoot = createDefaultScaffold()
+        dispatch(WorkspaceIntent.LoadDocument(freshRoot))
+        currentProjectFile = null
+        projectName = "Untitled"
+        isDirty = false
+        notifySuccess("Created new project")
+    }
+
+    fun openProject(parentFrame: Frame? = null) {
+        val file = DesktopFilePicker.chooseOpenProjectFile(parentFrame) ?: return
+        openProjectFile(file)
+    }
+
+    fun openProjectFile(file: File) {
+        try {
+            val content = file.readText()
+            val project = M3cProjectSerializer.decode(content)
+            val screen = project.screens.firstOrNull { it.id == project.activeScreenId }
+                ?: project.screens.firstOrNull()
+                ?: error("Project contains no screens")
+
+            dispatch(WorkspaceIntent.LoadDocument(screen.rootNode))
+            currentProjectFile = file
+            projectName = project.name.ifBlank { file.nameWithoutExtension }
+            packageName = project.packageName
+            isDirty = false
+            notifySuccess("Opened ${file.name}")
+        } catch (e: Exception) {
+            notifyError("Failed to open project: ${e.message}")
+        }
+    }
+
+    fun saveProject(parentFrame: Frame? = null) {
+        val target = currentProjectFile
+        if (target != null) {
+            saveToProjectFile(target)
+        } else {
+            saveProjectAs(parentFrame)
+        }
+    }
+
+    fun saveProjectAs(parentFrame: Frame? = null) {
+        val file = DesktopFilePicker.chooseSaveProjectFile(defaultName = projectName, parentFrame = parentFrame) ?: return
+        saveToProjectFile(file)
+    }
+
+    private fun saveToProjectFile(file: File) {
+        try {
+            val screen = M3cScreen(
+                id = "main_screen",
+                name = "MainScreen",
+                route = "main",
+                rootNode = workspaceState.rootNode
+            )
+            val project = M3cProject(
+                schemaVersion = 1,
+                name = projectName.ifBlank { file.nameWithoutExtension },
+                packageName = packageName,
+                screens = listOf(screen),
+                activeScreenId = screen.id
+            )
+            val jsonText = M3cProjectSerializer.encode(project)
+            file.writeText(jsonText)
+            currentProjectFile = file
+            projectName = file.nameWithoutExtension
+            isDirty = false
+            notifySuccess("Saved to ${file.name}")
+        } catch (e: Exception) {
+            notifyError("Failed to save project: ${e.message}")
+        }
+    }
+
+    // 4. Focused Sub-Controllers
     val documentController = DocumentController(initialRoot, viewModelScope)
     val canvasController = CanvasController()
     val dragController = DragController()
 
-    // 4. Document State & Intent Delegation
+    // 5. Document State & Intent Delegation
     val workspaceState: WorkspaceState get() = documentController.workspaceState
     val selectedNode: ComposableNode? get() = documentController.selectedNode
     val targetedSlot: Pair<NodeId, String>? get() = documentController.targetedSlot
 
     fun dispatch(intent: WorkspaceIntent) {
         documentController.dispatch(intent)
+        if (intent is WorkspaceIntent.LoadDocument) {
+            isDirty = false
+        } else if (intent !is WorkspaceIntent.SelectNode) {
+            isDirty = true
+        }
     }
 
     fun setTargetSlot(parentId: NodeId, slotName: String) =
@@ -216,8 +312,15 @@ class StudioViewModel {
     fun getParentScope(nodeId: NodeId): ContainerScope =
         documentController.getParentScope(nodeId)
 
-    fun undo() = documentController.undo()
-    fun redo() = documentController.redo()
+    fun undo() {
+        documentController.undo()
+        isDirty = true
+    }
+
+    fun redo() {
+        documentController.redo()
+        isDirty = true
+    }
 
     // 4. Canvas & Panel Delegation
     var isDarkMode: Boolean
