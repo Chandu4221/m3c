@@ -4,6 +4,7 @@ import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.CodeBlock
 import com.squareup.kotlinpoet.FileSpec
 import com.squareup.kotlinpoet.FunSpec
+import com.squareup.kotlinpoet.MemberName
 import com.squareup.kotlinpoet.ParameterSpec
 import dev.chandradsl.m3c.core.domain.model.AlignmentDef
 import dev.chandradsl.m3c.core.domain.model.AlignmentHorizontalDef
@@ -11,6 +12,7 @@ import dev.chandradsl.m3c.core.domain.model.AlignmentVerticalDef
 import dev.chandradsl.m3c.core.domain.model.ArrangementHorizontalDef
 import dev.chandradsl.m3c.core.domain.model.ArrangementVerticalDef
 import dev.chandradsl.m3c.core.domain.model.ComposableNode
+import dev.chandradsl.m3c.core.domain.model.MaterialIconCatalog
 import dev.chandradsl.m3c.core.domain.scope.ContainerScope
 
 object ComposeCodeGenerator {
@@ -36,6 +38,8 @@ object ComposeCodeGenerator {
     private val FabClass = ClassName("androidx.compose.material3", "FloatingActionButton")
     private val TextClass = ClassName("androidx.compose.material3", "Text")
     private val IconClass = ClassName("androidx.compose.material3", "Icon")
+    private val IconsFilledClass = ClassName("androidx.compose.material.icons", "Icons", "Filled")
+    private val IconsAutoMirroredFilledClass = ClassName("androidx.compose.material.icons", "Icons", "AutoMirrored", "Filled")
     private val IconsDefaultClass = ClassName("androidx.compose.material.icons", "Icons", "Default")
     private val TextFieldClass = ClassName("androidx.compose.material3", "TextField")
     private val OutlinedTextFieldClass = ClassName("androidx.compose.material3", "OutlinedTextField")
@@ -280,7 +284,21 @@ object ComposeCodeGenerator {
 
             is ComposableNode.IconNode -> {
                 val args = mutableListOf<CodeBlock>()
-                args.add(CodeBlock.of("imageVector = %T.%L", IconsDefaultClass, node.iconName))
+                val catalogEntry = MaterialIconCatalog.find(node.iconName)
+                if (catalogEntry != null) {
+                    if (catalogEntry.isAutoMirrored) {
+                        val member = MemberName("androidx.compose.material.icons.automirrored.filled", catalogEntry.name)
+                        args.add(CodeBlock.of("imageVector = %T.%M", IconsAutoMirroredFilledClass, member))
+                    } else {
+                        val member = MemberName("androidx.compose.material.icons.filled", catalogEntry.name)
+                        args.add(CodeBlock.of("imageVector = %T.%M", IconsFilledClass, member))
+                    }
+                } else {
+                    val cleanName = node.iconName.trim()
+                    val member = MemberName("androidx.compose.material.icons.filled", cleanName)
+                    args.add(CodeBlock.of("imageVector = %T.%M", IconsFilledClass, member))
+                }
+
                 if (node.contentDescription != null) {
                     args.add(CodeBlock.of("contentDescription = %S", node.contentDescription))
                 } else {

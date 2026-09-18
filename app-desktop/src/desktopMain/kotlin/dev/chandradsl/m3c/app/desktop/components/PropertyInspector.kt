@@ -238,55 +238,21 @@ fun PropertyInspector(
             }
 
             is ComposableNode.IconNode -> {
-                InspectorField(label = "Icon Name") {
+                InspectorField(label = "Material Icon") {
+                    MaterialIconPicker(
+                        selectedIconName = selectedNode.iconName,
+                        onSelectIcon = { newName ->
+                            viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(iconName = newName)))
+                        }
+                    )
+                }
+                InspectorField(label = "Custom Icon Name (Manual Override)") {
                     InspectorTextInput(
                         value = selectedNode.iconName,
                         onValueChange = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(iconName = it))) }
                     )
                 }
-                InspectorField(label = "Standard Icons") {
-                    val popularIcons = listOf(
-                        "Favorite", "Home", "Search", "Person",
-                        "Menu", "Add", "Close", "Settings",
-                        "Check", "Star", "Notifications", "Info"
-                    )
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        popularIcons.chunked(4).forEach { rowItems ->
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                rowItems.forEach { name ->
-                                    val isChosen = selectedNode.iconName.equals(name, ignoreCase = true)
-                                    Box(
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .clip(RoundedCornerShape(4.dp))
-                                            .background(if (isChosen) StudioColors.Primary else StudioColors.CardSurface)
-                                            .border(
-                                                width = 1.dp,
-                                                color = if (isChosen) StudioColors.Primary else StudioColors.BorderSubtle,
-                                                shape = RoundedCornerShape(4.dp)
-                                            )
-                                            .clickable { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(iconName = name))) }
-                                            .padding(vertical = 4.dp),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text(
-                                            text = name,
-                                            style = StudioTypography.Caption.copy(
-                                                color = if (isChosen) StudioColors.TextInverse else StudioColors.TextPrimary,
-                                                fontWeight = if (isChosen) FontWeight.Bold else FontWeight.Normal
-                                            ),
-                                            maxLines = 1
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                InspectorField(label = "Content Description") {
+                InspectorField(label = "Content Description (Accessibility)") {
                     InspectorTextInput(
                         value = selectedNode.contentDescription ?: "",
                         onValueChange = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(contentDescription = it.ifBlank { null }))) }

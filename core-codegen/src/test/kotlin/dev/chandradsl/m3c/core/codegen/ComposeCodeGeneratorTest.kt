@@ -148,7 +148,19 @@ class ComposeCodeGeneratorTest {
         )
         val code = ComposeCodeGenerator.generateCodeString(rootNode = root)
         assertTrue(code.contains("Icon("))
-        assertTrue(code.contains("Icons.Default.Favorite"))
+        assertTrue(code.contains("Icons.Filled.Favorite"))
         assertTrue(code.contains("contentDescription = \"Favorite Item\""))
+    }
+
+    @Test
+    fun testGenerateAutoMirroredIcon() {
+        val root = ComposableNode.IconNode(
+            iconName = "ArrowBack",
+            contentDescription = "Back"
+        )
+        val code = ComposeCodeGenerator.generateCodeString(rootNode = root)
+        assertTrue(code.contains("Icon("))
+        assertTrue(code.contains("Icons.AutoMirrored.Filled.ArrowBack"))
+        assertTrue(code.contains("contentDescription = \"Back\""))
     }
 }

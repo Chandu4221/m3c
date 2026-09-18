@@ -48,7 +48,7 @@ class DocumentController(
             return TreeMutator.findNode(workspaceState.rootNode, id)
         }
 
-    fun dispatch(intent: WorkspaceIntent, onRootMutated: (() -> Unit)? = null) {
+    fun dispatch(intent: WorkspaceIntent) {
         store.dispatch(intent)
     }
 

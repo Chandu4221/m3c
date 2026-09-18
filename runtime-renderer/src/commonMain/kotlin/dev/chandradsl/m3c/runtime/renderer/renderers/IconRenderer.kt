@@ -37,44 +37,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import dev.chandradsl.m3c.core.domain.model.ComposableNode
+import dev.chandradsl.m3c.core.domain.model.MaterialIconCatalog
 import dev.chandradsl.m3c.core.domain.store.WorkspaceIntent
 import dev.chandradsl.m3c.core.domain.store.WorkspaceState
 import dev.chandradsl.m3c.runtime.renderer.decorator.SelectionDecorator
 import dev.chandradsl.m3c.runtime.renderer.mapper.toComposeColor
 import dev.chandradsl.m3c.runtime.renderer.mapper.toComposeModifier
 
-val StandardMaterialIcons: List<String> = listOf(
-    "Favorite",
-    "Home",
-    "Search",
-    "Person",
-    "Menu",
-    "Add",
-    "Close",
-    "Settings",
-    "Check",
-    "Edit",
-    "Delete",
-    "Star",
-    "Share",
-    "Notifications",
-    "Info",
-    "Warning",
-    "MoreVert",
-    "Refresh",
-    "Email",
-    "Phone",
-    "ShoppingCart",
-    "ThumbUp",
-    "AccountCircle",
-    "Build",
-    "Done",
-    "Lock",
-    "LocationOn",
-    "ArrowBack",
-    "ArrowForward",
-    "Send"
-)
+val StandardMaterialIcons: List<String> = MaterialIconCatalog.icons.map { it.name }
 
 private val StaticMaterialIconMap: Map<String, ImageVector> = mapOf(
     "favorite" to Icons.Filled.Favorite,
@@ -124,18 +94,31 @@ fun resolveMaterialIcon(iconName: String): ImageVector {
 }
 
 private fun tryResolveReflection(name: String): ImageVector? {
+    val isAutoMirrored = MaterialIconCatalog.find(name)?.isAutoMirrored == true
+    return if (isAutoMirrored) {
+        resolveAutoMirrored(name) ?: resolveFilled(name)
+    } else {
+        resolveFilled(name) ?: resolveAutoMirrored(name)
+    }
+}
+
+private fun resolveFilled(name: String): ImageVector? {
     return try {
         val filledClass = Class.forName("androidx.compose.material.icons.filled." + name + "Kt")
         val getter = filledClass.getMethod("get" + name, Icons.Filled::class.java)
         getter.invoke(null, Icons.Filled) as? ImageVector
     } catch (_: Throwable) {
-        try {
-            val mirroredClass = Class.forName("androidx.compose.material.icons.automirrored.filled." + name + "Kt")
-            val getter = mirroredClass.getMethod("get" + name, Icons.AutoMirrored.Filled::class.java)
-            getter.invoke(null, Icons.AutoMirrored.Filled) as? ImageVector
-        } catch (_: Throwable) {
-            null
-        }
+        null
+    }
+}
+
+private fun resolveAutoMirrored(name: String): ImageVector? {
+    return try {
+        val mirroredClass = Class.forName("androidx.compose.material.icons.automirrored.filled." + name + "Kt")
+        val getter = mirroredClass.getMethod("get" + name, Icons.AutoMirrored.Filled::class.java)
+        getter.invoke(null, Icons.AutoMirrored.Filled) as? ImageVector
+    } catch (_: Throwable) {
+        null
     }
 }
 
