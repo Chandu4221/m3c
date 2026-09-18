@@ -28,8 +28,26 @@ class CanvasController {
     var rightPanelWidth: Dp by mutableStateOf(defaultRightPanelWidth)
     var codeDrawerHeight: Dp by mutableStateOf(defaultCodeDrawerHeight)
 
-    var currentDevicePreset: DevicePreset by mutableStateOf(DevicePreset.PhonePortrait)
+    var currentDevicePreset: DevicePreset by mutableStateOf(DevicePreset.Phone)
+    var isLandscape: Boolean by mutableStateOf(false)
     var canvasZoom: Float by mutableStateOf(1.0f)
+
+    val effectiveViewportWidth: Dp
+        get() = if (isLandscape) {
+            maxOf(currentDevicePreset.baseWidth, currentDevicePreset.baseHeight)
+        } else {
+            minOf(currentDevicePreset.baseWidth, currentDevicePreset.baseHeight)
+        }
+
+    val effectiveViewportHeight: Dp
+        get() = if (isLandscape) {
+            minOf(currentDevicePreset.baseWidth, currentDevicePreset.baseHeight)
+        } else {
+            maxOf(currentDevicePreset.baseWidth, currentDevicePreset.baseHeight)
+        }
+
+    val currentWindowSizeClass: WindowSizeClass
+        get() = WindowSizeClass.fromWidth(effectiveViewportWidth)
 
     fun resizeLeftPanel(deltaDp: Float) {
         val newWidth = (leftPanelWidth.value + deltaDp).coerceIn(minLeftPanelWidth.value, maxLeftPanelWidth.value)
@@ -76,7 +94,16 @@ class CanvasController {
         canvasZoom = 0.75f
     }
 
+    fun toggleOrientation() {
+        isLandscape = !isLandscape
+    }
+
+    fun setOrientation(landscape: Boolean) {
+        isLandscape = landscape
+    }
+
     fun setDevicePreset(preset: DevicePreset) {
         currentDevicePreset = preset
+        isLandscape = preset.isDefaultLandscape
     }
 }

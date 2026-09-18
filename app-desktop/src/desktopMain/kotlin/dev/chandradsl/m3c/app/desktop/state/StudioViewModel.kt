@@ -15,6 +15,8 @@ import dev.chandradsl.m3c.core.codegen.project.ProjectScaffoldGenerator
 import dev.chandradsl.m3c.core.domain.model.M3cProject
 import dev.chandradsl.m3c.core.domain.model.M3cScreen
 import dev.chandradsl.m3c.core.domain.storage.M3cProjectSerializer
+import dev.chandradsl.m3c.core.domain.template.ScreenTemplate
+import dev.chandradsl.m3c.core.domain.template.ScreenTemplates
 import java.awt.Frame
 import java.io.File
 import dev.chandradsl.m3c.core.domain.model.ColorSource
@@ -89,11 +91,38 @@ enum class LeftDrawerTab {
     Hierarchy
 }
 
-enum class DevicePreset(val label: String, val width: Dp, val height: Dp) {
-    PhonePortrait("Phone Portrait", 390.dp, 844.dp),
-    PhoneLandscape("Phone Landscape", 844.dp, 390.dp),
-    Tablet("Tablet", 800.dp, 1280.dp),
-    Desktop("Desktop", 1024.dp, 768.dp)
+enum class WindowSizeClass(val label: String, val badgeText: String, val rangeDescription: String) {
+    Compact("Compact", "COMPACT", "< 600 dp"),
+    Medium("Medium", "MEDIUM", "600–839 dp"),
+    Expanded("Expanded", "EXPANDED", "≥ 840 dp");
+
+    companion object {
+        fun fromWidth(width: Dp): WindowSizeClass = when {
+            width < 600.dp -> Compact
+            width < 840.dp -> Medium
+            else -> Expanded
+        }
+    }
+}
+
+enum class DevicePreset(
+    val label: String,
+    val baseWidth: Dp,
+    val baseHeight: Dp,
+    val isDefaultLandscape: Boolean = false
+) {
+    Phone("Phone", 390.dp, 844.dp, isDefaultLandscape = false),
+    Foldable("Foldable", 673.dp, 841.dp, isDefaultLandscape = false),
+    Tablet("Tablet", 800.dp, 1280.dp, isDefaultLandscape = false),
+    Desktop("Desktop", 1200.dp, 800.dp, isDefaultLandscape = true);
+
+    val width: Dp get() = baseWidth
+    val height: Dp get() = baseHeight
+
+    companion object {
+        val PhonePortrait get() = Phone
+        val PhoneLandscape get() = Phone
+    }
 }
 
 enum class CodePreviewMode {
@@ -304,6 +333,42 @@ class StudioViewModel {
         dispatch(WorkspaceIntent.LoadDocument(newScreen.rootNode))
         isDirty = true
         notifySuccess("Added screen '$sanitizedName'")
+    }
+
+    fun addScreenFromTemplate(
+        template: ScreenTemplate,
+        isStartDestination: Boolean = false
+    ) {
+        syncCurrentScreenRoot()
+        var count = 1
+        var candidateName = template.name
+        while (screens.any { it.name.equals(candidateName, ignoreCase = true) }) {
+            count++
+            candidateName = "${template.name}$count"
+        }
+        val sanitizedName = candidateName
+        val sanitizedRoute = sanitizedName.lowercase().replace(Regex("[^a-z0-9_]"), "_")
+        val uniqueId = "screen_${System.currentTimeMillis()}"
+        val templateRoot = template.createRoot()
+
+        val newScreen = M3cScreen(
+            id = uniqueId,
+            name = sanitizedName,
+            route = sanitizedRoute,
+            rootNode = templateRoot,
+            isStartDestination = isStartDestination || screens.isEmpty()
+        )
+
+        screens = if (newScreen.isStartDestination) {
+            screens.map { it.copy(isStartDestination = false) } + newScreen
+        } else {
+            screens + newScreen
+        }
+
+        activeScreenId = newScreen.id
+        dispatch(WorkspaceIntent.LoadDocument(newScreen.rootNode))
+        isDirty = true
+        notifySuccess("Added '${template.name}' screen from template library")
     }
 
     fun updateScreen(
@@ -732,6 +797,21 @@ class StudioViewModel {
     var currentDevicePreset: DevicePreset
         get() = canvasController.currentDevicePreset
         set(value) { canvasController.currentDevicePreset = value }
+
+    var isLandscape: Boolean
+        get() = canvasController.isLandscape
+        set(value) { canvasController.isLandscape = value }
+
+    val effectiveViewportWidth: Dp
+        get() = canvasController.effectiveViewportWidth
+
+    val effectiveViewportHeight: Dp
+        get() = canvasController.effectiveViewportHeight
+
+    val currentWindowSizeClass: WindowSizeClass
+        get() = canvasController.currentWindowSizeClass
+
+    fun toggleOrientation() = canvasController.toggleOrientation()
 
     var canvasZoom: Float
         get() = canvasController.canvasZoom

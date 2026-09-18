@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddCircle
+import androidx.compose.material.icons.filled.CropLandscape
 import androidx.compose.material.icons.filled.DesktopWindows
 import androidx.compose.material.icons.filled.FitScreen
 import androidx.compose.material.icons.filled.RestartAlt
@@ -110,16 +111,16 @@ fun CanvasViewport(
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 DevicePresetButton(
-                    preset = DevicePreset.PhonePortrait,
+                    preset = DevicePreset.Phone,
                     icon = Icons.Default.StayCurrentPortrait,
-                    isSelected = viewModel.currentDevicePreset == DevicePreset.PhonePortrait,
-                    onSelect = { viewModel.setDevicePreset(DevicePreset.PhonePortrait) }
+                    isSelected = viewModel.currentDevicePreset == DevicePreset.Phone,
+                    onSelect = { viewModel.setDevicePreset(DevicePreset.Phone) }
                 )
                 DevicePresetButton(
-                    preset = DevicePreset.PhoneLandscape,
-                    icon = Icons.Default.StayCurrentLandscape,
-                    isSelected = viewModel.currentDevicePreset == DevicePreset.PhoneLandscape,
-                    onSelect = { viewModel.setDevicePreset(DevicePreset.PhoneLandscape) }
+                    preset = DevicePreset.Foldable,
+                    icon = Icons.Default.CropLandscape,
+                    isSelected = viewModel.currentDevicePreset == DevicePreset.Foldable,
+                    onSelect = { viewModel.setDevicePreset(DevicePreset.Foldable) }
                 )
                 DevicePresetButton(
                     preset = DevicePreset.Tablet,
@@ -133,6 +134,23 @@ fun CanvasViewport(
                     isSelected = viewModel.currentDevicePreset == DevicePreset.Desktop,
                     onSelect = { viewModel.setDevicePreset(DevicePreset.Desktop) }
                 )
+
+                Box(
+                    modifier = Modifier
+                        .height(18.dp)
+                        .width(1.dp)
+                        .background(StudioColors.BorderSubtle)
+                )
+
+                // Orientation Toggle Button
+                CanvasIconButton(
+                    icon = if (viewModel.isLandscape) Icons.Default.StayCurrentLandscape else Icons.Default.StayCurrentPortrait,
+                    tooltip = if (viewModel.isLandscape) "Switch to Portrait" else "Switch to Landscape",
+                    onClick = viewModel::toggleOrientation
+                )
+
+                // M3 Window Size Class Indicator Badge
+                WindowSizeClassBadge(windowSizeClass = viewModel.currentWindowSizeClass)
             }
 
             // Right: Zoom Controls
@@ -308,7 +326,7 @@ fun CanvasViewport(
 
                 // Device Frame Label
                 Text(
-                    text = "${viewModel.currentDevicePreset.label} • ${viewModel.currentDevicePreset.width.value.toInt()} × ${viewModel.currentDevicePreset.height.value.toInt()}",
+                    text = "${viewModel.currentDevicePreset.label} • ${if (viewModel.isLandscape) "Landscape" else "Portrait"} • ${viewModel.effectiveViewportWidth.value.toInt()} × ${viewModel.effectiveViewportHeight.value.toInt()} dp • M3 ${viewModel.currentWindowSizeClass.label}",
                     style = StudioTypography.Caption,
                     modifier = Modifier.padding(bottom = 10.dp)
                 )
@@ -326,8 +344,8 @@ fun CanvasViewport(
                 // Simulated Device Frame
                 Box(
                     modifier = Modifier
-                        .width(viewModel.currentDevicePreset.width)
-                        .height(viewModel.currentDevicePreset.height)
+                        .width(viewModel.effectiveViewportWidth)
+                        .height(viewModel.effectiveViewportHeight)
                         .shadow(elevation = 16.dp, shape = RoundedCornerShape(24.dp))
                         .clip(RoundedCornerShape(24.dp))
                         .border(
@@ -434,6 +452,39 @@ private fun CanvasIconButton(
             contentDescription = tooltip,
             tint = StudioColors.TextPrimary,
             modifier = Modifier.size(StudioSizes.IconSmall)
+        )
+    }
+}
+
+@Composable
+private fun WindowSizeClassBadge(
+    windowSizeClass: dev.chandradsl.m3c.app.desktop.state.WindowSizeClass,
+    modifier: Modifier = Modifier
+) {
+    val (bg, border, text) = when (windowSizeClass) {
+        dev.chandradsl.m3c.app.desktop.state.WindowSizeClass.Compact -> Triple(Color(0xFF162D23), StudioColors.Success, Color(0xFF4EBE88))
+        dev.chandradsl.m3c.app.desktop.state.WindowSizeClass.Medium -> Triple(Color(0xFF332610), Color(0xFFE5A83B), Color(0xFFFFD166))
+        dev.chandradsl.m3c.app.desktop.state.WindowSizeClass.Expanded -> Triple(Color(0xFF231E3D), Color(0xFF8C7CFF), Color(0xFFB8AEFF))
+    }
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        modifier = modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(bg)
+            .border(width = 1.dp, color = border.copy(alpha = 0.6f), shape = RoundedCornerShape(12.dp))
+            .padding(horizontal = 8.dp, vertical = 3.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(6.dp)
+                .clip(CircleShape)
+                .background(text)
+        )
+        Text(
+            text = "${windowSizeClass.badgeText} (${windowSizeClass.rangeDescription})",
+            style = StudioTypography.Badge.copy(color = text, fontWeight = FontWeight.SemiBold)
         )
     }
 }

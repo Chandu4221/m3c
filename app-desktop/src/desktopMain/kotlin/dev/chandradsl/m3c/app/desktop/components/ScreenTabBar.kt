@@ -30,9 +30,17 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Layers
+import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.PhoneAndroid
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
+import androidx.compose.material.icons.filled.Widgets
+import androidx.compose.ui.graphics.vector.ImageVector
+import dev.chandradsl.m3c.core.domain.template.ScreenTemplate
+import dev.chandradsl.m3c.core.domain.template.ScreenTemplates
 import org.jetbrains.jewel.ui.component.Checkbox
 import org.jetbrains.jewel.ui.component.DefaultButton
 import org.jetbrains.jewel.ui.component.Icon
@@ -199,8 +207,12 @@ fun ScreenTabBar(
             AddScreenDialog(
                 screensCount = viewModel.screens.size,
                 onDismiss = { showAddModal = false },
-                onAdd = { name, route, isStart ->
+                onAddBlank = { name, route, isStart ->
                     viewModel.addScreen(name, route, isStart)
+                    showAddModal = false
+                },
+                onAddTemplate = { template, isStart ->
+                    viewModel.addScreenFromTemplate(template, isStart)
                     showAddModal = false
                 }
             )
@@ -331,11 +343,15 @@ private fun ScreenTabPill(
 private fun AddScreenDialog(
     screensCount: Int,
     onDismiss: () -> Unit,
-    onAdd: (name: String, route: String, isStart: Boolean) -> Unit
+    onAddBlank: (name: String, route: String, isStart: Boolean) -> Unit,
+    onAddTemplate: (template: ScreenTemplate, isStart: Boolean) -> Unit
 ) {
+    var selectedTab by remember { mutableStateOf(1) } // Default to 1 (Pre-built Templates) for instant discovery
     var screenName by remember { mutableStateOf("Screen${screensCount + 1}") }
     var route by remember { mutableStateOf("screen_${screensCount + 1}") }
     var isStart by remember { mutableStateOf(false) }
+    var selectedTemplate by remember { mutableStateOf(ScreenTemplates.all.first()) }
+    val templatesScrollState = rememberScrollState()
 
     Box(
         modifier = Modifier
@@ -347,7 +363,7 @@ private fun AddScreenDialog(
         Box(
             modifier = Modifier
                 .clickable(enabled = false) {}
-                .width(420.dp)
+                .width(520.dp)
                 .shadow(elevation = 16.dp, shape = RoundedCornerShape(8.dp))
                 .clip(RoundedCornerShape(8.dp))
                 .background(StudioColors.PanelSurface)
@@ -355,38 +371,185 @@ private fun AddScreenDialog(
                 .padding(20.dp)
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                Text(
-                    text = "Add New Screen",
-                    style = StudioTypography.ModalTitle
-                )
-
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text(
-                        text = "Screen Name (Composable)",
-                        style = StudioTypography.Caption.copy(fontWeight = FontWeight.SemiBold)
+                        text = "Add New Screen",
+                        style = StudioTypography.ModalTitle
                     )
-                    JewelTextField(
-                        value = screenName,
-                        onValueChange = { newName ->
-                            screenName = newName
-                            if (route.startsWith("screen_") || route.isBlank()) {
-                                route = newName.lowercase().replace(Regex("[^a-z0-9_]"), "_")
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth()
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Close",
+                        tint = StudioColors.TextSecondary,
+                        modifier = Modifier
+                            .size(18.dp)
+                            .clickable(onClick = onDismiss)
                     )
                 }
 
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(
-                        text = "Navigation Route",
-                        style = StudioTypography.Caption.copy(fontWeight = FontWeight.SemiBold)
-                    )
-                    JewelTextField(
-                        value = route,
-                        onValueChange = { route = it.lowercase().replace(Regex("[^a-z0-9_]"), "_") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                // Tab Selector (Templates vs Blank)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(StudioColors.ActiveSurface)
+                        .padding(3.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(if (selectedTab == 1) StudioColors.CardSurface else Color.Transparent)
+                            .clickable { selectedTab = 1 }
+                            .padding(vertical = 6.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Pre-built Templates (${ScreenTemplates.all.size})",
+                            style = StudioTypography.Caption.copy(
+                                color = if (selectedTab == 1) StudioColors.Primary else StudioColors.TextSecondary,
+                                fontWeight = if (selectedTab == 1) FontWeight.SemiBold else FontWeight.Normal
+                            )
+                        )
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(if (selectedTab == 0) StudioColors.CardSurface else Color.Transparent)
+                            .clickable { selectedTab = 0 }
+                            .padding(vertical = 6.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Blank Screen",
+                            style = StudioTypography.Caption.copy(
+                                color = if (selectedTab == 0) StudioColors.Primary else StudioColors.TextSecondary,
+                                fontWeight = if (selectedTab == 0) FontWeight.SemiBold else FontWeight.Normal
+                            )
+                        )
+                    }
+                }
+
+                if (selectedTab == 0) {
+                    // Blank screen form
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(
+                                text = "Screen Name (Composable)",
+                                style = StudioTypography.Caption.copy(fontWeight = FontWeight.SemiBold)
+                            )
+                            JewelTextField(
+                                value = screenName,
+                                onValueChange = { newName ->
+                                    screenName = newName
+                                    if (route.startsWith("screen_") || route.isBlank()) {
+                                        route = newName.lowercase().replace(Regex("[^a-z0-9_]"), "_")
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(
+                                text = "Navigation Route",
+                                style = StudioTypography.Caption.copy(fontWeight = FontWeight.SemiBold)
+                            )
+                            JewelTextField(
+                                value = route,
+                                onValueChange = { route = it.lowercase().replace(Regex("[^a-z0-9_]"), "_") },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    }
+                } else {
+                    // Template Selector list
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 280.dp)
+                            .verticalScroll(templatesScrollState),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        for (template in ScreenTemplates.all) {
+                            val isChosen = selectedTemplate.id == template.id
+                            val borderCol = if (isChosen) StudioColors.BorderActive else StudioColors.BorderSubtle
+                            val bgCol = if (isChosen) StudioColors.ActiveSurface else StudioColors.CardSurface
+
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(bgCol)
+                                    .border(width = 1.dp, color = borderCol, shape = RoundedCornerShape(6.dp))
+                                    .clickable { selectedTemplate = template }
+                                    .padding(10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(if (isChosen) StudioColors.Primary.copy(alpha = 0.2f) else StudioColors.PanelSurface),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = getTemplateIcon(template.iconName),
+                                        contentDescription = template.name,
+                                        tint = if (isChosen) StudioColors.Primary else StudioColors.TextSecondary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Text(
+                                            text = template.name,
+                                            style = StudioTypography.UIBody.copy(
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = if (isChosen) StudioColors.Primary else StudioColors.TextPrimary
+                                            )
+                                        )
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(3.dp))
+                                                .background(StudioColors.BorderSubtle.copy(alpha = 0.4f))
+                                                .padding(horizontal = 4.dp, vertical = 1.dp)
+                                        ) {
+                                            Text(
+                                                text = template.category.displayName,
+                                                style = StudioTypography.Badge.copy(fontSize = 9.sp)
+                                            )
+                                        }
+                                        Text(
+                                            text = "/${template.defaultRoute}",
+                                            style = StudioTypography.Badge.copy(
+                                                fontSize = 9.sp,
+                                                color = StudioColors.TextSecondary
+                                            )
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = template.description,
+                                        style = StudioTypography.Caption.copy(color = StudioColors.TextSecondary),
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
 
                 Row(
@@ -412,15 +575,30 @@ private fun AddScreenDialog(
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     DefaultButton(
-                        onClick = { onAdd(screenName, route, isStart) },
-                        enabled = screenName.isNotBlank() && route.isNotBlank()
+                        onClick = {
+                            if (selectedTab == 0) {
+                                onAddBlank(screenName, route, isStart)
+                            } else {
+                                onAddTemplate(selectedTemplate, isStart)
+                            }
+                        },
+                        enabled = if (selectedTab == 0) screenName.isNotBlank() && route.isNotBlank() else true
                     ) {
-                        Text("Add Screen")
+                        Text(if (selectedTab == 0) "Add Blank Screen" else "Add Template Screen")
                     }
                 }
             }
         }
     }
+}
+
+private fun getTemplateIcon(iconName: String): ImageVector = when (iconName) {
+    "Lock" -> Icons.Default.Lock
+    "AccountCircle" -> Icons.Default.AccountCircle
+    "Settings" -> Icons.Default.Settings
+    "Dashboard" -> Icons.Default.Widgets
+    "ShoppingCart" -> Icons.Default.ShoppingCart
+    else -> Icons.Default.PhoneAndroid
 }
 
 @Composable
