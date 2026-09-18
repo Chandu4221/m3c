@@ -8,11 +8,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountTree
 import androidx.compose.material.icons.filled.Widgets
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.lightColorScheme
+import org.jetbrains.jewel.ui.component.Icon
+import org.jetbrains.jewel.ui.component.Text
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
@@ -70,35 +67,7 @@ fun main() = application {
         IntUiTheme(isDark = viewModel.isDarkMode) {
             StudioColors.isDark = viewModel.isDarkMode
 
-            val colorScheme = if (viewModel.isDarkMode) {
-                darkColorScheme(
-                    background = StudioColors.CanvasBackdrop,
-                    surface = StudioColors.PanelSurface,
-                    surfaceVariant = StudioColors.CardSurface,
-                    primary = StudioColors.Primary,
-                    onPrimary = StudioColors.TextInverse,
-                    onBackground = StudioColors.TextPrimary,
-                    onSurface = StudioColors.TextPrimary,
-                    outline = StudioColors.BorderSubtle,
-                    outlineVariant = StudioColors.BorderActive
-                )
-            } else {
-                lightColorScheme(
-                    background = StudioColors.CanvasBackdrop,
-                    surface = StudioColors.PanelSurface,
-                    surfaceVariant = StudioColors.CardSurface,
-                    primary = StudioColors.Primary,
-                    onPrimary = StudioColors.TextInverse,
-                    onBackground = StudioColors.TextPrimary,
-                    onSurface = StudioColors.TextPrimary,
-                    outline = StudioColors.BorderSubtle,
-                    outlineVariant = StudioColors.BorderActive
-                )
-            }
-
-            // Material 3 bridge matching active Jewel Int-UI theme (WCAG 2.2 AA Compliant)
-            MaterialTheme(colorScheme = colorScheme) {
-                Box(modifier = Modifier.fillMaxSize()) {
+            Box(modifier = Modifier.fillMaxSize()) {
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
@@ -452,7 +421,6 @@ fun main() = application {
             }
         }
     }
-}
 
 @Composable
 private fun LeftTabButton(

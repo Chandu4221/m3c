@@ -20,16 +20,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DesignServices
 import androidx.compose.material.icons.filled.TouchApp
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
-import androidx.compose.material3.Text
+import org.jetbrains.jewel.ui.component.Checkbox
+import org.jetbrains.jewel.ui.component.DefaultButton
+import org.jetbrains.jewel.ui.component.Icon
+import org.jetbrains.jewel.ui.component.OutlinedButton
+import org.jetbrains.jewel.ui.component.OutlinedSlimButton
+import org.jetbrains.jewel.ui.component.Slider
+import org.jetbrains.jewel.ui.component.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -114,25 +111,24 @@ fun PropertyInspector(
                         textAlign = TextAlign.Center
                     )
 
-                    Button(
+                    DefaultButton(
                         onClick = { viewModel.updateInteractiveMode(false) },
-                        colors = ButtonDefaults.buttonColors(containerColor = StudioColors.Primary),
-                        shape = RoundedCornerShape(6.dp),
                         modifier = Modifier.padding(top = 8.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.DesignServices,
-                            contentDescription = null,
-                            tint = StudioColors.TextInverse,
-                            modifier = Modifier.size(StudioSizes.IconSmall).padding(end = 4.dp)
-                        )
-                        Text(
-                            text = "Switch to Design Mode",
-                            style = StudioTypography.UIBody.copy(
-                                color = StudioColors.TextInverse,
-                                fontWeight = FontWeight.Bold
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.DesignServices,
+                                contentDescription = null,
+                                modifier = Modifier.size(StudioSizes.IconSmall)
                             )
-                        )
+                            Text(
+                                text = "Switch to Design Mode",
+                                style = StudioTypography.UIBody.copy(fontWeight = FontWeight.Bold)
+                            )
+                        }
                     }
                 }
             }
@@ -344,10 +340,7 @@ fun PropertyInspector(
                         onValueChange = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(value = it))) },
                         valueRange = selectedNode.valueRangeStart..selectedNode.valueRangeEnd,
                         steps = selectedNode.steps,
-                        colors = SliderDefaults.colors(
-                            thumbColor = StudioColors.Primary,
-                            activeTrackColor = StudioColors.Primary
-                        )
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
                 InspectorSwitchField(
@@ -364,10 +357,7 @@ fun PropertyInspector(
                         value = current,
                         onValueChange = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(progress = it))) },
                         valueRange = 0f..1f,
-                        colors = SliderDefaults.colors(
-                            thumbColor = StudioColors.Primary,
-                            activeTrackColor = StudioColors.Primary
-                        )
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
             }
@@ -379,10 +369,7 @@ fun PropertyInspector(
                         value = current,
                         onValueChange = { viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(progress = it))) },
                         valueRange = 0f..1f,
-                        colors = SliderDefaults.colors(
-                            thumbColor = StudioColors.Primary,
-                            activeTrackColor = StudioColors.Primary
-                        )
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
             }
@@ -439,7 +426,7 @@ fun PropertyInspector(
                     )
                 }
                 InspectorField(label = "Navigation Items (${selectedNode.items.size})") {
-                    Button(
+                    DefaultButton(
                         onClick = {
                             val newItem = ComponentRegistry.findByType(ComponentType.NavigationBarItem)?.createDefault()
                             if (newItem != null) {
@@ -449,33 +436,29 @@ fun PropertyInspector(
                                 ))
                             }
                         },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = StudioColors.Primary,
-                            contentColor = StudioColors.TextInverse
-                        ),
-                        shape = RoundedCornerShape(4.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = "Add Navigation Item",
-                            tint = StudioColors.TextInverse,
-                            modifier = Modifier.size(StudioSizes.IconSmall).padding(end = 4.dp)
-                        )
-                        Text(
-                            text = "Add Navigation Item",
-                            style = StudioTypography.Caption.copy(
-                                color = StudioColors.TextInverse,
-                                fontWeight = FontWeight.SemiBold
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = "Add Navigation Item",
+                                modifier = Modifier.size(StudioSizes.IconSmall)
                             )
-                        )
+                            Text(
+                                text = "Add Navigation Item",
+                                style = StudioTypography.Caption.copy(fontWeight = FontWeight.SemiBold)
+                            )
+                        }
                     }
                 }
             }
 
             is ComposableNode.BottomAppBarNode -> {
                 InspectorField(label = "Actions (${selectedNode.actions.size})") {
-                    Button(
+                    DefaultButton(
                         onClick = {
                             val newItem = ComponentRegistry.findByType(ComponentType.IconButton)?.createDefault()
                             if (newItem != null) {
@@ -485,26 +468,22 @@ fun PropertyInspector(
                                 ))
                             }
                         },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = StudioColors.Primary,
-                            contentColor = StudioColors.TextInverse
-                        ),
-                        shape = RoundedCornerShape(4.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = "Add Action Button",
-                            tint = StudioColors.TextInverse,
-                            modifier = Modifier.size(StudioSizes.IconSmall).padding(end = 4.dp)
-                        )
-                        Text(
-                            text = "Add Action Button",
-                            style = StudioTypography.Caption.copy(
-                                color = StudioColors.TextInverse,
-                                fontWeight = FontWeight.SemiBold
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = "Add Action Button",
+                                modifier = Modifier.size(StudioSizes.IconSmall)
                             )
-                        )
+                            Text(
+                                text = "Add Action Button",
+                                style = StudioTypography.Caption.copy(fontWeight = FontWeight.SemiBold)
+                            )
+                        }
                     }
                 }
                 InspectorField(label = "Floating Action Button") {
@@ -781,10 +760,7 @@ fun PropertyInspector(
                             viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(startValue = newStart)))
                         },
                         valueRange = 0f..1f,
-                        colors = SliderDefaults.colors(
-                            thumbColor = StudioColors.Primary,
-                            activeTrackColor = StudioColors.Primary
-                        )
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
                 InspectorField(label = "End Value (${(selectedNode.endValue * 100).toInt()}%)") {
@@ -795,10 +771,7 @@ fun PropertyInspector(
                             viewModel.dispatch(WorkspaceIntent.UpdateNode(selectedNode.copy(endValue = newEnd)))
                         },
                         valueRange = 0f..1f,
-                        colors = SliderDefaults.colors(
-                            thumbColor = StudioColors.Primary,
-                            activeTrackColor = StudioColors.Primary
-                        )
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
                 InspectorSwitchField(
@@ -845,17 +818,9 @@ fun InspectorSwitchField(
                 color = StudioColors.TextPrimary
             )
         )
-        Switch(
+        Checkbox(
             checked = checked,
-            onCheckedChange = onCheckedChange,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = StudioColors.TextInverse,
-                checkedTrackColor = StudioColors.Primary,
-                checkedBorderColor = StudioColors.Primary,
-                uncheckedThumbColor = StudioColors.TextSecondary,
-                uncheckedTrackColor = StudioColors.ActiveSurface,
-                uncheckedBorderColor = StudioColors.BorderSubtle
-            )
+            onCheckedChange = onCheckedChange
         )
     }
 }
@@ -885,21 +850,10 @@ fun InspectorTextInput(
     value: String,
     onValueChange: (String) -> Unit
 ) {
-    OutlinedTextField(
+    JewelTextField(
         value = value,
         onValueChange = onValueChange,
-        modifier = Modifier.fillMaxWidth(),
-        singleLine = true,
-        textStyle = StudioTypography.InputText,
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedTextColor = StudioColors.TextPrimary,
-            unfocusedTextColor = StudioColors.TextPrimary,
-            focusedContainerColor = StudioColors.CardSurface,
-            unfocusedContainerColor = StudioColors.CardSurface,
-            focusedBorderColor = StudioColors.BorderActive,
-            unfocusedBorderColor = StudioColors.BorderSubtle,
-            cursorColor = StudioColors.Primary
-        )
+        modifier = Modifier.fillMaxWidth()
     )
 }
 
