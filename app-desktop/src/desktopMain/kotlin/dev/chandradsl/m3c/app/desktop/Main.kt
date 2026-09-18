@@ -92,6 +92,10 @@ fun main() = application {
                             viewModel.newProject(activeWindow)
                             true
                         }
+                        Key.E -> {
+                            viewModel.openExportDialog()
+                            true
+                        }
                         else -> false
                     }
                 } else false
@@ -475,6 +479,15 @@ fun main() = application {
                                 }
                             }
                         }
+                    }
+
+                    // 8. Global Export Project Modal Dialog Overlay
+                    if (viewModel.isExportDialogOpen) {
+                        ExportProjectDialog(
+                            viewModel = viewModel,
+                            parentFrame = activeWindow,
+                            onDismiss = { viewModel.closeExportDialog() }
+                        )
                     }
                 }
             }

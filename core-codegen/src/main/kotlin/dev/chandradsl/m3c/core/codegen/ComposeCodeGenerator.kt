@@ -102,7 +102,8 @@ object ComposeCodeGenerator {
     fun generateNavGraphFile(
         packageName: String = "dev.chandradsl.m3c.generated",
         screens: List<M3cScreen>,
-        graphName: String = "AppNavHost"
+        graphName: String = "AppNavHost",
+        screensPackage: String = packageName
     ): FileSpec {
         val startDest = screens.firstOrNull { it.isStartDestination }?.route
             ?: screens.firstOrNull()?.route
@@ -138,7 +139,7 @@ object ComposeCodeGenerator {
         )
 
         for (screen in screens) {
-            val screenComp = MemberName(packageName, screen.name)
+            val screenComp = MemberName(screensPackage, screen.name)
             navHostBlock.beginControlFlow("%M(%S)", composableFun, screen.route)
             navHostBlock.addStatement("%M()", screenComp)
             navHostBlock.endControlFlow()
@@ -158,8 +159,9 @@ object ComposeCodeGenerator {
     fun generateNavGraphCodeString(
         packageName: String = "dev.chandradsl.m3c.generated",
         screens: List<M3cScreen>,
-        graphName: String = "AppNavHost"
-    ): String = generateNavGraphFile(packageName, screens, graphName).toString()
+        graphName: String = "AppNavHost",
+        screensPackage: String = packageName
+    ): String = generateNavGraphFile(packageName, screens, graphName, screensPackage).toString()
 
     /**
      * Generates the @Composable FunSpec.

@@ -11,6 +11,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import dev.chandradsl.m3c.app.desktop.io.DesktopFilePicker
 import dev.chandradsl.m3c.core.codegen.ComposeCodeGenerator
+import dev.chandradsl.m3c.core.codegen.project.ProjectScaffoldGenerator
 import dev.chandradsl.m3c.core.domain.model.M3cProject
 import dev.chandradsl.m3c.core.domain.model.M3cScreen
 import dev.chandradsl.m3c.core.domain.storage.M3cProjectSerializer
@@ -111,6 +112,7 @@ class StudioViewModel {
     var packageName: String by mutableStateOf("com.example.app")
     var currentProjectFile: File? by mutableStateOf(null)
     var isDirty: Boolean by mutableStateOf(false)
+    var isExportDialogOpen: Boolean by mutableStateOf(false)
     var codePreviewMode: CodePreviewMode by mutableStateOf(CodePreviewMode.ActiveScreen)
 
     private fun createDefaultScaffold(): ComposableNode = ComposableNode.ScaffoldNode(
@@ -550,6 +552,61 @@ class StudioViewModel {
             notifySuccess("Saved ${screens.size} screen(s) to ${file.name}")
         } catch (e: Exception) {
             notifyError("Failed to save project: ${e.message}")
+        }
+    }
+
+    fun openExportDialog() {
+        syncCurrentScreenRoot()
+        isExportDialogOpen = true
+    }
+
+    fun closeExportDialog() {
+        isExportDialogOpen = false
+    }
+
+    fun exportProjectToDirectory(
+        targetDir: File,
+        customName: String = projectName,
+        customPackage: String = packageName
+    ): Boolean {
+        return try {
+            syncCurrentScreenRoot()
+            val project = M3cProject(
+                schemaVersion = 1,
+                name = customName.ifBlank { projectName },
+                packageName = customPackage.ifBlank { packageName },
+                screens = screens,
+                activeScreenId = activeScreenId
+            )
+            val generated = ProjectScaffoldGenerator.exportToDirectory(project, targetDir)
+            notifySuccess("Exported project (${generated.size} files) to ${targetDir.name}/")
+            true
+        } catch (e: Exception) {
+            notifyError("Export failed: ${e.message}")
+            false
+        }
+    }
+
+    fun exportProjectToZip(
+        zipFile: File,
+        customName: String = projectName,
+        customPackage: String = packageName
+    ): Boolean {
+        return try {
+            syncCurrentScreenRoot()
+            val project = M3cProject(
+                schemaVersion = 1,
+                name = customName.ifBlank { projectName },
+                packageName = customPackage.ifBlank { packageName },
+                screens = screens,
+                activeScreenId = activeScreenId
+            )
+            val exported = ProjectScaffoldGenerator.exportToZip(project, zipFile)
+            notifySuccess("Exported project ZIP to ${exported.name}")
+            true
+        } catch (e: Exception) {
+            notifyError("Export ZIP failed: ${e.message}")
+            false
         }
     }
 

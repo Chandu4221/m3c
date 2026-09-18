@@ -42,4 +42,41 @@ object DesktopFilePicker {
         }
         return File(dir, filename)
     }
+
+    /**
+     * Opens a native folder chooser dialog for selecting a destination directory.
+     * Returns the chosen [File] directory or null if canceled.
+     */
+    fun chooseDirectory(parentFrame: Frame? = null, title: String = "Select Export Destination"): File? {
+        val chooser = javax.swing.JFileChooser().apply {
+            dialogTitle = title
+            fileSelectionMode = javax.swing.JFileChooser.DIRECTORIES_ONLY
+            isAcceptAllFileFilterUsed = false
+        }
+        val result = chooser.showOpenDialog(parentFrame)
+        return if (result == javax.swing.JFileChooser.APPROVE_OPTION) {
+            chooser.selectedFile
+        } else null
+    }
+
+    /**
+     * Opens a native file dialog for selecting a destination .zip file.
+     * Ensures the returned file ends with `.zip`.
+     * Returns the chosen [File] or null if canceled.
+     */
+    fun chooseSaveZipFile(defaultName: String = "Project.zip", parentFrame: Frame? = null): File? {
+        val initialFile = if (defaultName.endsWith(".zip", ignoreCase = true)) defaultName else "$defaultName.zip"
+        val dialog = FileDialog(parentFrame, "Export Project as ZIP", FileDialog.SAVE).apply {
+            file = initialFile
+            filenameFilter = FilenameFilter { _, name -> name.endsWith(".zip", ignoreCase = true) }
+            isVisible = true
+        }
+
+        val dir = dialog.directory ?: return null
+        var filename = dialog.file ?: return null
+        if (!filename.endsWith(".zip", ignoreCase = true)) {
+            filename = "$filename.zip"
+        }
+        return File(dir, filename)
+    }
 }

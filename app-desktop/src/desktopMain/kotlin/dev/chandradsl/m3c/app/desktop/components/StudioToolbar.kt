@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.Brush
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.PlayArrow
@@ -113,6 +114,12 @@ fun StudioToolbar(
                 isActive = viewModel.isDirty,
                 activeColor = StudioColors.Primary,
                 onClick = { viewModel.saveProject() }
+            )
+
+            ToolbarIconButton(
+                icon = Icons.Default.Download,
+                label = "Export",
+                onClick = { viewModel.openExportDialog() }
             )
 
             state.selectedNodeId?.let { selectedId ->
