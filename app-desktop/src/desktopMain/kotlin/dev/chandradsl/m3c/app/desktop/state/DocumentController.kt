@@ -272,6 +272,12 @@ class DocumentController(
     fun undo() = dispatch(WorkspaceIntent.Undo)
     fun redo() = dispatch(WorkspaceIntent.Redo)
 
+    fun snapshotHistoryStacks() = store.snapshotHistoryStacks()
+    fun restoreHistoryStacks(
+        undo: List<dev.chandradsl.m3c.core.domain.command.EditorCommand>,
+        redo: List<dev.chandradsl.m3c.core.domain.command.EditorCommand>
+    ) = store.restoreHistoryStacks(undo, redo)
+
     private fun cloneWithNewIds(node: ComposableNode): ComposableNode = when (node) {
         is ComposableNode.TextNode -> node.copy(id = NodeId.generate("txt"))
         is ComposableNode.IconNode -> node.copy(id = NodeId.generate("icn"))

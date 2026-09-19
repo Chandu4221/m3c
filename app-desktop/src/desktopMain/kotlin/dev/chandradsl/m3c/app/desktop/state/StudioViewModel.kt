@@ -35,10 +35,13 @@ import dev.chandradsl.m3c.core.domain.model.hasDescendant
 import dev.chandradsl.m3c.core.domain.schema.ComponentCategory
 import dev.chandradsl.m3c.core.domain.schema.ComponentRegistry
 import dev.chandradsl.m3c.core.domain.schema.ComponentType
+import dev.chandradsl.m3c.core.domain.command.EditorCommand
 import dev.chandradsl.m3c.core.domain.scope.ContainerScope
+import dev.chandradsl.m3c.core.domain.store.HistoryTimelineItem
 import dev.chandradsl.m3c.core.domain.store.TreeMutator
 import dev.chandradsl.m3c.core.domain.store.WorkspaceIntent
 import dev.chandradsl.m3c.core.domain.store.WorkspaceState
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -88,7 +91,8 @@ data class DraggedModifier(
 
 enum class LeftDrawerTab {
     Palette,
-    Hierarchy
+    Hierarchy,
+    History
 }
 
 enum class WindowSizeClass(val label: String, val badgeText: String, val rangeDescription: String) {
@@ -134,7 +138,10 @@ enum class CodePreviewMode {
  * Main Studio ViewModel composing DocumentController, CanvasController, and DragController.
  * Provides derived, lazily-memoized Kotlin code generation.
  */
-class StudioViewModel {
+class StudioViewModel(
+    coroutineScope: CoroutineScope? = null,
+    computationDispatcher: CoroutineDispatcher = Dispatchers.Default
+) {
 
     // 0. Project File, Multi-Screen & Dirty State Management
     var projectName: String by mutableStateOf("Untitled")
@@ -197,7 +204,7 @@ class StudioViewModel {
         get() = screens.firstOrNull { it.id == activeScreenId } ?: screens.firstOrNull()
 
     // 2. Coroutine Scope & Notifications
-    val viewModelScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    val viewModelScope: CoroutineScope = coroutineScope ?: CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     private val _notificationChannel = Channel<StudioNotification>(Channel.BUFFERED)
     val notificationFlow: Flow<StudioNotification> = _notificationChannel.receiveAsFlow()
@@ -226,6 +233,8 @@ class StudioViewModel {
         }
     }
 
+    private val screenHistoryStacks = mutableMapOf<String, Pair<List<EditorCommand>, List<EditorCommand>>>()
+
     // 3. Multi-Screen Operations
     fun syncCurrentScreenRoot() {
         val curId = activeScreenId
@@ -235,6 +244,7 @@ class StudioViewModel {
                 screen.copy(rootNode = curRoot)
             } else screen
         }
+        screenHistoryStacks[curId] = documentController.snapshotHistoryStacks()
     }
 
     fun selectScreen(screenId: String) {
@@ -242,7 +252,14 @@ class StudioViewModel {
         syncCurrentScreenRoot()
         val target = screens.firstOrNull { it.id == screenId } ?: return
         activeScreenId = target.id
-        dispatch(WorkspaceIntent.LoadDocument(target.rootNode))
+        val savedHistory = screenHistoryStacks[target.id]
+        dispatch(
+            WorkspaceIntent.LoadDocument(
+                rootNode = target.rootNode,
+                undoStack = savedHistory?.first ?: emptyList(),
+                redoStack = savedHistory?.second ?: emptyList()
+            )
+        )
         notify("Switched to ${target.name}")
     }
 
@@ -512,10 +529,15 @@ class StudioViewModel {
         }
 
         screens = updatedRemaining
+        screenHistoryStacks.remove(screenId)
         if (activeScreenId == screenId) {
             val nextScreen = updatedRemaining.first()
             activeScreenId = nextScreen.id
             dispatch(WorkspaceIntent.LoadDocument(nextScreen.rootNode))
+            val saved = screenHistoryStacks[nextScreen.id]
+            if (saved != null) {
+                documentController.restoreHistoryStacks(saved.first, saved.second)
+            }
         }
         isDirty = true
         notifySuccess("Deleted '${target.name}'")
@@ -676,7 +698,7 @@ class StudioViewModel {
     }
 
     // 4. Focused Sub-Controllers
-    val documentController = DocumentController(initialRoot, viewModelScope)
+    val documentController = DocumentController(initialRoot, viewModelScope, computationDispatcher)
     val canvasController = CanvasController()
     val dragController = DragController()
 
@@ -748,6 +770,27 @@ class StudioViewModel {
     fun redo() {
         documentController.redo()
         isDirty = true
+    }
+
+    val historyTimeline: List<HistoryTimelineItem>
+        get() = workspaceState.historyTimeline
+
+    val lastUndoDescription: String?
+        get() = workspaceState.lastUndoDescription
+
+    val nextRedoDescription: String?
+        get() = workspaceState.nextRedoDescription
+
+    fun jumpToHistoryStep(targetStep: Int) {
+        dispatch(WorkspaceIntent.JumpToHistory(targetStep))
+        isDirty = true
+        notify("Jumped to revision #$targetStep")
+    }
+
+    fun clearHistory() {
+        dispatch(WorkspaceIntent.LoadDocument(workspaceState.rootNode))
+        screenHistoryStacks.remove(activeScreenId)
+        notify("Revision history cleared")
     }
 
     // 4. Canvas & Panel Delegation

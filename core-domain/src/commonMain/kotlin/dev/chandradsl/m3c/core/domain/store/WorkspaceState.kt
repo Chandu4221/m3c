@@ -1,14 +1,25 @@
 package dev.chandradsl.m3c.core.domain.store
 
+import dev.chandradsl.m3c.core.domain.command.EditorCommand
 import dev.chandradsl.m3c.core.domain.model.ComposableNode
 import dev.chandradsl.m3c.core.domain.model.ModifierDef
 import dev.chandradsl.m3c.core.domain.model.NodeId
+
+data class HistoryTimelineItem(
+    val stepIndex: Int,
+    val description: String,
+    val isCurrent: Boolean = false,
+    val isFuture: Boolean = false
+)
 
 data class WorkspaceState(
     val rootNode: ComposableNode,
     val selectedNodeId: NodeId? = null,
     val canUndo: Boolean = false,
-    val canRedo: Boolean = false
+    val canRedo: Boolean = false,
+    val lastUndoDescription: String? = null,
+    val nextRedoDescription: String? = null,
+    val historyTimeline: List<HistoryTimelineItem> = emptyList()
 )
 
 sealed interface WorkspaceIntent {
@@ -44,6 +55,13 @@ sealed interface WorkspaceIntent {
     data object Undo : WorkspaceIntent
     data object Redo : WorkspaceIntent
 
-    /** Loads a new document into the workspace, resetting history and selection */
-    data class LoadDocument(val rootNode: ComposableNode) : WorkspaceIntent
+    /** Jumps directly to an arbitrary step index in the command history */
+    data class JumpToHistory(val targetStep: Int) : WorkspaceIntent
+
+    /** Loads a new document into the workspace, optionally restoring history stacks */
+    data class LoadDocument(
+        val rootNode: ComposableNode,
+        val undoStack: List<EditorCommand> = emptyList(),
+        val redoStack: List<EditorCommand> = emptyList()
+    ) : WorkspaceIntent
 }

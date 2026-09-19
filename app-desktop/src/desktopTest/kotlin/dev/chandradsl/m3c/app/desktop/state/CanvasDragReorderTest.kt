@@ -90,7 +90,7 @@ class CanvasDragReorderTest {
         // Wait for reorder to complete
         waitFor {
             val root = viewModel.workspaceState.rootNode as? ComposableNode.ColumnNode
-            root?.children?.getOrNull(0)?.id == btnB.id
+            root?.children?.size == 2 && root.children[0].id == btnB.id
         }
 
         // Verify children order is now [btnB, btnA]
@@ -111,7 +111,7 @@ class CanvasDragReorderTest {
         // Wait for reorder to complete
         waitFor {
             val root = viewModel.workspaceState.rootNode as? ComposableNode.ColumnNode
-            root?.children?.getOrNull(0)?.id == btnA.id
+            root?.children?.size == 2 && root.children[0].id == btnA.id
         }
 
         // Verify children order is restored to [btnA, btnB]
@@ -149,7 +149,7 @@ class CanvasDragReorderTest {
 
         waitFor {
             val root = viewModel.workspaceState.rootNode as? ComposableNode.RowNode
-            root?.children?.getOrNull(0)?.id == textB.id
+            root?.children?.size == 2 && root.children[0].id == textB.id
         }
 
         val children = (viewModel.workspaceState.rootNode as ComposableNode.RowNode).children

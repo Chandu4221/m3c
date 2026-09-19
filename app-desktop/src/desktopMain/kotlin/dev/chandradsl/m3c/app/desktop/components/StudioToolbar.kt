@@ -22,7 +22,9 @@ import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.FolderOpen
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.LightMode
+import dev.chandradsl.m3c.app.desktop.state.LeftDrawerTab
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.animation.animateColorAsState
@@ -143,18 +145,37 @@ fun StudioToolbar(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            val undoTooltip = if (state.canUndo && !state.lastUndoDescription.isNullOrBlank()) {
+                "Undo: ${state.lastUndoDescription} (Ctrl+Z)"
+            } else {
+                "Undo (Ctrl+Z)"
+            }
+
+            val redoTooltip = if (state.canRedo && !state.nextRedoDescription.isNullOrBlank()) {
+                "Redo: ${state.nextRedoDescription} (Ctrl+Shift+Z)"
+            } else {
+                "Redo (Ctrl+Shift+Z)"
+            }
+
             ToolbarIconButton(
                 icon = Icons.AutoMirrored.Filled.Undo,
-                label = "Undo",
+                label = undoTooltip,
                 enabled = state.canUndo,
                 onClick = { viewModel.undo() }
             )
 
             ToolbarIconButton(
                 icon = Icons.AutoMirrored.Filled.Redo,
-                label = "Redo",
+                label = redoTooltip,
                 enabled = state.canRedo,
                 onClick = { viewModel.redo() }
+            )
+
+            ToolbarIconButton(
+                icon = Icons.Default.History,
+                label = "History Timeline (${state.historyTimeline.size} steps)",
+                enabled = true,
+                onClick = { viewModel.leftDrawerTab = LeftDrawerTab.History }
             )
 
             Box(

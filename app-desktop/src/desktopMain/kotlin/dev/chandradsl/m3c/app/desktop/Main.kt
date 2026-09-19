@@ -21,6 +21,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.runtime.Composable
@@ -177,13 +178,20 @@ fun main() = application {
                                         modifier = Modifier.weight(1f),
                                         onClick = { viewModel.leftDrawerTab = LeftDrawerTab.Hierarchy }
                                     )
+                                    LeftTabButton(
+                                        icon = Icons.Default.History,
+                                        text = "History",
+                                        isActive = viewModel.leftDrawerTab == LeftDrawerTab.History,
+                                        modifier = Modifier.weight(1f),
+                                        onClick = { viewModel.leftDrawerTab = LeftDrawerTab.History }
+                                    )
                                 }
 
                                 // Active Tab Content
-                                if (viewModel.leftDrawerTab == LeftDrawerTab.Palette) {
-                                    ComponentPalette(viewModel = viewModel, modifier = Modifier.weight(1f))
-                                } else {
-                                    HierarchyTree(viewModel = viewModel, modifier = Modifier.weight(1f))
+                                when (viewModel.leftDrawerTab) {
+                                    LeftDrawerTab.Palette -> ComponentPalette(viewModel = viewModel, modifier = Modifier.weight(1f))
+                                    LeftDrawerTab.Hierarchy -> HierarchyTree(viewModel = viewModel, modifier = Modifier.weight(1f))
+                                    LeftDrawerTab.History -> HistoryTimelinePanel(viewModel = viewModel, modifier = Modifier.weight(1f))
                                 }
                             }
 

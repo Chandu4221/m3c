@@ -139,4 +139,67 @@ class CommandHistoryTest {
         assertEquals(1, (store.state.rootNode as ComposableNode.ColumnNode).children.size)
         job.cancel()
     }
+
+    @Test
+    fun testJumpToTimeline() = runTest {
+        val root = ComposableNode.ColumnNode()
+        val history = CommandHistory()
+
+        val text1 = ComposableNode.TextNode(text = "First")
+        val text2 = ComposableNode.TextNode(text = "Second")
+        val text3 = ComposableNode.TextNode(text = "Third")
+
+        var current = history.execute(InsertNodeCommand(root.id, text1), root)
+        current = history.execute(InsertNodeCommand(root.id, text2), current)
+        current = history.execute(InsertNodeCommand(root.id, text3), current)
+
+        assertEquals(3, (current as ComposableNode.ColumnNode).children.size)
+        val timeline = history.getTimelineSnapshot()
+        assertEquals(4, timeline.size) // step 0, 1, 2, 3
+        assertEquals(3, timeline.first { it.isCurrent }.stepIndex)
+
+        // Jump to Step 1 (only First should remain)
+        current = history.jumpTo(1, current)
+        assertEquals(1, (current as ComposableNode.ColumnNode).children.size)
+        assertEquals("First", (current.children[0] as ComposableNode.TextNode).text)
+
+        val timelineAfterJump = history.getTimelineSnapshot()
+        assertEquals(1, timelineAfterJump.first { it.isCurrent }.stepIndex)
+        // Steps 2 and 3 should now be future/redoable
+        assertTrue(timelineAfterJump[2].isFuture)
+        assertTrue(timelineAfterJump[3].isFuture)
+
+        // Jump to Step 3 (all three should be restored)
+        current = history.jumpTo(3, current)
+        assertEquals(3, (current as ComposableNode.ColumnNode).children.size)
+
+        // Jump to Step 0 (initial document, 0 children)
+        current = history.jumpTo(0, current)
+        assertEquals(0, (current as ComposableNode.ColumnNode).children.size)
+    }
+
+    @Test
+    fun testSnapshotAndRestoreStacks() = runTest {
+        val root = ComposableNode.ColumnNode()
+        val historyA = CommandHistory()
+
+        val text1 = ComposableNode.TextNode(text = "A1")
+        val text2 = ComposableNode.TextNode(text = "A2")
+
+        val stateAfter2 = historyA.execute(InsertNodeCommand(root.id, text2), historyA.execute(InsertNodeCommand(root.id, text1), root))
+        val (undoA, redoA) = historyA.snapshotStacks()
+        assertEquals(2, undoA.size)
+
+        // Simulate switching to Screen B
+        val historyB = CommandHistory()
+        assertEquals(0, historyB.snapshotStacks().first.size)
+
+        // Restore Screen A's stacks into historyB
+        historyB.restoreStacks(undoA, redoA)
+        assertEquals(2, historyB.snapshotStacks().first.size)
+
+        val undone = historyB.undo(stateAfter2) as ComposableNode.ColumnNode
+        assertEquals(1, undone.children.size)
+        assertEquals("A1", (undone.children[0] as ComposableNode.TextNode).text)
+    }
 }

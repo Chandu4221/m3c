@@ -5,6 +5,7 @@ import dev.chandradsl.m3c.core.domain.model.ModifierDef
 import dev.chandradsl.m3c.core.domain.model.NodeId
 import dev.chandradsl.m3c.core.domain.model.allDirectChildren
 import dev.chandradsl.m3c.core.domain.schema.childrenWithSlots
+import dev.chandradsl.m3c.core.domain.store.HistoryTimelineItem
 import dev.chandradsl.m3c.core.domain.store.TreeMutator
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -274,6 +275,12 @@ class CommandHistory(
     val lastCommandDescription: String?
         get() = undoStack.lastOrNull()?.description
 
+    val lastUndoDescription: String?
+        get() = undoStack.lastOrNull()?.description
+
+    val nextRedoDescription: String?
+        get() = redoStack.lastOrNull()?.description
+
     /**
      * Executes [command] against [currentRoot], recording it in the undo stack.
      * Clears the redo stack upon new user actions.
@@ -319,6 +326,92 @@ class CommandHistory(
         val redoneRoot = command.execute(currentRoot)
         undoStack.addLast(command)
         redoneRoot
+    }
+
+    /**
+     * Jumps directly to an arbitrary step index in the command history timeline.
+     * Step 0 represents the baseline initial document.
+     * Step N represents the state after applying the N-th command in the undo stack.
+     */
+    suspend fun jumpTo(targetStep: Int, currentRoot: ComposableNode): ComposableNode = mutex.withLock {
+        var root = currentRoot
+        val currentStep = undoStack.size
+        if (targetStep < currentStep) {
+            val stepsToUndo = currentStep - targetStep
+            repeat(stepsToUndo) {
+                if (undoStack.isNotEmpty()) {
+                    val command = undoStack.removeLast()
+                    val inverseCommand = command.inverse(root)
+                    root = inverseCommand.execute(root)
+                    redoStack.addLast(command)
+                }
+            }
+        } else if (targetStep > currentStep) {
+            val stepsToRedo = targetStep - currentStep
+            repeat(stepsToRedo) {
+                if (redoStack.isNotEmpty()) {
+                    val command = redoStack.removeLast()
+                    root = command.execute(root)
+                    undoStack.addLast(command)
+                }
+            }
+        }
+        root
+    }
+
+    /**
+     * Produces a snapshot of the chronological timeline (past, current, and future/redoable steps).
+     */
+    fun getTimelineSnapshot(): List<HistoryTimelineItem> {
+        val items = mutableListOf<HistoryTimelineItem>()
+        val currentStep = undoStack.size
+
+        items.add(
+            HistoryTimelineItem(
+                stepIndex = 0,
+                description = "Initial Screen",
+                isCurrent = currentStep == 0,
+                isFuture = false
+            )
+        )
+
+        undoStack.forEachIndexed { index, cmd ->
+            val step = index + 1
+            items.add(
+                HistoryTimelineItem(
+                    stepIndex = step,
+                    description = cmd.description,
+                    isCurrent = step == currentStep,
+                    isFuture = false
+                )
+            )
+        }
+
+        val futureList = redoStack.reversed()
+        futureList.forEachIndexed { index, cmd ->
+            val step = currentStep + index + 1
+            items.add(
+                HistoryTimelineItem(
+                    stepIndex = step,
+                    description = cmd.description,
+                    isCurrent = false,
+                    isFuture = true
+                )
+            )
+        }
+
+        return items
+    }
+
+    fun snapshotStacks(): Pair<List<EditorCommand>, List<EditorCommand>> {
+        return undoStack.toList() to redoStack.toList()
+    }
+
+    fun restoreStacks(undo: List<EditorCommand>, redo: List<EditorCommand>) {
+        undoStack.clear()
+        undoStack.addAll(undo)
+        redoStack.clear()
+        redoStack.addAll(redo)
     }
 
     suspend fun clear() = mutex.withLock {

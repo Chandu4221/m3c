@@ -29,7 +29,12 @@ class WorkspaceStore(
     private val commandHistory = CommandHistory()
     private val intentChannel = Channel<WorkspaceIntent>(Channel.UNLIMITED)
 
-    private val _stateFlow = MutableStateFlow(WorkspaceState(rootNode = initialRoot))
+    private val _stateFlow = MutableStateFlow(
+        WorkspaceState(
+            rootNode = initialRoot,
+            historyTimeline = commandHistory.getTimelineSnapshot()
+        )
+    )
     val stateFlow: StateFlow<WorkspaceState> = _stateFlow.asStateFlow()
 
     var state: WorkspaceState
@@ -79,18 +84,43 @@ class WorkspaceStore(
             }
             is WorkspaceIntent.Undo -> performUndo()
             is WorkspaceIntent.Redo -> performRedo()
-            is WorkspaceIntent.LoadDocument -> loadDocument(intent.rootNode)
+            is WorkspaceIntent.JumpToHistory -> performJumpTo(intent.targetStep)
+            is WorkspaceIntent.LoadDocument -> loadDocument(intent.rootNode, intent.undoStack, intent.redoStack)
         }
     }
 
-    private suspend fun loadDocument(newRoot: ComposableNode) {
-        commandHistory.clear()
+    private fun updateStateWithHistory(newRoot: ComposableNode) {
+        _stateFlow.update {
+            it.copy(
+                rootNode = newRoot,
+                canUndo = commandHistory.canUndo,
+                canRedo = commandHistory.canRedo,
+                lastUndoDescription = commandHistory.lastUndoDescription,
+                nextRedoDescription = commandHistory.nextRedoDescription,
+                historyTimeline = commandHistory.getTimelineSnapshot()
+            )
+        }
+    }
+
+    private suspend fun loadDocument(
+        newRoot: ComposableNode,
+        undoStack: List<EditorCommand> = emptyList(),
+        redoStack: List<EditorCommand> = emptyList()
+    ) {
+        if (undoStack.isNotEmpty() || redoStack.isNotEmpty()) {
+            commandHistory.restoreStacks(undoStack, redoStack)
+        } else {
+            commandHistory.clear()
+        }
         _stateFlow.update {
             it.copy(
                 rootNode = newRoot,
                 selectedNodeId = null,
-                canUndo = false,
-                canRedo = false
+                canUndo = commandHistory.canUndo,
+                canRedo = commandHistory.canRedo,
+                lastUndoDescription = commandHistory.lastUndoDescription,
+                nextRedoDescription = commandHistory.nextRedoDescription,
+                historyTimeline = commandHistory.getTimelineSnapshot()
             )
         }
     }
@@ -99,38 +129,35 @@ class WorkspaceStore(
         val newRoot = withContext(computationDispatcher) {
             commandHistory.execute(command, state.rootNode)
         }
-        _stateFlow.update {
-            it.copy(
-                rootNode = newRoot,
-                canUndo = commandHistory.canUndo,
-                canRedo = commandHistory.canRedo
-            )
-        }
+        updateStateWithHistory(newRoot)
     }
 
     private suspend fun performUndo() {
         val previousRoot = withContext(computationDispatcher) {
             commandHistory.undo(state.rootNode)
         }
-        _stateFlow.update {
-            it.copy(
-                rootNode = previousRoot,
-                canUndo = commandHistory.canUndo,
-                canRedo = commandHistory.canRedo
-            )
-        }
+        updateStateWithHistory(previousRoot)
     }
 
     private suspend fun performRedo() {
         val nextRoot = withContext(computationDispatcher) {
             commandHistory.redo(state.rootNode)
         }
-        _stateFlow.update {
-            it.copy(
-                rootNode = nextRoot,
-                canUndo = commandHistory.canUndo,
-                canRedo = commandHistory.canRedo
-            )
+        updateStateWithHistory(nextRoot)
+    }
+
+    private suspend fun performJumpTo(targetStep: Int) {
+        val jumpedRoot = withContext(computationDispatcher) {
+            commandHistory.jumpTo(targetStep, state.rootNode)
         }
+        updateStateWithHistory(jumpedRoot)
+    }
+
+    fun snapshotHistoryStacks(): Pair<List<EditorCommand>, List<EditorCommand>> =
+        commandHistory.snapshotStacks()
+
+    fun restoreHistoryStacks(undo: List<EditorCommand>, redo: List<EditorCommand>) {
+        commandHistory.restoreStacks(undo, redo)
+        updateStateWithHistory(state.rootNode)
     }
 }
