@@ -112,4 +112,45 @@ class KotlinSyntaxHighlighterTest {
         assertEquals(KotlinSyntaxHighlighter.LightPalette.keyword, lightKw)
         assertTrue(darkKw != lightKw)
     }
+
+    @Test
+    fun testFindSearchMatches() {
+        val code = "val count = 0\nText(text = \"count\")\nButton { count }"
+        val matches = KotlinSyntaxHighlighter.findSearchMatches(code, "count")
+
+        assertEquals(3, matches.size)
+        // First match on line 0
+        assertEquals(code.indexOf("count"), matches[0].startIndex)
+        assertEquals(0, matches[0].lineIndex)
+
+        // Second match on line 1 inside "count"
+        assertEquals(code.indexOf("\"count\"") + 1, matches[1].startIndex)
+        assertEquals(1, matches[1].lineIndex)
+
+        // Third match on line 2
+        assertEquals(code.lastIndexOf("count"), matches[2].startIndex)
+        assertEquals(2, matches[2].lineIndex)
+    }
+
+    @Test
+    fun testSearchQueryHighlightingApplied() {
+        val code = "val count = 0\nval max = count + 1"
+        val annotated = KotlinSyntaxHighlighter.highlight(
+            code = code,
+            isDark = true,
+            searchQuery = "count",
+            activeMatchIndex = 1
+        )
+
+        // Verify span styles containing background for search matches
+        val backgroundSpans = annotated.spanStyles.filter { it.item.background.alpha > 0f }
+        assertEquals(2, backgroundSpans.size)
+
+        // First match should have non-active match background
+        assertEquals(KotlinSyntaxHighlighter.DarkPalette.searchMatchBackground, backgroundSpans[0].item.background)
+
+        // Second match (activeMatchIndex = 1) should have active match background
+        assertEquals(KotlinSyntaxHighlighter.DarkPalette.activeSearchMatchBackground, backgroundSpans[1].item.background)
+    }
 }
+

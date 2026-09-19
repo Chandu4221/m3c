@@ -79,4 +79,26 @@ object DesktopFilePicker {
         }
         return File(dir, filename)
     }
+
+    /**
+     * Opens a native file dialog for saving a Kotlin source file (.kt).
+     * Ensures the returned file ends with `.kt`.
+     * Returns the chosen [File] or null if canceled.
+     */
+    fun chooseSaveKotlinFile(defaultName: String = "Screen.kt", parentFrame: Frame? = null): File? {
+        val initialFile = if (defaultName.endsWith(".kt", ignoreCase = true)) defaultName else "$defaultName.kt"
+        val dialog = FileDialog(parentFrame, "Save Kotlin Source File", FileDialog.SAVE).apply {
+            file = initialFile
+            filenameFilter = FilenameFilter { _, name -> name.endsWith(".kt", ignoreCase = true) }
+            isVisible = true
+        }
+
+        val dir = dialog.directory ?: return null
+        var filename = dialog.file ?: return null
+        if (!filename.endsWith(".kt", ignoreCase = true)) {
+            filename = "$filename.kt"
+        }
+        return File(dir, filename)
+    }
 }
+

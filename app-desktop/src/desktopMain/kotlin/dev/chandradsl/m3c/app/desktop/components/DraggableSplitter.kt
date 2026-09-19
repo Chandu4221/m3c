@@ -24,6 +24,8 @@ import androidx.compose.ui.input.pointer.changedToUp
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.unit.dp
 import dev.chandradsl.m3c.app.desktop.theme.StudioColors
 import java.awt.Cursor
@@ -143,5 +145,16 @@ fun DraggableSplitter(
                     .background(activeColor)
             }
         )
+
+        // Subtle grip indicator for horizontal drawer splitter
+        if (orientation == SplitterOrientation.Horizontal && (isHovered || isDragging)) {
+            Box(
+                modifier = Modifier
+                    .width(36.dp)
+                    .height(3.dp)
+                    .clip(CircleShape)
+                    .background(StudioColors.Primary)
+            )
+        }
     }
 }

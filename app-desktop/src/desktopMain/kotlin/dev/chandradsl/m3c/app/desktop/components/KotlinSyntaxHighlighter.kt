@@ -13,6 +13,12 @@ import androidx.compose.ui.text.font.FontWeight
  */
 object KotlinSyntaxHighlighter {
 
+    data class SearchMatch(
+        val startIndex: Int,
+        val endIndex: Int,
+        val lineIndex: Int
+    )
+
     data class SyntaxPalette(
         val keyword: Color,
         val annotation: Color,
@@ -22,7 +28,9 @@ object KotlinSyntaxHighlighter {
         val functionCall: Color,
         val comment: Color,
         val punctuation: Color,
-        val defaultText: Color
+        val defaultText: Color,
+        val searchMatchBackground: Color = Color(0xFF5A4D2E),
+        val activeSearchMatchBackground: Color = Color(0xFFC97816)
     )
 
     val DarkPalette = SyntaxPalette(
@@ -34,7 +42,9 @@ object KotlinSyntaxHighlighter {
         functionCall = Color(0xFFFFC66D),  // Golden Peach
         comment = Color(0xFF808080),       // Slate Grey
         punctuation = Color(0xFFA9B7C6),   // Off-white
-        defaultText = Color(0xFFA9B7C6)    // Light Foreground
+        defaultText = Color(0xFFA9B7C6),   // Light Foreground
+        searchMatchBackground = Color(0xFF5A4D2E),
+        activeSearchMatchBackground = Color(0xFFC97816)
     )
 
     val LightPalette = SyntaxPalette(
@@ -46,7 +56,9 @@ object KotlinSyntaxHighlighter {
         functionCall = Color(0xFF7A3E9D),  // Deep Purple
         comment = Color(0xFF8C8C8C),       // Muted Grey
         punctuation = Color(0xFF000000),   // Dark Text
-        defaultText = Color(0xFF000000)
+        defaultText = Color(0xFF000000),
+        searchMatchBackground = Color(0xFFFFEB9C),
+        activeSearchMatchBackground = Color(0xFFF39C12)
     )
 
     private val KEYWORDS = setOf(
@@ -60,12 +72,56 @@ object KotlinSyntaxHighlighter {
         "constructor", "init"
     )
 
-    fun highlight(code: String, isDark: Boolean): AnnotatedString {
-        val palette = if (isDark) DarkPalette else LightPalette
-        return highlight(code, palette)
+    /**
+     * Scans [code] for occurrences of [query] (case-insensitive) and returns a list of [SearchMatch]
+     * with start, end, and 0-indexed line numbers.
+     */
+    fun findSearchMatches(code: String, query: String): List<SearchMatch> {
+        if (query.isBlank() || code.isEmpty()) return emptyList()
+        val matches = mutableListOf<SearchMatch>()
+        val lowerCode = code.lowercase()
+        val lowerQuery = query.lowercase()
+        val qLen = query.length
+
+        // Precompute line start offsets for fast binary search of line numbers
+        val lineStarts = mutableListOf(0)
+        for (idx in code.indices) {
+            if (code[idx] == '\n') {
+                lineStarts.add(idx + 1)
+            }
+        }
+
+        var pos = 0
+        while (pos < lowerCode.length) {
+            val found = lowerCode.indexOf(lowerQuery, pos)
+            if (found < 0) break
+
+            var lIdx = lineStarts.binarySearch(found)
+            if (lIdx < 0) {
+                lIdx = -lIdx - 2
+            }
+            matches.add(SearchMatch(startIndex = found, endIndex = found + qLen, lineIndex = lIdx.coerceAtLeast(0)))
+            pos = found + qLen.coerceAtLeast(1)
+        }
+        return matches
     }
 
-    fun highlight(code: String, palette: SyntaxPalette): AnnotatedString {
+    fun highlight(
+        code: String,
+        isDark: Boolean,
+        searchQuery: String? = null,
+        activeMatchIndex: Int = -1
+    ): AnnotatedString {
+        val palette = if (isDark) DarkPalette else LightPalette
+        return highlight(code, palette, searchQuery, activeMatchIndex)
+    }
+
+    fun highlight(
+        code: String,
+        palette: SyntaxPalette,
+        searchQuery: String? = null,
+        activeMatchIndex: Int = -1
+    ): AnnotatedString {
         val builder = AnnotatedString.Builder(code)
         val len = code.length
         var i = 0
@@ -206,6 +262,21 @@ object KotlinSyntaxHighlighter {
 
             // 8. Other characters
             i++
+        }
+
+        // 9. Overlay Search Highlights (if any query provided)
+        if (!searchQuery.isNullOrBlank()) {
+            val matches = findSearchMatches(code, searchQuery)
+            matches.forEachIndexed { idx, match ->
+                val isCurrent = idx == activeMatchIndex
+                val bg = if (isCurrent) palette.activeSearchMatchBackground else palette.searchMatchBackground
+                val fg = if (isCurrent) Color.White else Color.Unspecified
+                builder.addStyle(
+                    SpanStyle(background = bg, color = fg),
+                    match.startIndex,
+                    match.endIndex
+                )
+            }
         }
 
         return builder.toAnnotatedString()
