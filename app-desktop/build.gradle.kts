@@ -34,6 +34,9 @@ kotlin {
                 implementation(libs.androidx.lifecycle.viewmodelCompose)
                 implementation(libs.androidx.lifecycle.runtimeCompose)
 
+                // Serialization
+                implementation(libs.kotlinx.serialization.json)
+
                 // Material Icons
                 implementation(libs.material.icons.extended)
             }
@@ -43,6 +46,7 @@ kotlin {
                 implementation(libs.kotlin.test)
                 implementation(libs.junit)
                 implementation(libs.kotlinx.coroutines.test)
+                implementation(libs.kotlinx.serialization.json)
             }
         }
     }

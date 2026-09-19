@@ -502,6 +502,11 @@ fun main() = application {
                             onDismiss = { viewModel.closeExportDialog() }
                         )
                     }
+
+                    // 9. Hot-Reload Bridge Modal Dialog Overlay
+                    if (viewModel.isHotReloadDialogOpen) {
+                        HotReloadDialog(viewModel = viewModel)
+                    }
                 }
             }
         }

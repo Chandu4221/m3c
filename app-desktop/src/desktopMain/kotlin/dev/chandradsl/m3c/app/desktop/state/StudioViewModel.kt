@@ -15,6 +15,7 @@ import dev.chandradsl.m3c.core.codegen.project.ProjectScaffoldGenerator
 import dev.chandradsl.m3c.core.domain.model.M3cProject
 import dev.chandradsl.m3c.core.domain.model.M3cScreen
 import dev.chandradsl.m3c.core.domain.storage.M3cProjectSerializer
+import dev.chandradsl.m3c.app.desktop.server.HotReloadServer
 import dev.chandradsl.m3c.core.domain.template.ScreenTemplate
 import dev.chandradsl.m3c.core.domain.template.ScreenTemplates
 import java.awt.Frame
@@ -1313,6 +1314,52 @@ class StudioViewModel(
 
     fun toggleAnimationLoop() {
         animationPreview = animationPreview.copy(isLooping = !animationPreview.isLooping)
+    }
+
+    // 11. Hot-Reload Server / Bridge Engine
+    val hotReloadServer = HotReloadServer(this, initialPort = 8989)
+    var isHotReloadDialogOpen: Boolean by mutableStateOf(false)
+
+    val isHotReloadRunning: StateFlow<Boolean> get() = hotReloadServer.isRunning
+    val hotReloadClientCount: StateFlow<Int> get() = hotReloadServer.clientCount
+    val hotReloadLogs: StateFlow<List<String>> get() = hotReloadServer.logs
+    val hotReloadPort: Int get() = hotReloadServer.port
+    val localNetworkIp: String get() = hotReloadServer.getLocalNetworkIp()
+
+    init {
+        viewModelScope.launch {
+            snapshotFlow { workspaceState.rootNode to activeScreenId }
+                .debounce(200.milliseconds)
+                .collect {
+                    if (hotReloadServer.isRunning.value) {
+                        hotReloadServer.broadcastUpdate()
+                    }
+                }
+        }
+    }
+
+    fun startHotReloadServer(port: Int = hotReloadServer.port): Boolean {
+        val success = hotReloadServer.restart(port)
+        if (success) {
+            notifySuccess("Hot-Reload Bridge running on port $port")
+        } else {
+            notifyError("Failed to start Hot-Reload Bridge on port $port")
+        }
+        return success
+    }
+
+    fun stopHotReloadServer() {
+        hotReloadServer.stop()
+        notify("Hot-Reload Bridge stopped")
+    }
+
+    fun pushHotReloadSync() {
+        if (hotReloadServer.isRunning.value) {
+            hotReloadServer.broadcastUpdate()
+            notifySuccess("Broadcasted live update to connected clients")
+        } else {
+            notifyWarning("Hot-Reload Bridge is not running")
+        }
     }
 
     val generatedCode: String

@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.Sensors
 import androidx.compose.material.icons.filled.SlowMotionVideo
 import dev.chandradsl.m3c.app.desktop.state.LeftDrawerTab
 import androidx.compose.material.icons.filled.PlayArrow
@@ -33,6 +34,7 @@ import androidx.compose.animation.core.tween
 import org.jetbrains.jewel.ui.component.Icon
 import org.jetbrains.jewel.ui.component.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -185,6 +187,18 @@ fun StudioToolbar(
                 enabled = true,
                 isActive = viewModel.animationPreview.isActive,
                 onClick = { viewModel.toggleAnimationPreview() }
+            )
+
+            val isHotReloadRunning by viewModel.isHotReloadRunning.collectAsState()
+            val hotReloadClients by viewModel.hotReloadClientCount.collectAsState()
+
+            ToolbarIconButton(
+                icon = Icons.Default.Sensors,
+                label = if (isHotReloadRunning) "Bridge ($hotReloadClients)" else "Bridge",
+                enabled = true,
+                isActive = isHotReloadRunning,
+                activeColor = StudioColors.Success,
+                onClick = { viewModel.isHotReloadDialogOpen = true }
             )
 
             Box(

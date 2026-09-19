@@ -3,13 +3,28 @@ package dev.chandradsl.m3c.app.desktop.state
 import dev.chandradsl.m3c.core.domain.model.ComposableNode
 import dev.chandradsl.m3c.core.domain.model.NodeId
 import dev.chandradsl.m3c.core.domain.store.WorkspaceIntent
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class StudioViewModelMultiScreenTest {
+
+    private fun TestScope.createViewModel(): StudioViewModel {
+        val testDispatcher = UnconfinedTestDispatcher(testScheduler)
+        val vmScope = CoroutineScope(testDispatcher + SupervisorJob(backgroundScope.coroutineContext[Job]))
+        return StudioViewModel(coroutineScope = vmScope, computationDispatcher = testDispatcher)
+    }
 
     @Test
     fun testInitialMultiScreenState() {
@@ -46,20 +61,24 @@ class StudioViewModelMultiScreenTest {
     }
 
     @Test
-    fun testSyncRootNodeOnScreenSwitch() {
-        val vm = StudioViewModel()
+    fun testSyncRootNodeOnScreenSwitch() = runTest {
+        val vm = createViewModel()
+        advanceUntilIdle()
         val mainScreenId = vm.activeScreenId
 
         // Add a child node to main screen
         val newChild = ComposableNode.TextNode(id = NodeId("test_text"), text = "Edited Text")
         vm.dispatch(WorkspaceIntent.InsertChild(parentId = vm.workspaceState.rootNode.id, node = newChild))
+        advanceUntilIdle()
 
         // Add second screen (which switches to it)
         vm.addScreen("ProfileScreen", "profile")
+        advanceUntilIdle()
         assertNotEquals(mainScreenId, vm.activeScreenId)
 
         // Switch back to main screen
         vm.selectScreen(mainScreenId)
+        advanceUntilIdle()
 
         // Verify the edits in main screen were preserved in its AST
         val mainScreen = vm.screens.first { it.id == mainScreenId }
