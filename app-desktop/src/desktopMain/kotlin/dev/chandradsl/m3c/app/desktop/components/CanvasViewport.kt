@@ -42,15 +42,20 @@ import androidx.compose.animation.slideOutVertically
 import org.jetbrains.jewel.ui.component.Icon
 import org.jetbrains.jewel.ui.component.Text
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import dev.chandradsl.m3c.runtime.renderer.decorator.LocalCanvasContainerBoundsReporter
 import dev.chandradsl.m3c.runtime.renderer.decorator.LocalHoveredCanvasParentId
+import dev.chandradsl.m3c.runtime.renderer.decorator.LocalInteractiveActionHandler
+import dev.chandradsl.m3c.runtime.renderer.decorator.LocalInteractiveMode
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -93,6 +98,14 @@ fun CanvasViewport(
     val vScrollState = rememberScrollState()
     val hScrollState = rememberScrollState()
     val backdropInteraction = remember { MutableInteractionSource() }
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(viewModel.interactiveController.lastFeedbackMessage) {
+        val msg = viewModel.interactiveController.lastFeedbackMessage
+        if (!msg.isNullOrBlank()) {
+            snackbarHostState.showSnackbar(message = msg)
+        }
+    }
 
     Column(
         modifier = modifier
@@ -369,53 +382,68 @@ fun CanvasViewport(
                     val colorScheme = if (viewModel.isDarkMode) darkColorScheme() else lightColorScheme()
 
                     MaterialTheme(colorScheme = colorScheme) {
-                        Surface(
-                            modifier = Modifier.fillMaxSize(),
-                            color = MaterialTheme.colorScheme.background
-                        ) {
-                            CompositionLocalProvider(
-                                LocalHoveredCanvasParentId provides viewModel.hoveredCanvasParentId,
-                                LocalCanvasContainerBoundsReporter provides { id, tag, rect ->
-                                    if (viewModel.isContainerTag(tag)) {
-                                        viewModel.registerCanvasContainerBounds(id, tag, rect)
-                                    }
-                                },
-                                LocalCanvasContainerBoundsUnregister provides { id ->
-                                    viewModel.unregisterCanvasContainerBounds(id)
-                                },
-                                LocalCanvasRootNodeId provides state.rootNode.id,
-                                LocalCanvasNodeBoundsReporter provides { id, tag, rect, layout ->
-                                    viewModel.registerCanvasNodeBounds(id, tag, rect, layout)
-                                },
-                                LocalCanvasNodeBoundsUnregister provides { id ->
-                                    viewModel.unregisterCanvasNodeBounds(id)
-                                },
-                                LocalActiveCanvasDragNodeId provides viewModel.activeCanvasDragNodeId,
-                                LocalCanvasDropTargetId provides viewModel.canvasDropTargetId,
-                                LocalCanvasDropPosition provides viewModel.canvasDropPosition,
-                                LocalCanvasDragStart provides { id, offset ->
-                                    viewModel.startCanvasDrag(id, offset)
-                                },
-                                LocalCanvasDragDelta provides { delta ->
-                                    viewModel.updateCanvasDrag(delta)
-                                },
-                                LocalCanvasDragEnd provides {
-                                    viewModel.endCanvasDrag()
-                                },
-                                LocalCanvasDragCancel provides {
-                                    viewModel.cancelCanvasDrag()
-                                }
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            Surface(
+                                modifier = Modifier.fillMaxSize(),
+                                color = MaterialTheme.colorScheme.background
                             ) {
-                                NodeRenderer(
-                                    node = state.rootNode,
-                                    state = if (viewModel.isInteractiveMode) state.copy(selectedNodeId = null) else state,
-                                    onIntent = { intent ->
-                                        if (viewModel.isInteractiveMode && intent is WorkspaceIntent.SelectNode) {
-                                            return@NodeRenderer
-                                        }
-                                        viewModel.dispatch(intent)
+                                CompositionLocalProvider(
+                                    LocalInteractiveMode provides viewModel.isInteractiveMode,
+                                    LocalInteractiveActionHandler provides { event ->
+                                        viewModel.handleInteractiveEvent(event)
                                     },
-                                    isInteractiveMode = viewModel.isInteractiveMode
+                                    LocalHoveredCanvasParentId provides viewModel.hoveredCanvasParentId,
+                                    LocalCanvasContainerBoundsReporter provides { id, tag, rect ->
+                                        if (viewModel.isContainerTag(tag)) {
+                                            viewModel.registerCanvasContainerBounds(id, tag, rect)
+                                        }
+                                    },
+                                    LocalCanvasContainerBoundsUnregister provides { id ->
+                                        viewModel.unregisterCanvasContainerBounds(id)
+                                    },
+                                    LocalCanvasRootNodeId provides state.rootNode.id,
+                                    LocalCanvasNodeBoundsReporter provides { id, tag, rect, layout ->
+                                        viewModel.registerCanvasNodeBounds(id, tag, rect, layout)
+                                    },
+                                    LocalCanvasNodeBoundsUnregister provides { id ->
+                                        viewModel.unregisterCanvasNodeBounds(id)
+                                    },
+                                    LocalActiveCanvasDragNodeId provides viewModel.activeCanvasDragNodeId,
+                                    LocalCanvasDropTargetId provides viewModel.canvasDropTargetId,
+                                    LocalCanvasDropPosition provides viewModel.canvasDropPosition,
+                                    LocalCanvasDragStart provides { id, offset ->
+                                        viewModel.startCanvasDrag(id, offset)
+                                    },
+                                    LocalCanvasDragDelta provides { delta ->
+                                        viewModel.updateCanvasDrag(delta)
+                                    },
+                                    LocalCanvasDragEnd provides {
+                                        viewModel.endCanvasDrag()
+                                    },
+                                    LocalCanvasDragCancel provides {
+                                        viewModel.cancelCanvasDrag()
+                                    }
+                                ) {
+                                    NodeRenderer(
+                                        node = state.rootNode,
+                                        state = if (viewModel.isInteractiveMode) state.copy(selectedNodeId = null) else state,
+                                        onIntent = { intent ->
+                                            if (viewModel.isInteractiveMode && intent is WorkspaceIntent.SelectNode) {
+                                                return@NodeRenderer
+                                            }
+                                            viewModel.dispatch(intent)
+                                        },
+                                        isInteractiveMode = viewModel.isInteractiveMode
+                                    )
+                                }
+                            }
+
+                            if (viewModel.isInteractiveMode) {
+                                SnackbarHost(
+                                    hostState = snackbarHostState,
+                                    modifier = Modifier
+                                        .align(Alignment.BottomCenter)
+                                        .padding(16.dp)
                                 )
                             }
                         }

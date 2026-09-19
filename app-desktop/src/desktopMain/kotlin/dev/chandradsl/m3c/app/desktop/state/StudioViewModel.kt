@@ -22,6 +22,7 @@ import java.io.File
 import dev.chandradsl.m3c.core.domain.model.ColorSource
 import dev.chandradsl.m3c.core.domain.model.ColorToken
 import dev.chandradsl.m3c.core.domain.model.ComposableNode
+import dev.chandradsl.m3c.core.domain.model.InteractiveEvent
 import dev.chandradsl.m3c.core.domain.model.DpVal
 import dev.chandradsl.m3c.core.domain.model.ModifierDef
 import dev.chandradsl.m3c.core.domain.model.NodeId
@@ -763,6 +764,20 @@ class StudioViewModel {
         if (enabled) {
             dispatch(WorkspaceIntent.SelectNode(null))
         }
+    }
+
+    val interactiveController = InteractiveController(
+        onNavigateToScreen = { screenId ->
+            selectScreen(screenId)
+        }
+    )
+
+    fun handleInteractiveEvent(event: InteractiveEvent) {
+        interactiveController.handleEvent(event, screens)
+    }
+
+    fun resetInteractiveState() {
+        interactiveController.resetState()
     }
 
     var isCodeDrawerOpen: Boolean

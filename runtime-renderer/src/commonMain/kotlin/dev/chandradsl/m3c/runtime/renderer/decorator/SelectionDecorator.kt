@@ -49,8 +49,12 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.chandradsl.m3c.core.domain.model.InteractiveEvent
 import dev.chandradsl.m3c.core.domain.model.NodeId
 import dev.chandradsl.m3c.core.domain.model.TreeDropPosition
+
+val LocalInteractiveMode = compositionLocalOf<Boolean> { false }
+val LocalInteractiveActionHandler = compositionLocalOf<((InteractiveEvent) -> Unit)?> { null }
 
 val LocalCanvasContainerBoundsReporter = compositionLocalOf<((NodeId, String, Rect) -> Unit)?> { null }
 val LocalCanvasContainerBoundsUnregister = compositionLocalOf<((NodeId) -> Unit)?> { null }
@@ -82,7 +86,8 @@ fun SelectionDecorator(
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit
 ) {
-    if (isInteractiveMode) {
+    val effectiveInteractiveMode = isInteractiveMode || LocalInteractiveMode.current
+    if (effectiveInteractiveMode) {
         // Pure preview mode: render raw content with zero editor overhead
         Box(modifier = modifier) {
             content()

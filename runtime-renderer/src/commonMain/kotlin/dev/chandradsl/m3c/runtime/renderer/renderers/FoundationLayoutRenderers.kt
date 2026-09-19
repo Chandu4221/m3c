@@ -11,6 +11,7 @@ import dev.chandradsl.m3c.core.domain.model.ComposableNode
 import dev.chandradsl.m3c.core.domain.store.WorkspaceIntent
 import dev.chandradsl.m3c.core.domain.store.WorkspaceState
 import dev.chandradsl.m3c.runtime.renderer.decorator.LocalCanvasParentContainerType
+import dev.chandradsl.m3c.runtime.renderer.decorator.LocalInteractiveMode
 import dev.chandradsl.m3c.runtime.renderer.decorator.SelectionDecorator
 import dev.chandradsl.m3c.runtime.renderer.mapper.*
 
@@ -19,12 +20,15 @@ fun RenderColumn(
     node: ComposableNode.ColumnNode,
     state: WorkspaceState,
     onIntent: (WorkspaceIntent) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isInteractiveMode: Boolean = false
 ) {
+    val effectiveInteractive = isInteractiveMode || LocalInteractiveMode.current
     SelectionDecorator(
         nodeId = node.id,
         nodeTag = "Column",
         isSelected = state.selectedNodeId == node.id,
+        isInteractiveMode = effectiveInteractive,
         onSelect = { onIntent(WorkspaceIntent.SelectNode(it)) },
         modifier = modifier
     ) {
@@ -36,7 +40,7 @@ fun RenderColumn(
             CompositionLocalProvider(LocalCanvasParentContainerType provides "Column") {
                 node.children.forEach { child ->
                     val childModifier = toComposeColumnModifier(child.modifiers)
-                    NodeRenderer(node = child, state = state, onIntent = onIntent, modifier = childModifier)
+                    NodeRenderer(node = child, state = state, onIntent = onIntent, modifier = childModifier, isInteractiveMode = effectiveInteractive)
                 }
             }
         }
@@ -48,12 +52,15 @@ fun RenderRow(
     node: ComposableNode.RowNode,
     state: WorkspaceState,
     onIntent: (WorkspaceIntent) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isInteractiveMode: Boolean = false
 ) {
+    val effectiveInteractive = isInteractiveMode || LocalInteractiveMode.current
     SelectionDecorator(
         nodeId = node.id,
         nodeTag = "Row",
         isSelected = state.selectedNodeId == node.id,
+        isInteractiveMode = effectiveInteractive,
         onSelect = { onIntent(WorkspaceIntent.SelectNode(it)) },
         modifier = modifier
     ) {
@@ -65,7 +72,7 @@ fun RenderRow(
             CompositionLocalProvider(LocalCanvasParentContainerType provides "Row") {
                 node.children.forEach { child ->
                     val childModifier = toComposeRowModifier(child.modifiers)
-                    NodeRenderer(node = child, state = state, onIntent = onIntent, modifier = childModifier)
+                    NodeRenderer(node = child, state = state, onIntent = onIntent, modifier = childModifier, isInteractiveMode = effectiveInteractive)
                 }
             }
         }
@@ -77,12 +84,15 @@ fun RenderBox(
     node: ComposableNode.BoxNode,
     state: WorkspaceState,
     onIntent: (WorkspaceIntent) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isInteractiveMode: Boolean = false
 ) {
+    val effectiveInteractive = isInteractiveMode || LocalInteractiveMode.current
     SelectionDecorator(
         nodeId = node.id,
         nodeTag = "Box",
         isSelected = state.selectedNodeId == node.id,
+        isInteractiveMode = effectiveInteractive,
         onSelect = { onIntent(WorkspaceIntent.SelectNode(it)) },
         modifier = modifier
     ) {
@@ -94,7 +104,7 @@ fun RenderBox(
             CompositionLocalProvider(LocalCanvasParentContainerType provides "Box") {
                 node.children.forEach { child ->
                     val childModifier = toComposeBoxModifier(child.modifiers)
-                    NodeRenderer(node = child, state = state, onIntent = onIntent, modifier = childModifier)
+                    NodeRenderer(node = child, state = state, onIntent = onIntent, modifier = childModifier, isInteractiveMode = effectiveInteractive)
                 }
             }
         }
@@ -106,12 +116,15 @@ fun RenderSpacer(
     node: ComposableNode.SpacerNode,
     state: WorkspaceState,
     onIntent: (WorkspaceIntent) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isInteractiveMode: Boolean = false
 ) {
+    val effectiveInteractive = isInteractiveMode || LocalInteractiveMode.current
     SelectionDecorator(
         nodeId = node.id,
         nodeTag = "Spacer",
         isSelected = state.selectedNodeId == node.id,
+        isInteractiveMode = effectiveInteractive,
         onSelect = { onIntent(WorkspaceIntent.SelectNode(it)) },
         modifier = modifier
     ) {

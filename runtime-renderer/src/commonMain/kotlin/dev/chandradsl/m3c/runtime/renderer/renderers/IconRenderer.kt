@@ -127,7 +127,8 @@ fun RenderIcon(
     node: ComposableNode.IconNode,
     state: WorkspaceState,
     onIntent: (WorkspaceIntent) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isInteractiveMode: Boolean = false
 ) {
     val imageVector = resolveMaterialIcon(node.iconName)
     val tint = node.tint?.toComposeColor() ?: LocalContentColor.current
@@ -136,6 +137,7 @@ fun RenderIcon(
         nodeId = node.id,
         nodeTag = "Icon",
         isSelected = state.selectedNodeId == node.id,
+        isInteractiveMode = isInteractiveMode,
         onSelect = { onIntent(WorkspaceIntent.SelectNode(it)) },
         modifier = modifier
     ) {

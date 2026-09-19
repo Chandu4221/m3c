@@ -9,8 +9,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.sp
 import dev.chandradsl.m3c.core.domain.model.ComposableNode
+import dev.chandradsl.m3c.core.domain.model.InteractiveEvent
 import dev.chandradsl.m3c.core.domain.store.WorkspaceIntent
 import dev.chandradsl.m3c.core.domain.store.WorkspaceState
+import dev.chandradsl.m3c.runtime.renderer.decorator.LocalInteractiveActionHandler
+import dev.chandradsl.m3c.runtime.renderer.decorator.LocalInteractiveMode
 import dev.chandradsl.m3c.runtime.renderer.decorator.SelectionDecorator
 import dev.chandradsl.m3c.runtime.renderer.mapper.toComposeColor
 import dev.chandradsl.m3c.runtime.renderer.mapper.toComposeModifier
@@ -21,8 +24,10 @@ fun RenderText(
     node: ComposableNode.TextNode,
     state: WorkspaceState,
     onIntent: (WorkspaceIntent) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isInteractiveMode: Boolean = false
 ) {
+    val effectiveInteractive = isInteractiveMode || LocalInteractiveMode.current
     val style = node.typography?.toComposeTextStyle() ?: LocalTextStyle.current
     val textColor = node.color?.toComposeColor() ?: Color.Unspecified
     val fontSize = node.fontSize?.let { it.value.sp } ?: style.fontSize
@@ -31,6 +36,7 @@ fun RenderText(
         nodeId = node.id,
         nodeTag = "Text",
         isSelected = state.selectedNodeId == node.id,
+        isInteractiveMode = effectiveInteractive,
         onSelect = { onIntent(WorkspaceIntent.SelectNode(it)) },
         modifier = modifier
     ) {
@@ -49,18 +55,26 @@ fun RenderTextField(
     node: ComposableNode.TextFieldNode,
     state: WorkspaceState,
     onIntent: (WorkspaceIntent) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isInteractiveMode: Boolean = false
 ) {
+    val effectiveInteractive = isInteractiveMode || LocalInteractiveMode.current
+    val actionHandler = LocalInteractiveActionHandler.current
+
     SelectionDecorator(
         nodeId = node.id,
         nodeTag = "TextField",
         isSelected = state.selectedNodeId == node.id,
+        isInteractiveMode = effectiveInteractive,
         onSelect = { onIntent(WorkspaceIntent.SelectNode(it)) },
         modifier = modifier
     ) {
         TextField(
             value = node.value,
             onValueChange = { newValue ->
+                if (effectiveInteractive) {
+                    actionHandler?.invoke(InteractiveEvent.ValueChange(node.id, "TextField", newValue))
+                }
                 onIntent(WorkspaceIntent.UpdateNode(node.copy(value = newValue)))
             },
             modifier = node.modifiers.toComposeModifier(),
@@ -71,10 +85,10 @@ fun RenderTextField(
             label = node.label?.let { { Text(it) } },
             placeholder = node.placeholder?.let { { Text(it) } },
             leadingIcon = node.leadingIcon?.let { iconNode ->
-                { NodeRenderer(node = iconNode, state = state, onIntent = onIntent) }
+                { NodeRenderer(node = iconNode, state = state, onIntent = onIntent, isInteractiveMode = effectiveInteractive) }
             },
             trailingIcon = node.trailingIcon?.let { iconNode ->
-                { NodeRenderer(node = iconNode, state = state, onIntent = onIntent) }
+                { NodeRenderer(node = iconNode, state = state, onIntent = onIntent, isInteractiveMode = effectiveInteractive) }
             }
         )
     }
@@ -85,18 +99,26 @@ fun RenderOutlinedTextField(
     node: ComposableNode.OutlinedTextFieldNode,
     state: WorkspaceState,
     onIntent: (WorkspaceIntent) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isInteractiveMode: Boolean = false
 ) {
+    val effectiveInteractive = isInteractiveMode || LocalInteractiveMode.current
+    val actionHandler = LocalInteractiveActionHandler.current
+
     SelectionDecorator(
         nodeId = node.id,
         nodeTag = "OutlinedTextField",
         isSelected = state.selectedNodeId == node.id,
+        isInteractiveMode = effectiveInteractive,
         onSelect = { onIntent(WorkspaceIntent.SelectNode(it)) },
         modifier = modifier
     ) {
         OutlinedTextField(
             value = node.value,
             onValueChange = { newValue ->
+                if (effectiveInteractive) {
+                    actionHandler?.invoke(InteractiveEvent.ValueChange(node.id, "OutlinedTextField", newValue))
+                }
                 onIntent(WorkspaceIntent.UpdateNode(node.copy(value = newValue)))
             },
             modifier = node.modifiers.toComposeModifier(),
@@ -107,10 +129,10 @@ fun RenderOutlinedTextField(
             label = node.label?.let { { Text(it) } },
             placeholder = node.placeholder?.let { { Text(it) } },
             leadingIcon = node.leadingIcon?.let { iconNode ->
-                { NodeRenderer(node = iconNode, state = state, onIntent = onIntent) }
+                { NodeRenderer(node = iconNode, state = state, onIntent = onIntent, isInteractiveMode = effectiveInteractive) }
             },
             trailingIcon = node.trailingIcon?.let { iconNode ->
-                { NodeRenderer(node = iconNode, state = state, onIntent = onIntent) }
+                { NodeRenderer(node = iconNode, state = state, onIntent = onIntent, isInteractiveMode = effectiveInteractive) }
             }
         )
     }

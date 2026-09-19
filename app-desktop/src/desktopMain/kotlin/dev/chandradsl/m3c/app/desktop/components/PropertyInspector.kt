@@ -19,6 +19,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DesignServices
+import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.TouchApp
 import org.jetbrains.jewel.ui.component.Checkbox
 import org.jetbrains.jewel.ui.component.DefaultButton
@@ -78,65 +79,9 @@ fun PropertyInspector(
             .verticalScroll(scrollState),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // 1. Guard for Interactive Mode: Lock editing and inform user
+        // 1. Guard for Interactive Mode: Display live simulation console
         if (viewModel.isInteractiveMode) {
-            Box(
-                modifier = Modifier.fillMaxWidth().fillMaxHeight(),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.padding(16.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .clip(RoundedCornerShape(24.dp))
-                            .background(StudioColors.ActiveSurface),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.TouchApp,
-                            contentDescription = null,
-                            tint = StudioColors.Primary,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-
-                    Text(
-                        text = "Interactive Mode Active",
-                        style = StudioTypography.ComponentTitle,
-                        textAlign = TextAlign.Center
-                    )
-
-                    Text(
-                        text = "Styling edits are locked during interactive preview. Click components on the canvas to test buttons, inputs, and states directly.",
-                        style = StudioTypography.Caption,
-                        textAlign = TextAlign.Center
-                    )
-
-                    DefaultButton(
-                        onClick = { viewModel.updateInteractiveMode(false) },
-                        modifier = Modifier.padding(top = 8.dp)
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.DesignServices,
-                                contentDescription = null,
-                                modifier = Modifier.size(StudioSizes.IconSmall)
-                            )
-                            Text(
-                                text = "Switch to Design Mode",
-                                style = StudioTypography.UIBody.copy(fontWeight = FontWeight.Bold)
-                            )
-                        }
-                    }
-                }
-            }
+            InteractiveInspectorView(viewModel = viewModel)
             return@Column
         }
 
@@ -1628,5 +1573,272 @@ private fun CardTemplateActions(
         }
     }
 }
+
+@Composable
+private fun InteractiveInspectorView(
+    viewModel: StudioViewModel
+) {
+    val controller = viewModel.interactiveController
+    val events = controller.eventLogs
+    val dynamicVars = controller.dynamicVariables
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // 1. Status Card
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .background(StudioColors.ActiveSurface)
+                .border(width = 1.dp, color = StudioColors.Success.copy(alpha = 0.5f), shape = RoundedCornerShape(8.dp))
+                .padding(14.dp)
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(10.dp)
+                            .clip(RoundedCornerShape(5.dp))
+                            .background(StudioColors.Success)
+                    )
+                    Text(
+                        text = "Live Simulation Active",
+                        style = StudioTypography.ComponentTitle.copy(fontWeight = FontWeight.Bold)
+                    )
+                }
+
+                Text(
+                    text = "Components on canvas are fully interactive. Clicks, typing, toggles, and navigation are captured live.",
+                    style = StudioTypography.Caption.copy(color = StudioColors.TextSecondary)
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    DefaultButton(
+                        onClick = { viewModel.updateInteractiveMode(false) },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.DesignServices,
+                                contentDescription = null,
+                                modifier = Modifier.size(StudioSizes.IconSmall)
+                            )
+                            Text(
+                                text = "Design Mode",
+                                style = StudioTypography.UIBody.copy(fontWeight = FontWeight.Bold)
+                            )
+                        }
+                    }
+
+                    OutlinedButton(
+                        onClick = { viewModel.resetInteractiveState() },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.RestartAlt,
+                                contentDescription = null,
+                                modifier = Modifier.size(StudioSizes.IconSmall)
+                            )
+                            Text(
+                                text = "Reset State",
+                                style = StudioTypography.UIBody
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // 2. Dynamic Variables Table
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Dynamic State Variables",
+                    style = StudioTypography.SectionHeader.copy(fontWeight = FontWeight.SemiBold)
+                )
+                Text(
+                    text = "${dynamicVars.size} active",
+                    style = StudioTypography.Caption.copy(color = StudioColors.TextSecondary)
+                )
+            }
+
+            if (dynamicVars.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(StudioColors.CardSurface)
+                        .border(1.dp, StudioColors.BorderSubtle, RoundedCornerShape(6.dp))
+                        .padding(12.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Type into TextFields or toggle controls on the canvas to create dynamic state variables.",
+                        style = StudioTypography.Caption.copy(color = StudioColors.TextSecondary),
+                        textAlign = TextAlign.Center
+                    )
+                }
+            } else {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(StudioColors.CardSurface)
+                        .border(1.dp, StudioColors.BorderSubtle, RoundedCornerShape(6.dp))
+                ) {
+                    dynamicVars.toList().forEachIndexed { index, (key, value) ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = key,
+                                style = StudioTypography.CodeMonospace.copy(
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = StudioColors.Primary
+                                )
+                            )
+                            Text(
+                                text = value,
+                                style = StudioTypography.CodeMonospace.copy(
+                                    color = StudioColors.TextPrimary
+                                )
+                            )
+                        }
+                        if (index < dynamicVars.size - 1) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(1.dp)
+                                    .background(StudioColors.BorderSubtle)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // 3. Live Interaction Event Log
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Event Dispatch Log",
+                    style = StudioTypography.SectionHeader.copy(fontWeight = FontWeight.SemiBold)
+                )
+                Text(
+                    text = "${events.size} captured",
+                    style = StudioTypography.Caption.copy(color = StudioColors.TextSecondary)
+                )
+            }
+
+            if (events.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(StudioColors.CardSurface)
+                        .border(1.dp, StudioColors.BorderSubtle, RoundedCornerShape(6.dp))
+                        .padding(12.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Click buttons or interact with inputs to view dispatched events in real-time.",
+                        style = StudioTypography.Caption.copy(color = StudioColors.TextSecondary),
+                        textAlign = TextAlign.Center
+                    )
+                }
+            } else {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    events.take(15).forEach { entry ->
+                        val badgeLabel = if (entry.isNavigation) "NAV" else "EVENT"
+                        val badgeBg = if (entry.isNavigation) StudioColors.Primary.copy(alpha = 0.2f) else StudioColors.Success.copy(alpha = 0.15f)
+                        val badgeColor = if (entry.isNavigation) StudioColors.Primary else StudioColors.Success
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(StudioColors.CardSurface)
+                                .border(1.dp, StudioColors.BorderSubtle, RoundedCornerShape(4.dp))
+                                .padding(horizontal = 8.dp, vertical = 6.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = entry.timestamp,
+                                style = StudioTypography.Caption.copy(fontSize = 10.sp, color = StudioColors.TextMuted)
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(3.dp))
+                                    .background(badgeBg)
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = badgeLabel,
+                                    style = StudioTypography.Caption.copy(
+                                        color = badgeColor,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 10.sp
+                                    )
+                                )
+                            }
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = entry.title,
+                                    style = StudioTypography.Caption.copy(
+                                        color = StudioColors.TextPrimary,
+                                        fontWeight = FontWeight.Medium
+                                    ),
+                                    maxLines = 1
+                                )
+                                if (entry.detail != null) {
+                                    Text(
+                                        text = entry.detail,
+                                        style = StudioTypography.Caption.copy(
+                                            color = StudioColors.TextSecondary,
+                                            fontSize = 10.sp
+                                        ),
+                                        maxLines = 1
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 
 

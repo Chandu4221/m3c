@@ -18,12 +18,14 @@ fun RenderHorizontalDivider(
     node: ComposableNode.HorizontalDividerNode,
     state: WorkspaceState,
     onIntent: (WorkspaceIntent) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isInteractiveMode: Boolean = false
 ) {
     SelectionDecorator(
         nodeId = node.id,
         nodeTag = "HorizontalDivider",
         isSelected = state.selectedNodeId == node.id,
+        isInteractiveMode = isInteractiveMode,
         onSelect = { onIntent(WorkspaceIntent.SelectNode(it)) },
         modifier = modifier
     ) {
@@ -40,12 +42,14 @@ fun RenderVerticalDivider(
     node: ComposableNode.VerticalDividerNode,
     state: WorkspaceState,
     onIntent: (WorkspaceIntent) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isInteractiveMode: Boolean = false
 ) {
     SelectionDecorator(
         nodeId = node.id,
         nodeTag = "VerticalDivider",
         isSelected = state.selectedNodeId == node.id,
+        isInteractiveMode = isInteractiveMode,
         onSelect = { onIntent(WorkspaceIntent.SelectNode(it)) },
         modifier = modifier
     ) {

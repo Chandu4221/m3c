@@ -19,10 +19,10 @@ fun NodeRenderer(
 ) {
     when (node) {
         // 1. Foundation Layouts
-        is ComposableNode.ColumnNode -> RenderColumn(node, state, onIntent, modifier)
-        is ComposableNode.RowNode -> RenderRow(node, state, onIntent, modifier)
-        is ComposableNode.BoxNode -> RenderBox(node, state, onIntent, modifier)
-        is ComposableNode.SpacerNode -> RenderSpacer(node, state, onIntent, modifier)
+        is ComposableNode.ColumnNode -> RenderColumn(node, state, onIntent, modifier, isInteractiveMode)
+        is ComposableNode.RowNode -> RenderRow(node, state, onIntent, modifier, isInteractiveMode)
+        is ComposableNode.BoxNode -> RenderBox(node, state, onIntent, modifier, isInteractiveMode)
+        is ComposableNode.SpacerNode -> RenderSpacer(node, state, onIntent, modifier, isInteractiveMode)
 
         // 2. Surfaces & Cards
         is ComposableNode.SurfaceNode -> RenderSurface(node, state, onIntent, modifier, isInteractiveMode)
@@ -40,18 +40,18 @@ fun NodeRenderer(
         is ComposableNode.FloatingActionButtonNode -> RenderFloatingActionButton(node, state, onIntent, modifier, isInteractiveMode)
 
         // 4. Text & Inputs
-        is ComposableNode.TextNode -> RenderText(node, state, onIntent, modifier)
-        is ComposableNode.IconNode -> RenderIcon(node, state, onIntent, modifier)
-        is ComposableNode.TextFieldNode -> RenderTextField(node, state, onIntent, modifier)
-        is ComposableNode.OutlinedTextFieldNode -> RenderOutlinedTextField(node, state, onIntent, modifier)
+        is ComposableNode.TextNode -> RenderText(node, state, onIntent, modifier, isInteractiveMode)
+        is ComposableNode.IconNode -> RenderIcon(node, state, onIntent, modifier, isInteractiveMode)
+        is ComposableNode.TextFieldNode -> RenderTextField(node, state, onIntent, modifier, isInteractiveMode)
+        is ComposableNode.OutlinedTextFieldNode -> RenderOutlinedTextField(node, state, onIntent, modifier, isInteractiveMode)
 
         // 5. Selection & Progress Indicators
-        is ComposableNode.CheckboxNode -> RenderCheckbox(node, state, onIntent, modifier)
-        is ComposableNode.SwitchNode -> RenderSwitch(node, state, onIntent, modifier)
-        is ComposableNode.RadioButtonNode -> RenderRadioButton(node, state, onIntent, modifier)
-        is ComposableNode.SliderNode -> RenderSlider(node, state, onIntent, modifier)
-        is ComposableNode.CircularProgressIndicatorNode -> RenderCircularProgressIndicator(node, state, onIntent, modifier)
-        is ComposableNode.LinearProgressIndicatorNode -> RenderLinearProgressIndicator(node, state, onIntent, modifier)
+        is ComposableNode.CheckboxNode -> RenderCheckbox(node, state, onIntent, modifier, isInteractiveMode)
+        is ComposableNode.SwitchNode -> RenderSwitch(node, state, onIntent, modifier, isInteractiveMode)
+        is ComposableNode.RadioButtonNode -> RenderRadioButton(node, state, onIntent, modifier, isInteractiveMode)
+        is ComposableNode.SliderNode -> RenderSlider(node, state, onIntent, modifier, isInteractiveMode)
+        is ComposableNode.CircularProgressIndicatorNode -> RenderCircularProgressIndicator(node, state, onIntent, modifier, isInteractiveMode)
+        is ComposableNode.LinearProgressIndicatorNode -> RenderLinearProgressIndicator(node, state, onIntent, modifier, isInteractiveMode)
 
         // 6. Scaffolding & Navigation
         is ComposableNode.ScaffoldNode -> RenderScaffold(node, state, onIntent, modifier, isInteractiveMode)
@@ -80,7 +80,7 @@ fun NodeRenderer(
         is ComposableNode.AlertDialogNode -> RenderAlertDialog(node, state, onIntent, modifier, isInteractiveMode)
 
         // 9. Dividers & Utilities
-        is ComposableNode.HorizontalDividerNode -> RenderHorizontalDivider(node, state, onIntent, modifier)
-        is ComposableNode.VerticalDividerNode -> RenderVerticalDivider(node, state, onIntent, modifier)
+        is ComposableNode.HorizontalDividerNode -> RenderHorizontalDivider(node, state, onIntent, modifier, isInteractiveMode)
+        is ComposableNode.VerticalDividerNode -> RenderVerticalDivider(node, state, onIntent, modifier, isInteractiveMode)
     }
 }

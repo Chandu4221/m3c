@@ -12,8 +12,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import dev.chandradsl.m3c.core.domain.model.ComposableNode
+import dev.chandradsl.m3c.core.domain.model.InteractiveEvent
 import dev.chandradsl.m3c.core.domain.store.WorkspaceIntent
 import dev.chandradsl.m3c.core.domain.store.WorkspaceState
+import dev.chandradsl.m3c.runtime.renderer.decorator.LocalInteractiveActionHandler
+import dev.chandradsl.m3c.runtime.renderer.decorator.LocalInteractiveMode
 import dev.chandradsl.m3c.runtime.renderer.decorator.SelectionDecorator
 import dev.chandradsl.m3c.runtime.renderer.mapper.toComposeColor
 import dev.chandradsl.m3c.runtime.renderer.mapper.toComposeModifier
@@ -23,18 +26,26 @@ fun RenderCheckbox(
     node: ComposableNode.CheckboxNode,
     state: WorkspaceState,
     onIntent: (WorkspaceIntent) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isInteractiveMode: Boolean = false
 ) {
+    val effectiveInteractive = isInteractiveMode || LocalInteractiveMode.current
+    val actionHandler = LocalInteractiveActionHandler.current
+
     SelectionDecorator(
         nodeId = node.id,
         nodeTag = "Checkbox",
         isSelected = state.selectedNodeId == node.id,
+        isInteractiveMode = effectiveInteractive,
         onSelect = { onIntent(WorkspaceIntent.SelectNode(it)) },
         modifier = modifier
     ) {
         Checkbox(
             checked = node.checked,
             onCheckedChange = { isChecked ->
+                if (effectiveInteractive) {
+                    actionHandler?.invoke(InteractiveEvent.Toggle(node.id, "Checkbox", isChecked))
+                }
                 onIntent(WorkspaceIntent.UpdateNode(node.copy(checked = isChecked)))
             },
             enabled = node.enabled,
@@ -48,18 +59,26 @@ fun RenderSwitch(
     node: ComposableNode.SwitchNode,
     state: WorkspaceState,
     onIntent: (WorkspaceIntent) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isInteractiveMode: Boolean = false
 ) {
+    val effectiveInteractive = isInteractiveMode || LocalInteractiveMode.current
+    val actionHandler = LocalInteractiveActionHandler.current
+
     SelectionDecorator(
         nodeId = node.id,
         nodeTag = "Switch",
         isSelected = state.selectedNodeId == node.id,
+        isInteractiveMode = effectiveInteractive,
         onSelect = { onIntent(WorkspaceIntent.SelectNode(it)) },
         modifier = modifier
     ) {
         Switch(
             checked = node.checked,
             onCheckedChange = { isChecked ->
+                if (effectiveInteractive) {
+                    actionHandler?.invoke(InteractiveEvent.Toggle(node.id, "Switch", isChecked))
+                }
                 onIntent(WorkspaceIntent.UpdateNode(node.copy(checked = isChecked)))
             },
             enabled = node.enabled,
@@ -73,19 +92,28 @@ fun RenderRadioButton(
     node: ComposableNode.RadioButtonNode,
     state: WorkspaceState,
     onIntent: (WorkspaceIntent) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isInteractiveMode: Boolean = false
 ) {
+    val effectiveInteractive = isInteractiveMode || LocalInteractiveMode.current
+    val actionHandler = LocalInteractiveActionHandler.current
+
     SelectionDecorator(
         nodeId = node.id,
         nodeTag = "RadioButton",
         isSelected = state.selectedNodeId == node.id,
+        isInteractiveMode = effectiveInteractive,
         onSelect = { onIntent(WorkspaceIntent.SelectNode(it)) },
         modifier = modifier
     ) {
         RadioButton(
             selected = node.selected,
             onClick = {
-                onIntent(WorkspaceIntent.UpdateNode(node.copy(selected = !node.selected)))
+                val newSelected = !node.selected
+                if (effectiveInteractive) {
+                    actionHandler?.invoke(InteractiveEvent.Toggle(node.id, "RadioButton", newSelected))
+                }
+                onIntent(WorkspaceIntent.UpdateNode(node.copy(selected = newSelected)))
             },
             enabled = node.enabled,
             modifier = node.modifiers.toComposeModifier()
@@ -98,18 +126,26 @@ fun RenderSlider(
     node: ComposableNode.SliderNode,
     state: WorkspaceState,
     onIntent: (WorkspaceIntent) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isInteractiveMode: Boolean = false
 ) {
+    val effectiveInteractive = isInteractiveMode || LocalInteractiveMode.current
+    val actionHandler = LocalInteractiveActionHandler.current
+
     SelectionDecorator(
         nodeId = node.id,
         nodeTag = "Slider",
         isSelected = state.selectedNodeId == node.id,
+        isInteractiveMode = effectiveInteractive,
         onSelect = { onIntent(WorkspaceIntent.SelectNode(it)) },
         modifier = modifier
     ) {
         Slider(
             value = node.value,
             onValueChange = { newValue ->
+                if (effectiveInteractive) {
+                    actionHandler?.invoke(InteractiveEvent.ValueChange(node.id, "Slider", newValue.toString()))
+                }
                 onIntent(WorkspaceIntent.UpdateNode(node.copy(value = newValue)))
             },
             valueRange = node.valueRangeStart..node.valueRangeEnd,
@@ -125,8 +161,10 @@ fun RenderCircularProgressIndicator(
     node: ComposableNode.CircularProgressIndicatorNode,
     state: WorkspaceState,
     onIntent: (WorkspaceIntent) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isInteractiveMode: Boolean = false
 ) {
+    val effectiveInteractive = isInteractiveMode || LocalInteractiveMode.current
     val indicatorColor = node.color?.toComposeColor() ?: ProgressIndicatorDefaults.circularColor
     val trackColor = node.trackColor?.toComposeColor() ?: ProgressIndicatorDefaults.circularDeterminateTrackColor
     val currentProgress = node.progress
@@ -135,6 +173,7 @@ fun RenderCircularProgressIndicator(
         nodeId = node.id,
         nodeTag = "CircularProgress",
         isSelected = state.selectedNodeId == node.id,
+        isInteractiveMode = effectiveInteractive,
         onSelect = { onIntent(WorkspaceIntent.SelectNode(it)) },
         modifier = modifier
     ) {
@@ -162,8 +201,10 @@ fun RenderLinearProgressIndicator(
     node: ComposableNode.LinearProgressIndicatorNode,
     state: WorkspaceState,
     onIntent: (WorkspaceIntent) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isInteractiveMode: Boolean = false
 ) {
+    val effectiveInteractive = isInteractiveMode || LocalInteractiveMode.current
     val indicatorColor = node.color?.toComposeColor() ?: ProgressIndicatorDefaults.linearColor
     val trackColor = node.trackColor?.toComposeColor() ?: ProgressIndicatorDefaults.linearTrackColor
     val currentProgress = node.progress
@@ -172,6 +213,7 @@ fun RenderLinearProgressIndicator(
         nodeId = node.id,
         nodeTag = "LinearProgress",
         isSelected = state.selectedNodeId == node.id,
+        isInteractiveMode = effectiveInteractive,
         onSelect = { onIntent(WorkspaceIntent.SelectNode(it)) },
         modifier = modifier
     ) {
@@ -200,11 +242,14 @@ fun RenderRangeSlider(
     modifier: Modifier = Modifier,
     isInteractiveMode: Boolean = false
 ) {
+    val effectiveInteractive = isInteractiveMode || LocalInteractiveMode.current
+    val actionHandler = LocalInteractiveActionHandler.current
+
     SelectionDecorator(
         nodeId = node.id,
         nodeTag = "RangeSlider",
         isSelected = state.selectedNodeId == node.id,
-        isInteractiveMode = isInteractiveMode,
+        isInteractiveMode = effectiveInteractive,
         drillDownOnlyWhenSelected = true,
         onSelect = { onIntent(WorkspaceIntent.SelectNode(it)) },
         modifier = modifier
@@ -212,9 +257,10 @@ fun RenderRangeSlider(
         RangeSlider(
             value = node.startValue..node.endValue,
             onValueChange = { range ->
-                if (isInteractiveMode) {
-                    onIntent(WorkspaceIntent.UpdateNode(node.copy(startValue = range.start, endValue = range.endInclusive)))
+                if (effectiveInteractive) {
+                    actionHandler?.invoke(InteractiveEvent.ValueChange(node.id, "RangeSlider", "${range.start}..${range.endInclusive}"))
                 }
+                onIntent(WorkspaceIntent.UpdateNode(node.copy(startValue = range.start, endValue = range.endInclusive)))
             },
             steps = node.steps,
             enabled = node.enabled,
