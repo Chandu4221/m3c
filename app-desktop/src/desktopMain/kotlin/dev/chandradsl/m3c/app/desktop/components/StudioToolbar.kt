@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.SlowMotionVideo
 import dev.chandradsl.m3c.app.desktop.state.LeftDrawerTab
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Save
@@ -176,6 +177,14 @@ fun StudioToolbar(
                 label = "History Timeline (${state.historyTimeline.size} steps)",
                 enabled = true,
                 onClick = { viewModel.leftDrawerTab = LeftDrawerTab.History }
+            )
+
+            ToolbarIconButton(
+                icon = Icons.Default.SlowMotionVideo,
+                label = if (viewModel.animationPreview.isActive) "Motion Preview" else "Motion",
+                enabled = true,
+                isActive = viewModel.animationPreview.isActive,
+                onClick = { viewModel.toggleAnimationPreview() }
             )
 
             Box(

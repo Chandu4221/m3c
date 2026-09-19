@@ -56,6 +56,7 @@ import dev.chandradsl.m3c.runtime.renderer.decorator.LocalCanvasContainerBoundsR
 import dev.chandradsl.m3c.runtime.renderer.decorator.LocalHoveredCanvasParentId
 import dev.chandradsl.m3c.runtime.renderer.decorator.LocalInteractiveActionHandler
 import dev.chandradsl.m3c.runtime.renderer.decorator.LocalInteractiveMode
+import dev.chandradsl.m3c.app.desktop.state.TransitionEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -107,11 +108,14 @@ fun CanvasViewport(
         }
     }
 
-    Column(
+    Box(
         modifier = modifier
             .fillMaxSize()
             .background(StudioColors.CanvasBackdrop)
     ) {
+        Column(
+            modifier = Modifier.fillMaxSize()
+        ) {
         // ====================================================================
         // 0. Screen Navigation Tab Bar
         // ====================================================================
@@ -424,17 +428,54 @@ fun CanvasViewport(
                                         viewModel.cancelCanvasDrag()
                                     }
                                 ) {
-                                    NodeRenderer(
-                                        node = state.rootNode,
-                                        state = if (viewModel.isInteractiveMode) state.copy(selectedNodeId = null) else state,
-                                        onIntent = { intent ->
-                                            if (viewModel.isInteractiveMode && intent is WorkspaceIntent.SelectNode) {
-                                                return@NodeRenderer
+                                    val animState = viewModel.animationPreview
+                                    val motionModifier = if (animState.isActive) {
+                                        val easedProgress = animState.easing.transform(animState.progress)
+                                        Modifier.graphicsLayer {
+                                            when (animState.effect) {
+                                                TransitionEffect.Fade -> {
+                                                    alpha = easedProgress
+                                                }
+                                                TransitionEffect.SlideUp -> {
+                                                    alpha = easedProgress
+                                                    translationY = (1f - easedProgress) * 280f
+                                                }
+                                                TransitionEffect.SlideDown -> {
+                                                    alpha = easedProgress
+                                                    translationY = -(1f - easedProgress) * 280f
+                                                }
+                                                TransitionEffect.SlideHorizontal -> {
+                                                    alpha = easedProgress
+                                                    translationX = (1f - easedProgress) * 350f
+                                                }
+                                                TransitionEffect.Scale -> {
+                                                    alpha = easedProgress
+                                                    val scale = 0.85f + (0.15f * easedProgress)
+                                                    scaleX = scale
+                                                    scaleY = scale
+                                                }
+                                                TransitionEffect.Expand -> {
+                                                    alpha = easedProgress
+                                                    scaleY = easedProgress.coerceAtLeast(0.001f)
+                                                    transformOrigin = TransformOrigin(0.5f, 0f)
+                                                }
                                             }
-                                            viewModel.dispatch(intent)
-                                        },
-                                        isInteractiveMode = viewModel.isInteractiveMode
-                                    )
+                                        }
+                                    } else Modifier
+
+                                    Box(modifier = Modifier.fillMaxSize().then(motionModifier)) {
+                                        NodeRenderer(
+                                            node = state.rootNode,
+                                            state = if (viewModel.isInteractiveMode) state.copy(selectedNodeId = null) else state,
+                                            onIntent = { intent ->
+                                                if (viewModel.isInteractiveMode && intent is WorkspaceIntent.SelectNode) {
+                                                    return@NodeRenderer
+                                                }
+                                                viewModel.dispatch(intent)
+                                            },
+                                            isInteractiveMode = viewModel.isInteractiveMode
+                                        )
+                                    }
                                 }
                             }
 
@@ -450,6 +491,18 @@ fun CanvasViewport(
                     }
                 }
             }
+        }
+
+        }
+
+        // Floating Animation Control Bar at bottom
+        AnimatedVisibility(
+            visible = viewModel.animationPreview.isActive,
+            modifier = Modifier.align(Alignment.BottomCenter),
+            enter = fadeIn(tween(200)) + slideInVertically(tween(200)) { it },
+            exit = fadeOut(tween(150)) + slideOutVertically(tween(150)) { it }
+        ) {
+            AnimationControlBar(viewModel = viewModel)
         }
     }
 }

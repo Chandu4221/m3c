@@ -46,7 +46,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
@@ -1225,6 +1227,93 @@ class StudioViewModel(
                 rootNode = initialRoot
             )
         )
+
+    // 10. Animation & Transition Preview Engine
+    var animationPreview: AnimationPreviewState by mutableStateOf(AnimationPreviewState())
+        private set
+
+    private var animationJob: Job? = null
+
+    fun toggleAnimationPreview(active: Boolean? = null) {
+        val nextActive = active ?: !animationPreview.isActive
+        if (!nextActive) {
+            pauseAnimation()
+            animationPreview = animationPreview.copy(isActive = false, isPlaying = false, progress = 1.0f)
+        } else {
+            animationPreview = animationPreview.copy(isActive = true, progress = 0.0f)
+            playAnimation()
+        }
+    }
+
+    fun playAnimation() {
+        if (!animationPreview.isActive) {
+            animationPreview = animationPreview.copy(isActive = true)
+        }
+        animationJob?.cancel()
+        if (animationPreview.progress >= 1.0f) {
+            animationPreview = animationPreview.copy(progress = 0.0f)
+        }
+        animationPreview = animationPreview.copy(isPlaying = true)
+
+        animationJob = viewModelScope.launch {
+            val stepIntervalMs = 16L
+            while (animationPreview.isPlaying) {
+                delay(stepIntervalMs)
+                val duration = animationPreview.durationMs.toFloat()
+                val speed = animationPreview.speedMultiplier.coerceAtLeast(0.1f)
+                val deltaProgress = (stepIntervalMs.toFloat() / duration) * speed
+                val nextProgress = animationPreview.progress + deltaProgress
+
+                if (nextProgress >= 1.0f) {
+                    if (animationPreview.isLooping) {
+                        animationPreview = animationPreview.copy(progress = 0.0f)
+                    } else {
+                        animationPreview = animationPreview.copy(progress = 1.0f, isPlaying = false)
+                        break
+                    }
+                } else {
+                    animationPreview = animationPreview.copy(progress = nextProgress)
+                }
+            }
+        }
+    }
+
+    fun pauseAnimation() {
+        animationJob?.cancel()
+        animationJob = null
+        animationPreview = animationPreview.copy(isPlaying = false)
+    }
+
+    fun replayAnimation() {
+        pauseAnimation()
+        animationPreview = animationPreview.copy(progress = 0.0f)
+        playAnimation()
+    }
+
+    fun seekAnimation(progress: Float) {
+        pauseAnimation()
+        animationPreview = animationPreview.copy(progress = progress.coerceIn(0f, 1f))
+    }
+
+    fun setAnimationSpeed(speed: Float) {
+        animationPreview = animationPreview.copy(speedMultiplier = speed)
+    }
+
+    fun setAnimationDuration(durationMs: Int) {
+        animationPreview = animationPreview.copy(durationMs = durationMs.coerceAtLeast(50))
+    }
+
+    fun setAnimationEffect(effect: TransitionEffect) {
+        animationPreview = animationPreview.copy(effect = effect)
+    }
+
+    fun setAnimationEasing(easing: EasingCurve) {
+        animationPreview = animationPreview.copy(easing = easing)
+    }
+
+    fun toggleAnimationLoop() {
+        animationPreview = animationPreview.copy(isLooping = !animationPreview.isLooping)
+    }
 
     val generatedCode: String
         get() = generatedCodeFlow.value

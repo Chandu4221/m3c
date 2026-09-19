@@ -104,24 +104,29 @@ fun main() = application {
         },
         onKeyEvent = { keyEvent ->
             if (keyEvent.type == KeyEventType.KeyDown) {
-                val isMetaOrCtrl = keyEvent.isMetaPressed || keyEvent.isCtrlPressed
-                if (isMetaOrCtrl) {
-                    when {
-                        keyEvent.key == Key.Z && keyEvent.isShiftPressed -> {
-                            viewModel.redo()
-                            true
+                if (keyEvent.key == Key.F8) {
+                    viewModel.toggleAnimationPreview()
+                    true
+                } else {
+                    val isMetaOrCtrl = keyEvent.isMetaPressed || keyEvent.isCtrlPressed
+                    if (isMetaOrCtrl) {
+                        when {
+                            keyEvent.key == Key.Z && keyEvent.isShiftPressed -> {
+                                viewModel.redo()
+                                true
+                            }
+                            keyEvent.key == Key.Z -> {
+                                viewModel.undo()
+                                true
+                            }
+                            keyEvent.key == Key.Y -> {
+                                viewModel.redo()
+                                true
+                            }
+                            else -> false
                         }
-                        keyEvent.key == Key.Z -> {
-                            viewModel.undo()
-                            true
-                        }
-                        keyEvent.key == Key.Y -> {
-                            viewModel.redo()
-                            true
-                        }
-                        else -> false
-                    }
-                } else false
+                    } else false
+                }
             } else false
         }
     ) {
