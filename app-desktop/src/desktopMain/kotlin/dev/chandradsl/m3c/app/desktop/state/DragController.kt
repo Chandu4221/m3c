@@ -6,6 +6,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import dev.chandradsl.m3c.core.domain.model.NodeId
+import dev.chandradsl.m3c.core.domain.model.TreeDropPosition
 
 class DragController {
 
@@ -157,4 +158,53 @@ class DragController {
         activeModifierDrag = null
         modifierDropTargetIndex = null
     }
+
+    // 4. On-Canvas Drag & Drop Reordering
+    var activeCanvasDragNodeId: NodeId? by mutableStateOf(null)
+    var canvasDropTargetId: NodeId? by mutableStateOf(null)
+    var canvasDropPosition: TreeDropPosition? by mutableStateOf(null)
+
+    private val _canvasNodeBounds = mutableMapOf<NodeId, CanvasNodeInfo>()
+    val allCanvasNodes: Map<NodeId, CanvasNodeInfo> get() = _canvasNodeBounds
+
+    fun registerCanvasNodeBounds(nodeId: NodeId, tag: String, bounds: Rect, parentLayout: String?) {
+        _canvasNodeBounds[nodeId] = CanvasNodeInfo(nodeId, tag, bounds, parentLayout)
+    }
+
+    fun unregisterCanvasNodeBounds(nodeId: NodeId) {
+        _canvasNodeBounds.remove(nodeId)
+        if (canvasDropTargetId == nodeId) {
+            canvasDropTargetId = null
+            canvasDropPosition = null
+        }
+    }
+
+    fun startCanvasDrag(nodeId: NodeId, initialOffset: Offset) {
+        activeCanvasDragNodeId = nodeId
+        dragPointerOffset = initialOffset
+        canvasDropTargetId = null
+        canvasDropPosition = null
+    }
+
+    fun updateCanvasDrag(delta: Offset) {
+        dragPointerOffset += delta
+    }
+
+    fun setCanvasDropTarget(targetId: NodeId?, position: TreeDropPosition?) {
+        canvasDropTargetId = targetId
+        canvasDropPosition = position
+    }
+
+    fun cancelCanvasDrag() {
+        activeCanvasDragNodeId = null
+        canvasDropTargetId = null
+        canvasDropPosition = null
+    }
 }
+
+data class CanvasNodeInfo(
+    val nodeId: NodeId,
+    val tag: String,
+    val bounds: Rect,
+    val parentLayout: String? = null
+)

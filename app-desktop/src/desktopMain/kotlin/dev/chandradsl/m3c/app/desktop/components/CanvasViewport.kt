@@ -69,7 +69,19 @@ import dev.chandradsl.m3c.app.desktop.theme.StudioColors
 import dev.chandradsl.m3c.app.desktop.theme.StudioSizes
 import dev.chandradsl.m3c.app.desktop.theme.StudioTypography
 import dev.chandradsl.m3c.core.domain.store.WorkspaceIntent
+import dev.chandradsl.m3c.runtime.renderer.decorator.LocalActiveCanvasDragNodeId
+import dev.chandradsl.m3c.runtime.renderer.decorator.LocalCanvasContainerBoundsReporter
 import dev.chandradsl.m3c.runtime.renderer.decorator.LocalCanvasContainerBoundsUnregister
+import dev.chandradsl.m3c.runtime.renderer.decorator.LocalCanvasDragCancel
+import dev.chandradsl.m3c.runtime.renderer.decorator.LocalCanvasDragDelta
+import dev.chandradsl.m3c.runtime.renderer.decorator.LocalCanvasDragEnd
+import dev.chandradsl.m3c.runtime.renderer.decorator.LocalCanvasDragStart
+import dev.chandradsl.m3c.runtime.renderer.decorator.LocalCanvasDropPosition
+import dev.chandradsl.m3c.runtime.renderer.decorator.LocalCanvasDropTargetId
+import dev.chandradsl.m3c.runtime.renderer.decorator.LocalCanvasNodeBoundsReporter
+import dev.chandradsl.m3c.runtime.renderer.decorator.LocalCanvasNodeBoundsUnregister
+import dev.chandradsl.m3c.runtime.renderer.decorator.LocalCanvasRootNodeId
+import dev.chandradsl.m3c.runtime.renderer.decorator.LocalHoveredCanvasParentId
 import dev.chandradsl.m3c.runtime.renderer.renderers.NodeRenderer
 
 @Composable
@@ -370,6 +382,28 @@ fun CanvasViewport(
                                 },
                                 LocalCanvasContainerBoundsUnregister provides { id ->
                                     viewModel.unregisterCanvasContainerBounds(id)
+                                },
+                                LocalCanvasRootNodeId provides state.rootNode.id,
+                                LocalCanvasNodeBoundsReporter provides { id, tag, rect, layout ->
+                                    viewModel.registerCanvasNodeBounds(id, tag, rect, layout)
+                                },
+                                LocalCanvasNodeBoundsUnregister provides { id ->
+                                    viewModel.unregisterCanvasNodeBounds(id)
+                                },
+                                LocalActiveCanvasDragNodeId provides viewModel.activeCanvasDragNodeId,
+                                LocalCanvasDropTargetId provides viewModel.canvasDropTargetId,
+                                LocalCanvasDropPosition provides viewModel.canvasDropPosition,
+                                LocalCanvasDragStart provides { id, offset ->
+                                    viewModel.startCanvasDrag(id, offset)
+                                },
+                                LocalCanvasDragDelta provides { delta ->
+                                    viewModel.updateCanvasDrag(delta)
+                                },
+                                LocalCanvasDragEnd provides {
+                                    viewModel.endCanvasDrag()
+                                },
+                                LocalCanvasDragCancel provides {
+                                    viewModel.cancelCanvasDrag()
                                 }
                             ) {
                                 NodeRenderer(

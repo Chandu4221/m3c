@@ -27,8 +27,11 @@ import dev.chandradsl.m3c.core.domain.model.ModifierDef
 import dev.chandradsl.m3c.core.domain.model.NodeId
 import dev.chandradsl.m3c.core.domain.model.ShapeDef
 import dev.chandradsl.m3c.core.domain.model.ShapeToken
+import dev.chandradsl.m3c.core.domain.model.TreeDropPosition
 import dev.chandradsl.m3c.core.domain.model.TypographyToken
+import dev.chandradsl.m3c.core.domain.model.allDirectChildren
 import dev.chandradsl.m3c.core.domain.model.hasDescendant
+import dev.chandradsl.m3c.core.domain.schema.ComponentCategory
 import dev.chandradsl.m3c.core.domain.schema.ComponentRegistry
 import dev.chandradsl.m3c.core.domain.schema.ComponentType
 import dev.chandradsl.m3c.core.domain.scope.ContainerScope
@@ -81,10 +84,6 @@ data class DraggedModifier(
     val name: String,
     val summary: String
 )
-
-enum class TreeDropPosition {
-    INSIDE, ABOVE, BELOW
-}
 
 enum class LeftDrawerTab {
     Palette,
@@ -849,38 +848,200 @@ class StudioViewModel {
         return def?.acceptsChildren ?: false
     }
 
+    fun isStructuralContainer(tag: String): Boolean {
+        val def = ComponentRegistry.all.firstOrNull {
+            it.type.name.equals(tag, ignoreCase = true) ||
+            it.displayName.replace(" ", "").equals(tag, ignoreCase = true)
+        }
+        return def?.category == ComponentCategory.LayoutContainers ||
+               def?.category == ComponentCategory.SurfacesAndCards ||
+               tag.equals("Box", ignoreCase = true) ||
+               tag.equals("Column", ignoreCase = true) ||
+               tag.equals("Row", ignoreCase = true)
+    }
+
     fun startPaletteDrag(item: DraggedPaletteItem, initialOffset: Offset) {
         if (isInteractiveMode) return
         dragController.startPaletteDrag(item, initialOffset, workspaceState.rootNode.id)
+        updateCanvasDropTarget()
     }
 
-    fun updatePaletteDrag(delta: Offset) =
+    fun updatePaletteDrag(delta: Offset) {
         dragController.updatePaletteDrag(delta, workspaceState.rootNode.id)
+        updateCanvasDropTarget()
+    }
 
     fun updateCanvasBounds(bounds: Rect) =
         dragController.updateCanvasBounds(bounds)
 
     fun endPaletteDrag() {
         val wasHovered = isCanvasDropHovered
-        val targetParentId = hoveredCanvasParentId ?: run {
-            val selected = selectedNode
-            if (selected != null && documentController.isContainerNode(selected)) {
-                selected.id
-            } else if (selected != null) {
-                TreeMutator.findParent(workspaceState.rootNode, selected.id)?.id ?: workspaceState.rootNode.id
-            } else {
-                workspaceState.rootNode.id
-            }
-        }
+        val canvasDropTarget = dragController.canvasDropTargetId
+        val canvasDropPos = dragController.canvasDropPosition
         val item = dragController.endPaletteDrag()
+        dragController.cancelCanvasDrag()
+
         if (item != null && wasHovered) {
             val newNode = item.factory()
-            dispatch(WorkspaceIntent.InsertChild(parentId = targetParentId, node = newNode))
+            if (canvasDropTarget != null && canvasDropPos != null && canvasDropPos.isRelative) {
+                val targetParent = TreeMutator.findParent(workspaceState.rootNode, canvasDropTarget)
+                if (targetParent != null) {
+                    val siblings = targetParent.allDirectChildren
+                    val targetIdx = siblings.indexOfFirst { it.id == canvasDropTarget }
+                    val insertIdx = if (canvasDropPos == TreeDropPosition.BELOW) {
+                        if (targetIdx >= 0) targetIdx + 1 else -1
+                    } else {
+                        if (targetIdx >= 0) targetIdx else 0
+                    }
+                    dispatch(WorkspaceIntent.InsertChild(parentId = targetParent.id, node = newNode, index = insertIdx))
+                } else {
+                    dispatch(WorkspaceIntent.InsertChild(parentId = workspaceState.rootNode.id, node = newNode))
+                }
+            } else {
+                val targetParentId = canvasDropTarget ?: hoveredCanvasParentId ?: run {
+                    val selected = selectedNode
+                    if (selected != null && documentController.isContainerNode(selected)) {
+                        selected.id
+                    } else if (selected != null) {
+                        TreeMutator.findParent(workspaceState.rootNode, selected.id)?.id ?: workspaceState.rootNode.id
+                    } else {
+                        workspaceState.rootNode.id
+                    }
+                }
+                dispatch(WorkspaceIntent.InsertChild(parentId = targetParentId, node = newNode))
+            }
             dispatch(WorkspaceIntent.SelectNode(newNode.id))
         }
     }
 
-    fun cancelPaletteDrag() = dragController.cancelPaletteDrag()
+    fun cancelPaletteDrag() {
+        dragController.cancelPaletteDrag()
+        dragController.cancelCanvasDrag()
+    }
+
+    // 5b. On-Canvas Drag & Drop Reordering
+    val activeCanvasDragNodeId: NodeId? get() = dragController.activeCanvasDragNodeId
+    val canvasDropTargetId: NodeId? get() = dragController.canvasDropTargetId
+    val canvasDropPosition: TreeDropPosition? get() = dragController.canvasDropPosition
+
+    fun registerCanvasNodeBounds(nodeId: NodeId, tag: String, bounds: Rect, parentLayout: String?) =
+        dragController.registerCanvasNodeBounds(nodeId, tag, bounds, parentLayout)
+
+    fun unregisterCanvasNodeBounds(nodeId: NodeId) =
+        dragController.unregisterCanvasNodeBounds(nodeId)
+
+    fun startCanvasDrag(nodeId: NodeId, initialOffset: Offset) {
+        if (isInteractiveMode) return
+        if (nodeId == workspaceState.rootNode.id) return
+        dragController.startCanvasDrag(nodeId, initialOffset)
+        updateCanvasDropTarget()
+    }
+
+    fun updateCanvasDrag(delta: Offset) {
+        dragController.updateCanvasDrag(delta)
+        updateCanvasDropTarget()
+    }
+
+    fun endCanvasDrag() {
+        val draggedId = dragController.activeCanvasDragNodeId
+        val targetId = dragController.canvasDropTargetId
+        val position = dragController.canvasDropPosition
+        if (draggedId != null && targetId != null && position != null) {
+            when (position) {
+                TreeDropPosition.INSIDE -> moveNodeInto(draggedId, targetId)
+                TreeDropPosition.ABOVE -> moveNodeRelative(draggedId, targetId, placeAfter = false)
+                TreeDropPosition.BELOW -> moveNodeRelative(draggedId, targetId, placeAfter = true)
+            }
+        }
+        dragController.cancelCanvasDrag()
+    }
+
+    fun cancelCanvasDrag() {
+        dragController.cancelCanvasDrag()
+    }
+
+    private fun updateCanvasDropTarget() {
+        val draggedId = dragController.activeCanvasDragNodeId
+        val pointer = dragController.dragPointerOffset
+        val root = workspaceState.rootNode
+
+        val candidates = dragController.allCanvasNodes.filter { (id, info) ->
+            if (id == draggedId) return@filter false
+            if (draggedId != null) {
+                val draggedNode = TreeMutator.findNode(root, draggedId)
+                if (draggedNode?.hasDescendant(id) == true) return@filter false
+            }
+            info.bounds.contains(pointer)
+        }
+
+        if (candidates.isEmpty()) {
+            if (dragController.canvasBoundsInWindow.contains(pointer)) {
+                dragController.setCanvasDropTarget(root.id, TreeDropPosition.INSIDE)
+            } else {
+                dragController.setCanvasDropTarget(null, null)
+            }
+            return
+        }
+
+        val best = candidates.minByOrNull { it.value.bounds.width * it.value.bounds.height }?.value
+        if (best == null) {
+            dragController.setCanvasDropTarget(null, null)
+            return
+        }
+
+        val targetId = best.nodeId
+        if (targetId == root.id) {
+            dragController.setCanvasDropTarget(root.id, TreeDropPosition.INSIDE)
+            return
+        }
+
+        when (best.parentLayout) {
+            "Column" -> {
+                if (isStructuralContainer(best.tag)) {
+                    val h = best.bounds.height
+                    val relY = pointer.y - best.bounds.top
+                    val pos = when {
+                        relY < h * 0.2f -> TreeDropPosition.ABOVE
+                        relY > h * 0.8f -> TreeDropPosition.BELOW
+                        else -> TreeDropPosition.INSIDE
+                    }
+                    dragController.setCanvasDropTarget(targetId, pos)
+                } else {
+                    val midY = best.bounds.top + best.bounds.height * 0.5f
+                    val pos = if (pointer.y < midY) TreeDropPosition.ABOVE else TreeDropPosition.BELOW
+                    dragController.setCanvasDropTarget(targetId, pos)
+                }
+            }
+            "Row" -> {
+                if (isStructuralContainer(best.tag)) {
+                    val w = best.bounds.width
+                    val relX = pointer.x - best.bounds.left
+                    val pos = when {
+                        relX < w * 0.2f -> TreeDropPosition.ABOVE
+                        relX > w * 0.8f -> TreeDropPosition.BELOW
+                        else -> TreeDropPosition.INSIDE
+                    }
+                    dragController.setCanvasDropTarget(targetId, pos)
+                } else {
+                    val midX = best.bounds.left + best.bounds.width * 0.5f
+                    val pos = if (pointer.x < midX) TreeDropPosition.ABOVE else TreeDropPosition.BELOW
+                    dragController.setCanvasDropTarget(targetId, pos)
+                }
+            }
+            else -> {
+                if (isContainerTag(best.tag)) {
+                    dragController.setCanvasDropTarget(targetId, TreeDropPosition.INSIDE)
+                } else {
+                    val parent = TreeMutator.findParent(root, targetId)
+                    if (parent != null) {
+                        dragController.setCanvasDropTarget(parent.id, TreeDropPosition.INSIDE)
+                    } else {
+                        dragController.setCanvasDropTarget(root.id, TreeDropPosition.INSIDE)
+                    }
+                }
+            }
+        }
+    }
 
     // 6. Tree Hierarchy Drag & Drop
     val activeTreeDragNode: DraggedTreeNode? get() = dragController.activeTreeDragNode

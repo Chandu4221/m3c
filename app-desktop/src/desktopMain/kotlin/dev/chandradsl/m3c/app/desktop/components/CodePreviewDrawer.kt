@@ -56,6 +56,11 @@ fun CodePreviewDrawer(
     var copied by remember { mutableStateOf(false) }
     val generatedCode by viewModel.generatedCodeFlow.collectAsState()
 
+    val lines = remember(generatedCode) { generatedCode.lines() }
+    val highlightedCode = remember(generatedCode, viewModel.isDarkMode) {
+        KotlinSyntaxHighlighter.highlight(generatedCode, viewModel.isDarkMode)
+    }
+
     LaunchedEffect(copied) {
         if (copied) {
             delay(2000)
@@ -110,6 +115,15 @@ fun CodePreviewDrawer(
                         onClick = { viewModel.codePreviewMode = CodePreviewMode.NavGraph }
                     )
                 }
+
+                // Line count stats
+                Text(
+                    text = "${lines.size} lines",
+                    style = StudioTypography.Caption.copy(
+                        color = StudioColors.TextMuted,
+                        fontSize = 11.sp
+                    )
+                )
             }
 
             Row(
@@ -179,19 +193,50 @@ fun CodePreviewDrawer(
             }
         }
 
-        // Code Viewer Area
-        Box(
+        // Code Viewer Area with synchronized Line Numbers Gutter
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
-                .padding(14.dp)
+                .background(StudioColors.CardSurface)
                 .verticalScroll(vScroll)
-                .horizontalScroll(hScroll)
         ) {
-            Text(
-                text = generatedCode,
-                style = StudioTypography.CodeMonospace
-            )
+            // 1. Line Numbers Gutter
+            val maxDigits = remember(lines.size) { lines.size.toString().length.coerceAtLeast(2) }
+            Column(
+                modifier = Modifier
+                    .background(StudioColors.PanelSurface)
+                    .border(width = 1.dp, color = StudioColors.BorderSubtle)
+                    .padding(horizontal = 10.dp, vertical = 12.dp),
+                horizontalAlignment = Alignment.End
+            ) {
+                lines.indices.forEach { idx ->
+                    Text(
+                        text = (idx + 1).toString().padStart(maxDigits, ' '),
+                        style = StudioTypography.CodeMonospace.copy(
+                            color = StudioColors.TextMuted,
+                            fontSize = 12.sp,
+                            lineHeight = 18.sp
+                        )
+                    )
+                }
+            }
+
+            // 2. Syntax Highlighted Code with Horizontal Scroll
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .horizontalScroll(hScroll)
+                    .padding(horizontal = 14.dp, vertical = 12.dp)
+            ) {
+                Text(
+                    text = highlightedCode,
+                    style = StudioTypography.CodeMonospace.copy(
+                        fontSize = 12.sp,
+                        lineHeight = 18.sp
+                    )
+                )
+            }
         }
     }
 }

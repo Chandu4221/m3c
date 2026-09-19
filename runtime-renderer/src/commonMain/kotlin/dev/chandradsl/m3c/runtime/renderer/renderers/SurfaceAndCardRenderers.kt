@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
@@ -16,6 +17,7 @@ import dev.chandradsl.m3c.core.domain.model.ComposableNode
 import dev.chandradsl.m3c.core.domain.model.hasDescendant
 import dev.chandradsl.m3c.core.domain.store.WorkspaceIntent
 import dev.chandradsl.m3c.core.domain.store.WorkspaceState
+import dev.chandradsl.m3c.runtime.renderer.decorator.LocalCanvasParentContainerType
 import dev.chandradsl.m3c.runtime.renderer.decorator.SelectionDecorator
 import dev.chandradsl.m3c.runtime.renderer.mapper.toComposeColor
 import dev.chandradsl.m3c.runtime.renderer.mapper.toComposeModifier
@@ -53,8 +55,10 @@ fun RenderSurface(
             border = borderStroke
         ) {
             Column {
-                node.children.forEach { child ->
-                    NodeRenderer(node = child, state = state, onIntent = onIntent, isInteractiveMode = isInteractiveMode)
+                CompositionLocalProvider(LocalCanvasParentContainerType provides "Column") {
+                    node.children.forEach { child ->
+                        NodeRenderer(node = child, state = state, onIntent = onIntent, isInteractiveMode = isInteractiveMode)
+                    }
                 }
             }
         }
@@ -95,8 +99,10 @@ fun RenderCard(
             border = borderStroke
         ) {
             Column {
-                node.content.forEach { child ->
-                    NodeRenderer(node = child, state = state, onIntent = onIntent, isInteractiveMode = isInteractiveMode)
+                CompositionLocalProvider(LocalCanvasParentContainerType provides "Column") {
+                    node.content.forEach { child ->
+                        NodeRenderer(node = child, state = state, onIntent = onIntent, isInteractiveMode = isInteractiveMode)
+                    }
                 }
             }
         }
@@ -127,8 +133,10 @@ fun RenderElevatedCard(
             elevation = CardDefaults.elevatedCardElevation(defaultElevation = node.elevation.value.dp)
         ) {
             Column {
-                node.content.forEach { child ->
-                    NodeRenderer(node = child, state = state, onIntent = onIntent, isInteractiveMode = isInteractiveMode)
+                CompositionLocalProvider(LocalCanvasParentContainerType provides "Column") {
+                    node.content.forEach { child ->
+                        NodeRenderer(node = child, state = state, onIntent = onIntent, isInteractiveMode = isInteractiveMode)
+                    }
                 }
             }
         }
@@ -163,8 +171,10 @@ fun RenderOutlinedCard(
             border = borderStroke
         ) {
             Column {
-                node.content.forEach { child ->
-                    NodeRenderer(node = child, state = state, onIntent = onIntent, isInteractiveMode = isInteractiveMode)
+                CompositionLocalProvider(LocalCanvasParentContainerType provides "Column") {
+                    node.content.forEach { child ->
+                        NodeRenderer(node = child, state = state, onIntent = onIntent, isInteractiveMode = isInteractiveMode)
+                    }
                 }
             }
         }

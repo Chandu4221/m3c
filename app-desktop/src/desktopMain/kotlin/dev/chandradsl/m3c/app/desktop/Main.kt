@@ -330,9 +330,9 @@ fun main() = application {
                                         )
                                     )
                                     val actionText = when (viewModel.treeDropPosition) {
-                                        dev.chandradsl.m3c.app.desktop.state.TreeDropPosition.INSIDE -> "Drop inside container"
-                                        dev.chandradsl.m3c.app.desktop.state.TreeDropPosition.ABOVE -> "Insert before"
-                                        dev.chandradsl.m3c.app.desktop.state.TreeDropPosition.BELOW -> "Insert after"
+                                        dev.chandradsl.m3c.core.domain.model.TreeDropPosition.INSIDE -> "Drop inside container"
+                                        dev.chandradsl.m3c.core.domain.model.TreeDropPosition.ABOVE -> "Insert before"
+                                        dev.chandradsl.m3c.core.domain.model.TreeDropPosition.BELOW -> "Insert after"
                                         null -> "Drag to reparent or reorder"
                                     }
                                     val actionColor by animateColorAsState(

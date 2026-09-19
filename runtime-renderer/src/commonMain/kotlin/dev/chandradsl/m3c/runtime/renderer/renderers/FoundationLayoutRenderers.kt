@@ -5,10 +5,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import dev.chandradsl.m3c.core.domain.model.ComposableNode
 import dev.chandradsl.m3c.core.domain.store.WorkspaceIntent
 import dev.chandradsl.m3c.core.domain.store.WorkspaceState
+import dev.chandradsl.m3c.runtime.renderer.decorator.LocalCanvasParentContainerType
 import dev.chandradsl.m3c.runtime.renderer.decorator.SelectionDecorator
 import dev.chandradsl.m3c.runtime.renderer.mapper.*
 
@@ -31,9 +33,11 @@ fun RenderColumn(
             verticalArrangement = node.verticalArrangement.toComposeArrangement(),
             horizontalAlignment = node.horizontalAlignment.toComposeAlignment()
         ) {
-            node.children.forEach { child ->
-                val childModifier = toComposeColumnModifier(child.modifiers)
-                NodeRenderer(node = child, state = state, onIntent = onIntent, modifier = childModifier)
+            CompositionLocalProvider(LocalCanvasParentContainerType provides "Column") {
+                node.children.forEach { child ->
+                    val childModifier = toComposeColumnModifier(child.modifiers)
+                    NodeRenderer(node = child, state = state, onIntent = onIntent, modifier = childModifier)
+                }
             }
         }
     }
@@ -58,9 +62,11 @@ fun RenderRow(
             horizontalArrangement = node.horizontalArrangement.toComposeArrangement(),
             verticalAlignment = node.verticalAlignment.toComposeAlignment()
         ) {
-            node.children.forEach { child ->
-                val childModifier = toComposeRowModifier(child.modifiers)
-                NodeRenderer(node = child, state = state, onIntent = onIntent, modifier = childModifier)
+            CompositionLocalProvider(LocalCanvasParentContainerType provides "Row") {
+                node.children.forEach { child ->
+                    val childModifier = toComposeRowModifier(child.modifiers)
+                    NodeRenderer(node = child, state = state, onIntent = onIntent, modifier = childModifier)
+                }
             }
         }
     }
@@ -85,9 +91,11 @@ fun RenderBox(
             contentAlignment = node.contentAlignment.toComposeAlignment(),
             propagateMinConstraints = node.propagateMinConstraints
         ) {
-            node.children.forEach { child ->
-                val childModifier = toComposeBoxModifier(child.modifiers)
-                NodeRenderer(node = child, state = state, onIntent = onIntent, modifier = childModifier)
+            CompositionLocalProvider(LocalCanvasParentContainerType provides "Box") {
+                node.children.forEach { child ->
+                    val childModifier = toComposeBoxModifier(child.modifiers)
+                    NodeRenderer(node = child, state = state, onIntent = onIntent, modifier = childModifier)
+                }
             }
         }
     }

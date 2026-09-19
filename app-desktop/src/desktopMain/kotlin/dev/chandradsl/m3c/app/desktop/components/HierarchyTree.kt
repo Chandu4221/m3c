@@ -85,7 +85,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.chandradsl.m3c.app.desktop.state.StudioViewModel
-import dev.chandradsl.m3c.app.desktop.state.TreeDropPosition
+import dev.chandradsl.m3c.core.domain.model.TreeDropPosition
 import dev.chandradsl.m3c.app.desktop.theme.StudioColors
 import dev.chandradsl.m3c.app.desktop.theme.StudioSizes
 import dev.chandradsl.m3c.app.desktop.theme.StudioTypography
